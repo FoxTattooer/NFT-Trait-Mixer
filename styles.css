@@ -143,3 +143,17 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
   .organizer-tree{max-height:calc(100dvh - 190px)}
   .organizer-browser .traits{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 }
+
+/* Čitelnější ovládání traitů v sestavách: ikony zůstávají pod obrázkem. */
+.library-trait-preview{position:static}
+.library-trait-actions{position:static;display:flex;justify-content:space-between;gap:12px;padding:0 5px;margin:2px 0 1px;pointer-events:auto}
+.library-trait-actions .icon-button{width:32px;height:30px;min-height:30px;flex:0 0 32px;padding:6px;background:#292c39;border-color:#41465a;backdrop-filter:none;border-radius:7px}
+.library-trait-actions .icon-button:first-child{margin-right:auto}
+.library-trait-actions .icon-button:last-child{margin-left:auto}
+.library-trait-name{margin:3px 5px 2px;line-height:1.35}
+@media(max-width:900px){.toolbar{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:900px) and (orientation:landscape){
+  .toolbar{justify-content:flex-end;gap:4px}
+  .toolbar-group{gap:3px}
+  .toolbar button,.toolbar>.primary,.toolbar-group button{padding:5px 7px;font-size:9px}
+}
