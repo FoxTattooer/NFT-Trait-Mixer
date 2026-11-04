@@ -165,6 +165,17 @@ function renderRules() {
 }
 function renderSnapshots() {
   $('snapshots').innerHTML = state.snapshots.length ? state.snapshots.map(s => `<article class="saved-card"><strong>${esc(s.name)}</strong><p>${Object.values(s.selected).filter(Boolean).length} vybraných traitů</p><div class="saved-actions">${button('load-snapshot', 'Použít', s.id)}${tool('rename-snapshot', `Přejmenovat sestavu ${s.name}`, s.id, 'edit')}${tool('delete-snapshot', `Smazat sestavu ${s.name}`, s.id, 'trash')}</div></article>`).join('') : '<p class="empty-list">Oblíbená kombinace?<br>Ulož si ji pro příště.</p>';
+  renderSnapshotLayerLibrary();
+}
+function renderSnapshotLayerLibrary() {
+  const container = $('snapshotLayerLibrary');
+  const openCategories = new Set([...container.querySelectorAll('.library-category[open]')].map(details => details.dataset.category));
+  container.innerHTML = state.cats.length ? state.cats.map((c, i) => {
+    const selected = c.traits.find(t => t.id === state.selected[c.id]);
+    const items = c.traits.length ? c.traits.map(t => `<button class="library-trait ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span>${esc(t.name)}</span></button>`).join('') : '<p class="empty-list">V téhle kategorii zatím nejsou žádné traity.</p>';
+    return `<details class="library-category" data-category="${esc(c.id)}"><summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${selected ? `<img class="library-current" src="${selected.data}" alt="" loading="lazy">` : '<span class="library-current-empty">∅</span>'}<span class="library-count">${c.traits.length} traitů</span></summary><div class="library-traits">${items}</div></details>`;
+  }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
+  for (const details of container.querySelectorAll('.library-category')) details.open = openCategories.has(details.dataset.category);
 }
 function visibleLayers(project) {
   const { hidden } = M.conflicts(project);
@@ -311,7 +322,14 @@ async function handleAction(action, id, element) {
       if (i >= 0 && j >= 0 && j < state.cats.length) change(() => { [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; }); break;
     }
     case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { showPanel('traits'); $('traitFiles').click(); } break;
-    case 'choose-trait': if (M.category(state, active) && (!id || M.category(state, active).traits.some(t => t.id === id))) change(() => { state.selected[active] = id || null; }); break;
+    case 'choose-trait': {
+      const categoryId = element?.dataset.category || active;
+      if (M.category(state, categoryId) && (!id || M.category(state, categoryId).traits.some(t => t.id === id))) {
+        active = categoryId;
+        change(() => { state.selected[categoryId] = id || null; });
+      }
+      break;
+    }
     case 'rename-trait': {
       if (!located) break; const name = await ask({ title: 'Přejmenovat trait', value: located.trait.name });
       if (name && name !== located.trait.name) change(() => { located.trait.name = name; }, 'Název traitu uložen'); break;
