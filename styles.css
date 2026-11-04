@@ -192,6 +192,15 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .library-trait-actions{position:absolute;top:auto;bottom:7px;left:7px;right:7px;padding:0;margin:0;gap:12px;pointer-events:none}
 .library-trait-actions .icon-button{width:32px;height:32px;min-height:32px;flex:0 0 32px;background:rgba(23,26,37,.48);border-color:rgba(120,125,150,.35);pointer-events:auto}
 .library-trait-actions .icon-button:hover,.library-trait-actions .icon-button:focus-visible{background:rgba(23,26,37,.9)}
-.toolbar [data-panel="rules"].is-active{color:var(--purple);background:#30273f;border-color:#625282}
+.app-header [data-panel="rules"].is-active{color:var(--purple);background:#30273f;border-color:#625282}
 @media(max-width:900px){.workspace-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.app-header .toolbar{overflow-x:auto;justify-content:flex-start}.app-header .toolbar-group{flex-wrap:nowrap}.app-header .toolbar button{flex-shrink:0}}
 @media(max-width:900px) and (orientation:landscape){.app-header .header-end{display:flex}.app-header .refresh-button{width:38px;min-width:38px;padding:8px}.app-header .refresh-button span{display:none}}
+
+/* Keep both controls within narrow thumbnails and inset the delete action. */
+.library-trait-actions{right:11px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.library-trait-actions .icon-button{width:min(32px,100%);min-width:0}
+.library-trait-actions .icon-button:first-child{margin:0;justify-self:start}
+.library-trait-actions .icon-button:last-child{margin:0;justify-self:end}
+.app-header .header-end [data-panel="rules"]{white-space:nowrap;border-color:#625282;color:var(--purple)}
+#snapshotsPanel>.snapshot-library:first-child{margin-top:0;padding-top:0;border-top:0}
+@media(max-width:900px) and (orientation:landscape){.app-header .header-end [data-panel="rules"]{min-height:38px;padding:5px 8px;font-size:10px}}
