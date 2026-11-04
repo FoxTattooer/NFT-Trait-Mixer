@@ -25,6 +25,7 @@
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V4h7l3 3h8v13H3V7Z"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="m9 4-6 6 6 6M3 10h10a7 7 0 0 1 7 7v3"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 4 6 6-6 6m6-6H11a7 7 0 0 0-7 7v3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 2M4 16l2 2a7 7 0 0 0 12.4-3"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l2-7L17 2l5 5L11 18l-7 2Z"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></symbol>
     <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6"/></symbol>
@@ -40,7 +41,7 @@
 
   <header class="app-header">
     <div class="brand"><img src="icons/icon.svg" width="40" height="40" alt=""><span><strong>Trait Workshop</strong><small>TVŮJ NFT ATELIÉR</small></span></div>
-    <div class="header-end"><span class="version">v0.3</span><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+    <div class="header-end"><span class="version">v0.3</span><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
