@@ -138,6 +138,14 @@ function organizerPath(folders, folderId) {
   if (!folder) return '';
   return [...(folder.parentId ? [organizerPath(folders, folder.parentId)] : []), folder.name].filter(Boolean).join(' / ');
 }
+function organizerDescendants(folders, folderId) {
+  const ids = new Set([folderId]);
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const folder of folders) if (folder.parentId && ids.has(folder.parentId) && !ids.has(folder.id)) { ids.add(folder.id); changed = true; }
+  }
+  return ids;
+}
 function renderOrganizerFolderRows(category, folders, assignments, parentId = null, depth = 0) {
   return folders.filter(f => f.parentId === parentId).map(folder => {
     const count = Object.values(assignments).filter(id => id === folder.id).length;
@@ -167,7 +175,7 @@ function renderTraits() {
     $('organizerTree').innerHTML = `<div class="organizer-tree-heading"><strong>Skupiny</strong><span>jen pro přehled</span></div>
       <button class="organizer-all ${!currentFolder ? 'is-selected' : ''}" data-action="organizer-select-folder" data-category="${esc(c.id)}" data-id="" aria-pressed="${!currentFolder}"><span>Všechny traity</span><span class="folder-count">${c.traits.length}</span></button>
       <div class="organizer-folder-list">${renderOrganizerFolderRows(c, folders, assignments)}</div>
-      <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>`;
+      <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
     $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
     $('traits').innerHTML = visibleTraits.length ? visibleTraits.map(t => `<div class="trait-entry"><button class="trait-card ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button><select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
   }
@@ -559,6 +567,19 @@ async function handleAction(action, id, element) {
   }
 }
 document.addEventListener('change', event => {
+  const moveFolder = event.target.closest('[data-action="move-organizer-folder"]');
+  if (moveFolder) {
+    if (!ready || busy) { renderTraits(); return; }
+    const categoryId = moveFolder.dataset.category, folderId = moveFolder.dataset.folderId, parentId = moveFolder.value || null;
+    const category = M.category(state, categoryId), org = organizerFolders(categoryId), folder = org.folders.find(f => f.id === folderId);
+    if (!category || !folder || (parentId && !org.folders.some(f => f.id === parentId))) { renderTraits(); return; }
+    if (parentId && organizerDescendants(org.folders, folderId).has(parentId)) { toast('Složku nelze přesunout dovnitř sebe nebo své podsložky.', true); renderTraits(); return; }
+    if (folder.parentId !== parentId) change(() => {
+      folder.parentId = parentId;
+      if (parentId) (organizerExpanded[categoryId] ||= new Set()).add(parentId);
+    }, 'Složka přesunuta');
+    return;
+  }
   const select = event.target.closest('[data-action="assign-trait-folder"]');
   if (!select || !ready || busy) return;
   const categoryId = select.dataset.category, traitId = select.dataset.traitId, folderId = select.value;
