@@ -78,12 +78,15 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .library-category>summary{padding-right:56px}
 .library-add-trait{position:absolute;z-index:2;top:7px;right:7px;width:38px;height:38px;min-height:38px;padding:9px;border-radius:8px}
 .library-traits{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
-.library-trait-item{position:relative;min-width:0}
-.library-trait-item .library-trait{width:100%;height:100%}
-.library-trait-actions{position:absolute;top:9px;right:9px;display:flex;gap:3px}
-.library-trait-actions .icon-button{width:29px;height:29px;min-height:29px;flex-basis:29px;padding:6px;background:#171a25ef;border-color:#45495d;border-radius:7px}
+.library-trait-item{min-width:0}
+.library-trait-preview{position:relative;min-width:0}
+.library-trait-preview .library-trait{display:block;width:100%;padding:5px}
+.library-trait-preview .library-trait img{display:block}
+.library-trait-actions{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none}
+.library-trait-actions .icon-button{width:29px;height:29px;min-height:29px;flex-basis:29px;padding:6px;background:rgba(23,26,37,.62);backdrop-filter:blur(3px);border-color:rgba(120,125,150,.45);border-radius:7px;pointer-events:auto}
 .library-trait-actions .danger-icon{color:var(--danger)}
 .library-trait-actions .icon{width:15px;height:15px}
+.library-trait-name{display:block;margin:4px 3px 0;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:900px){.library-traits{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 
@@ -100,8 +103,9 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .organizer-folder-pick{display:flex;justify-content:space-between;flex:1;min-width:0;min-height:32px;padding:5px 4px;background:transparent;border-color:transparent;font-size:10px;text-align:left}
 .folder-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.folder-count{flex:0 0 auto;font-size:9px;color:var(--muted);padding-left:3px}
 .organizer-folder-tools{display:flex;gap:0;flex:0 0 auto}
-.organizer-folder-tools .icon-button{width:25px;min-width:25px;min-height:29px;padding:3px}
+.organizer-folder-tools .icon-button{width:22px;min-width:22px;min-height:27px;padding:3px;background:transparent;border-color:transparent}
 .organizer-folder-tools .icon{width:13px;height:13px}
+.organizer-folder-tools .danger-icon{color:var(--danger)}
 .organizer-tree-actions{display:grid;gap:4px;margin-top:8px}
 .organizer-tree-actions button{min-height:32px;padding:5px 4px;font-size:9px;background:#222535}
 .organizer-browser{min-width:0}
@@ -116,7 +120,7 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .trait-folder-select{width:100%;min-width:0;min-height:30px;padding:4px 5px;border:1px solid var(--line);border-radius:7px;background:#1b1d29;color:var(--muted);font-size:9px}
 .organizer-empty{grid-column:1/-1;padding:14px 8px;color:var(--muted);font-size:10px;text-align:center;border:1px dashed var(--line);border-radius:9px}
 @media(max-width:900px){.trait-organizer{grid-template-columns:minmax(122px,.7fr) minmax(0,1.5fr);gap:12px}.organizer-tree{max-height:50vh}.organizer-browser .traits{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.organizer-folder-pick{font-size:11px}.organizer-tree-actions button{font-size:10px}}
-@media(max-width:420px){.trait-organizer{grid-template-columns:minmax(106px,.7fr) minmax(0,1.45fr);gap:7px}.organizer-tree{padding:7px 5px}.organizer-browser .traits{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.organizer-folder-tools{display:none}.organizer-tree-actions button{font-size:9px}}
+@media(max-width:420px){.trait-organizer{grid-template-columns:minmax(106px,.7fr) minmax(0,1.45fr);gap:7px}.organizer-tree{padding:7px 5px}.organizer-browser .traits{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.organizer-tree-actions button{font-size:9px}}
 
 .organizer-tree-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 .organizer-tree-actions button{min-width:0;font-size:8px;padding-inline:2px;white-space:nowrap}
