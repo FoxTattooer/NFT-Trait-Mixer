@@ -144,7 +144,7 @@ function renderOrganizerFolderRows(category, folders, assignments, parentId = nu
     const selected = organizerSelection[category.id] === folder.id;
     const hasChildren = folders.some(f => f.parentId === folder.id);
     const expanded = organizerExpanded[category.id]?.has(folder.id);
-    return `<div class="organizer-folder-row ${selected ? 'is-selected' : ''}" style="--folder-depth:${depth}">
+    return `<div class="organizer-folder-row ${selected ? 'is-selected' : ''}" style="padding-left:${depth*8}px">
       ${hasChildren ? `<button class="organizer-folder-toggle" data-action="organizer-toggle-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} ${esc(folder.name)}" aria-expanded="${!!expanded}">${expanded ? '⌄' : '›'}</button>` : '<span class="organizer-folder-spacer"></span>'}
       <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label">${esc(folder.name)}</span><span class="folder-count">${count}</span></button>
     </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, folder.id, depth + 1) : ''}`;
@@ -464,7 +464,7 @@ async function handleAction(action, id, element) {
       const name = await ask({ title: parentId ? 'Nová podsložka' : 'Nová složka', description: 'Organizační složka změní jen přehled traitů. Skládání zůstane stejné.' });
       if (name) {
         const folderId = M.uid();
-        change(() => { state.organizer ||= {}; const org = state.organizer[categoryId] ||= { folders: [], assignments: {} }; org.folders.push({ id: folderId, name, parentId }); organizerSelection[categoryId] = folderId; }, 'Organizační složka přidána');
+        change(() => { state.organizer ||= {}; const org = state.organizer[categoryId] ||= { folders: [], assignments: {} }; org.folders.push({ id: folderId, name, parentId }); if (parentId) (organizerExpanded[categoryId] ||= new Set()).add(parentId); organizerSelection[categoryId] = folderId; }, 'Organizační složka přidána');
       }
       break;
     }
