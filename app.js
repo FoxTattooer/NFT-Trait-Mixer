@@ -253,7 +253,7 @@ async function uploadFiles(files) {
     for (const [i, file] of Array.from(files).entries()) {
       $('uploadStatus').textContent = `Načítání ${i + 1} / ${files.length}…`;
       try {
-        if (!file.size || file.size > 20 * 1024 * 1024) throw new Error('Použij PNG menší než 20 MB.');
+        if (!file.size || file.size > 50 * 1024 * 1024) throw new Error('Použij PNG menší než 50 MB.');
         const bytes = new Uint8Array(await file.slice(0, 24).arrayBuffer());
         if (![137, 80, 78, 71, 13, 10, 26, 10].every((b, j) => bytes[j] === b)) throw new Error('Soubor není PNG.');
         const data = await readFile(file); await decodeImage(data);
