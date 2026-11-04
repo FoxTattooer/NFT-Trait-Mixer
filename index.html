@@ -42,11 +42,11 @@
   <header class="app-header">
     <div class="brand"><img src="icons/icon.svg" width="40" height="40" alt="Trait Workshop"></div>
   <div class="toolbar" aria-label="Akce projektu">
-    <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button><button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button></div>
+    <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button></div>
     <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
   </div>
-    <div class="header-end"><span class="version">v0.3</span><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+    <div class="header-end"><span class="version">v0.3.11</span><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
@@ -76,7 +76,7 @@
       <button data-action="show-panel" data-panel="snapshots" aria-pressed="false"><svg class="icon"><use href="#i-bookmark"/></svg>Sestavy</button>
     </nav>
     <aside class="panel inspector" aria-label="Editor vrstev a pravidel">
-      <nav class="inspector-tabs" aria-label="Editor"><button data-action="show-panel" data-panel="traits" class="is-active" aria-pressed="true">Traity</button><button data-action="show-panel" data-panel="rules" aria-pressed="false">Pravidla</button><button data-action="show-panel" data-panel="snapshots" aria-pressed="false">Sestavy</button></nav>
+      <nav class="inspector-tabs" aria-label="Editor"><button data-action="show-panel" data-panel="traits" class="is-active" aria-pressed="true">Traity</button><button data-action="show-panel" data-panel="snapshots" aria-pressed="false">Sestavy</button></nav>
       <section id="traitsPanel" class="tab-panel is-active">
         <div class="panel-heading"><div><span class="eyebrow">02 / VARIANTY</span><h2 id="catTitle">Vyber kategorii</h2></div><span id="traitCount" class="count">0</span></div>
         <div id="dropzone" class="dropzone"><svg class="icon"><use href="#i-upload"/></svg><button id="addTrait" data-action="add-traits" class="primary" disabled>Nahrát PNG</button></div>
