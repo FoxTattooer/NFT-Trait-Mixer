@@ -121,3 +121,6 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .organizer-tree-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 .organizer-tree-actions button{min-width:0;font-size:8px;padding-inline:2px;white-space:nowrap}
 @media(max-width:900px){.organizer-tree-actions button{font-size:9px}}
+
+.organizer-move-label{display:block;margin:9px 3px 4px;color:var(--muted);font-size:8px}
+.organizer-move-select{display:block;width:100%;min-width:0;min-height:33px;padding:5px 4px;border:1px solid var(--line);border-radius:7px;background:#1b1d29;color:var(--text);font-size:9px}
