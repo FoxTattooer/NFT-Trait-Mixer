@@ -173,7 +173,7 @@ function visibleLayers(project) {
 function decodeImage(data) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => { if (!image.naturalWidth || image.naturalWidth > 8192 || image.naturalHeight > 8192 || image.naturalWidth * image.naturalHeight > 33554432) reject(new Error('PNG je příliš velké. Použij nejvýše 8192 px na stranu a 32 megapixelů.')); else resolve(image); };
+    image.onload = () => { if (!image.naturalWidth || !image.naturalHeight) reject(new Error('Obrázek nelze načíst.')); else resolve(image); };
     image.onerror = () => reject(new Error('Obrázek není platné PNG nebo je poškozený.'));
     image.src = data;
   });
@@ -245,6 +245,7 @@ function readFile(file) {
 }
 async function uploadFiles(files) {
   if (busy || !files.length) return;
+  if (files.length > 500) { toast('Vyber nejvýše 500 PNG souborů najednou.', true); return; }
   const categoryId = active;
   if (!M.category(state, categoryId)) { toast('Nejdřív přidej kategorii.', true); return; }
   busy = true; render();
@@ -253,7 +254,6 @@ async function uploadFiles(files) {
     for (const [i, file] of Array.from(files).entries()) {
       $('uploadStatus').textContent = `Načítání ${i + 1} / ${files.length}…`;
       try {
-        if (!file.size || file.size > 50 * 1024 * 1024) throw new Error('Použij PNG menší než 50 MB.');
         const bytes = new Uint8Array(await file.slice(0, 24).arrayBuffer());
         if (![137, 80, 78, 71, 13, 10, 26, 10].every((b, j) => bytes[j] === b)) throw new Error('Soubor není PNG.');
         const data = await readFile(file); await decodeImage(data);
@@ -268,7 +268,6 @@ async function loadProject(file) {
   if (!file || busy) return;
   busy = true; render();
   try {
-    if (file.size > 100 * 1024 * 1024) throw new Error('Projekt je příliš velký (maximum 100 MB).');
     const next = M.normalize(JSON.parse(await file.text()));
     for (const c of next.cats) for (const t of c.traits) await decodeImage(t.data);
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
