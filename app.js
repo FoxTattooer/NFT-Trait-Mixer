@@ -148,7 +148,8 @@ function organizerDescendants(folders, folderId) {
 }
 function renderOrganizerFolderRows(category, folders, assignments, parentId = null, depth = 0) {
   return folders.filter(f => f.parentId === parentId).map(folder => {
-    const count = Object.values(assignments).filter(id => id === folder.id).length;
+    const nestedIds = organizerDescendants(folders, folder.id);
+    const count = Object.values(assignments).filter(id => nestedIds.has(id)).length;
     const selected = organizerSelection[category.id] === folder.id;
     const hasChildren = folders.some(f => f.parentId === folder.id);
     const canDelete = count === 0 && !hasChildren;
