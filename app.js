@@ -288,6 +288,57 @@ async function loadProject(file) {
   finally { busy = false; $('projectFile').value = ''; render(); }
 }
 
+async function refreshApp() {
+  const control = $('refreshApp');
+  control.disabled = true;
+  try {
+    if (!await flushSave() || revision !== persistedRevision) {
+      toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
+      return;
+    }
+    const registration = workerRegistration || (navigator.serviceWorker ? await navigator.serviceWorker.getRegistration() : null);
+    if (!registration) {
+      toast('Obnovuji aplikaci…');
+      location.reload();
+      return;
+    }
+    workerRegistration = registration;
+    await registration.update();
+    if (registration.waiting) {
+      $('updateNotice').hidden = false;
+      toast('Načítám nejnovější verzi…');
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
+    const installing = registration.installing;
+    if (installing) {
+      await new Promise(resolve => {
+        const finish = () => {
+          if (['installed', 'activated', 'redundant'].includes(installing.state)) resolve();
+        };
+        installing.addEventListener('statechange', finish);
+        finish();
+        setTimeout(resolve, 12000);
+      });
+      if (registration.waiting) {
+        $('updateNotice').hidden = false;
+        toast('Načítám nejnovější verzi…');
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        return;
+      }
+      if (installing.state === 'installing') {
+        toast('Nová verze se ještě načítá. Zkus Aktualizovat za chvíli.');
+        return;
+      }
+    }
+    toast('Aplikace už má nejnovější verzi.');
+  } catch {
+    toast('Aktualizaci se nepodařilo zkontrolovat. Zkontroluj připojení a zkus to znovu.', true);
+  } finally {
+    control.disabled = false;
+  }
+}
+
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
@@ -360,6 +411,7 @@ async function handleAction(action, id, element) {
       if (installPrompt) { const prompt = installPrompt; installPrompt = null; await prompt.prompt(); await prompt.userChoice; }
       else { $('installNote').textContent = location.protocol === 'https:' ? 'Otevři na telefonu stejnou webovou adresu. Projekt do něj přeneseš přes Zálohu JSON a Otevřít.' : 'Pro instalaci na telefon otevři aplikaci na webové adrese s HTTPS. Projekt přeneseš přes Zálohu JSON a Otevřít.'; $('installDialog').showModal(); }
       break;
+    case 'refresh-app': await refreshApp(); break;
     case 'update-app': if (await flushSave() && revision === persistedRevision) workerRegistration?.waiting?.postMessage({ type: 'SKIP_WAITING' }); else toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true); break;
   }
 }
