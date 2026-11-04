@@ -12,3 +12,35 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 @media(max-width:900px){.toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(86px,1.1fr);align-items:stretch;gap:4px}.toolbar-group{display:contents}.toolbar button,.toolbar>.primary,.toolbar-group button{flex-direction:column;gap:5px;font-size:10px;white-space:nowrap;min-height:54px;padding:8px 3px}.toolbar button .icon,.toolbar-group button .icon{width:17px;height:17px}}
 @media(max-width:900px) and (max-height:700px){.canvas-empty{padding:14px;gap:8px}.canvas-empty .empty-art{display:none}.canvas-empty h2{font-size:16px}.canvas-empty p{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* Landscape phone workspace: settings stay reachable beside the live preview. */
+@media(max-width:900px) and (orientation:landscape){
+  .app-header{min-height:42px;padding:4px 12px;padding-top:max(4px,env(safe-area-inset-top))}
+  .brand img{width:30px;height:30px}.brand strong{font-size:14px}.brand small{display:none}
+  .project-bar,.app-footer{display:none}
+  .toolbar{min-height:46px;padding:3px 10px;gap:6px;display:flex;justify-content:flex-end;flex-wrap:nowrap}
+  .toolbar-group{display:flex;gap:5px}
+  .toolbar button,.toolbar>.primary,.toolbar-group button{min-height:38px;flex-direction:row;gap:6px;padding:6px 9px;font-size:10px}
+  .toolbar button .icon,.toolbar-group button .icon{width:15px;height:15px}
+  .app-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:42px minmax(0,1fr);grid-template-areas:"tabs stage" "settings stage";height:calc(100dvh - 98px - env(safe-area-inset-bottom));min-height:0;max-height:none;margin:0 8px 6px;overflow:hidden;border-radius:12px}
+  .workspace-tabs{grid-area:tabs;display:flex;order:unset;position:static;gap:3px;padding:3px;background:#151721;border:0;border-bottom:1px solid var(--line)}
+  .workspace-tabs button{flex:1;display:flex;flex-direction:row;justify-content:center;gap:4px;min-height:34px;padding:5px 3px;font-size:9px;white-space:nowrap}
+  .workspace-tabs button .icon{width:14px;height:14px}
+  .layers-panel,.inspector{grid-area:settings;order:unset;min-height:0;overflow:auto;border:0;border-radius:0}
+  .layers-panel{display:none;border-right:0}
+  .app-layout[data-mobile-panel=layers] .layers-panel{display:block}
+  .app-layout[data-mobile-panel=layers] .inspector{display:none}
+  .inspector{display:block;padding:0}
+  .panel,.tab-panel{padding:12px}
+  .panel-heading{margin-bottom:7px}
+  .category-list{gap:6px;margin:10px 0}
+  .category-pick{min-height:42px}
+  .stage{grid-area:stage;order:unset;min-height:0;overflow:auto;padding:10px 12px;justify-content:flex-start}
+  .stage-heading{margin-bottom:7px}
+  .canvas-wrap{width:min(100%,58dvh);max-width:100%;flex:0 0 auto;border-radius:10px}
+  .canvas-empty{padding:10px;gap:6px}.canvas-empty h2{font-size:15px}.canvas-empty p{font-size:10px}
+  .empty-art{width:34px;height:34px}.empty-art .icon{width:20px;height:20px}
+  .preview-meta{padding-top:7px;font-size:9px}.stage-actions{margin-top:8px;gap:5px}.stage-actions button{min-height:36px;font-size:9px;padding:6px 8px}
+  .stage-tip{display:none}
+}
