@@ -3,10 +3,10 @@
   'use strict';
   const validId = v => typeof v === 'string' && /^[\w-]{1,100}$/.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
   const uid = () => globalThis.crypto?.randomUUID?.() || `trait-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, rules: [], snapshots: [], rulesEnabled: true });
+  const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, rules: [], snapshots: [], organizer: {}, rulesEnabled: true });
   function clone(p) {
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
-    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t })) })), selected: { ...p.selected }, rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, visibility: { ...s.visibility } })) };
+    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t })) })), selected: { ...p.selected }, rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, visibility: { ...s.visibility } })), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -30,6 +30,28 @@
       }) };
     });
     p.selected = selection(p, raw.selected);
+    const traitIds = new Set(p.cats.flatMap(c => c.traits.map(t => t.id)));
+    p.organizer = {};
+    for (const c of p.cats) {
+      const source = raw.organizer?.[c.id];
+      if (!source) continue;
+      if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
+      const folders = source.folders.map(f => {
+        if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
+        return { id: unique(f.id), name: f.name.trim().slice(0, 100), parentId: f.parentId == null ? null : f.parentId };
+      });
+      const folderIds = new Set(folders.map(f => f.id));
+      for (const f of folders) if (f.parentId !== null && !folderIds.has(f.parentId)) fail('Projekt obsahuje složku s neplatným rodičem.');
+      for (const f of folders) {
+        const seen = new Set([f.id]); let parent = folders.find(item => item.id === f.parentId);
+        while (parent) { if (seen.has(parent.id)) fail('Projekt obsahuje zacyklené složky.'); seen.add(parent.id); parent = folders.find(item => item.id === parent.parentId); }
+      }
+      const assignments = {};
+      for (const [traitId, folderId] of Object.entries(source.assignments)) {
+        if (traitIds.has(traitId) && folderIds.has(folderId) && category(p, c.id).traits.some(t => t.id === traitId)) assignments[traitId] = folderId;
+      }
+      if (folders.length) p.organizer[c.id] = { folders, assignments };
+    }
     p.rules = raw.rules.map(r => {
       if (!r || !['hide', 'block'].includes(r.action)) fail('Projekt obsahuje neplatné pravidlo.');
       const source = locate(p, r.source), target = category(p, r.targetCat);
@@ -60,12 +82,13 @@
     c.traits = c.traits.filter(t => t.id !== traitId);
     if (p.selected[categoryId] === traitId) p.selected[categoryId] = null;
     p.rules = p.rules.filter(r => r.source !== traitId && r.targetTrait !== traitId);
+    if (p.organizer?.[categoryId]) delete p.organizer[categoryId].assignments[traitId];
     for (const s of p.snapshots) if (s.selected[categoryId] === traitId) s.selected[categoryId] = null;
   }
   function removeCategory(p, categoryId) {
     const removed = category(p, categoryId); if (!removed) return;
     const traits = new Set(removed.traits.map(t => t.id));
-    p.cats = p.cats.filter(c => c.id !== categoryId); delete p.selected[categoryId];
+    p.cats = p.cats.filter(c => c.id !== categoryId); delete p.selected[categoryId]; delete p.organizer?.[categoryId];
     p.rules = p.rules.filter(r => r.targetCat !== categoryId && !traits.has(r.source) && !traits.has(r.targetTrait));
     for (const s of p.snapshots) { delete s.selected[categoryId]; delete s.visibility[categoryId]; }
   }
