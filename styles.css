@@ -157,3 +157,32 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
   .toolbar-group{gap:3px}
   .toolbar button,.toolbar>.primary,.toolbar-group button{padding:5px 7px;font-size:9px}
 }
+
+
+/* One compact top bar combines the logo and project actions. */
+.app-header{display:flex;align-items:center;gap:14px;min-height:72px;padding:10px 24px}
+.brand{flex:0 0 auto}.brand span{display:none}
+.app-header .toolbar{flex:1;min-width:0;margin:0;padding:0;display:flex;justify-content:flex-end;gap:12px;border:0}
+.app-header .toolbar-group{display:flex;gap:8px}
+.app-header .toolbar button{white-space:nowrap}
+.app-header .header-end{flex:0 0 auto}
+@media(max-width:900px){
+  .app-header{min-height:56px;padding:7px 12px;gap:6px}
+  .app-header .toolbar{flex:1;gap:4px}
+  .app-header .toolbar-group{gap:2px}
+  .app-header .toolbar button,.app-header .toolbar>.primary,.app-header .toolbar-group button{min-height:44px;padding:5px 5px;font-size:9px}
+  .app-header .toolbar .icon{width:15px;height:15px}
+  .app-header .header-end .version,.app-header .header-end #install{display:none}
+}
+@media(max-width:900px) and (orientation:landscape){
+  .app-header{min-height:46px;padding:3px 8px;padding-top:max(3px,env(safe-area-inset-top));gap:6px}
+  .brand img{width:29px;height:29px}
+  .app-header .toolbar{display:flex;grid-template-columns:none;gap:4px}
+  .app-header .toolbar-group{display:flex;gap:3px}
+  .app-header .toolbar button,.app-header .toolbar>.primary,.app-header .toolbar-group button{min-height:38px;padding:4px 6px;font-size:9px}
+  .app-header .header-end{display:none}
+  body{padding-left:max(52px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+  .app-layout{height:calc(100dvh - 52px - env(safe-area-inset-bottom));margin-bottom:2px}
+  .stage{padding:8px 10px}
+  .canvas-wrap{width:min(100%,72dvh);max-width:100%}
+}
