@@ -172,8 +172,8 @@ function renderSnapshotLayerLibrary() {
   const openCategories = new Set([...container.querySelectorAll('.library-category[open]')].map(details => details.dataset.category));
   container.innerHTML = state.cats.length ? state.cats.map((c, i) => {
     const selected = c.traits.find(t => t.id === state.selected[c.id]);
-    const items = c.traits.length ? c.traits.map(t => `<button class="library-trait ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span>${esc(t.name)}</span></button>`).join('') : '<p class="empty-list">V téhle kategorii zatím nejsou žádné traity.</p>';
-    return `<details class="library-category" data-category="${esc(c.id)}"><summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${selected ? `<img class="library-current" src="${selected.data}" alt="" loading="lazy">` : '<span class="library-current-empty">∅</span>'}<span class="library-count">${c.traits.length} traitů</span></summary><div class="library-traits">${items}</div></details>`;
+    const items = c.traits.length ? c.traits.map(t => '<div class="library-trait-item"><button class="library-trait ' + (t.id === selected?.id ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + (t.id === selected?.id) + '" title="' + esc(t.name) + '"><img src="' + t.data + '" alt="" loading="lazy"><span>' + esc(t.name) + '</span></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div>').join('') : '<p class="empty-list">V téhle kategorii zatím nejsou žádné traity.</p>';
+    return '<details class="library-category" data-category="' + esc(c.id) + '"><summary><span class="layer-index">' + String(i + 1).padStart(2, '0') + '</span><span class="library-category-name">' + esc(c.name) + '</span>' + (selected ? '<img class="library-current" src="' + selected.data + '" alt="" loading="lazy">' : '<span class="library-current-empty">∅</span>') + '<span class="library-count">' + c.traits.length + ' traitů</span></summary><button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="' + esc(c.id) + '" title="Přidat PNG do ' + esc(c.name) + '" aria-label="Přidat PNG do ' + esc(c.name) + '">' + icon('plus') + '</button><div class="library-traits">' + items + '</div></details>';
   }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
   for (const details of container.querySelectorAll('.library-category')) details.open = openCategories.has(details.dataset.category);
 }
@@ -219,6 +219,7 @@ function render() {
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
+  $('exportPackage').disabled = !layers.length || !!warnings.length || busy;
   $('warnings').innerHTML = warnings.map(w => `<p class="conflict-warning">${esc(w.message)}. Uprav výběr před exportem.</p>`).join('');
   $('canvasEmpty').hidden = !!layers.length;
   if (!state.cats.length) {
@@ -250,6 +251,65 @@ async function exportPNG() {
     if (!blob) throw new Error('PNG se nepodařilo vytvořit.');
     download(blob, `${filename(project.name)}.png`); toast('PNG je připravené ke stažení');
   } finally { exporting = false; render(); }
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0); }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function zipStored(entries) {
+  const encoder = new TextEncoder(), localParts = [], centralParts = [];
+  let offset = 0;
+  for (const entry of entries) {
+    const name = encoder.encode(entry.name), data = entry.data, crc = crc32(data);
+    const local = new Uint8Array(30 + name.length), lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true); lv.setUint16(8, 0, true);
+    lv.setUint16(10, 0, true); lv.setUint16(12, 0x21, true); lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true); lv.setUint16(26, name.length, true); lv.setUint16(28, 0, true); local.set(name, 30);
+    localParts.push(local, data);
+    const central = new Uint8Array(46 + name.length), cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true); cv.setUint16(12, 0, true); cv.setUint16(14, 0x21, true); cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true); cv.setUint16(28, name.length, true);
+    cv.setUint16(30, 0, true); cv.setUint16(32, 0, true); cv.setUint16(34, 0, true); cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true); cv.setUint32(42, offset, true); central.set(name, 46); centralParts.push(central);
+    offset += local.length + data.length;
+  }
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0), centralOffset = offset;
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true); ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralOffset, true); ev.setUint16(20, 0, true);
+  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+}
+function pngBytes(dataUrl) {
+  const encoded = dataUrl.slice(dataUrl.indexOf(',') + 1), binary = atob(encoded), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+async function exportPackage() {
+  const project = M.clone(state), layers = visibleLayers(project);
+  if (!layers.length) throw new Error('Nejdřív vyber alespoň jeden viditelný trait.');
+  if (M.conflicts(project).warnings.length) throw new Error('Nejdřív uprav zakázanou kombinaci traitů.');
+  busy = true; render();
+  try {
+    const root = filename(project.name), entries = [], canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1024; paint(canvas, await Promise.all(layers.map(cachedImage)));
+    const finalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!finalBlob) throw new Error('Finální PNG se nepodařilo vytvořit.');
+    for (const [categoryIndex, category] of project.cats.entries()) {
+      const folder = String(categoryIndex + 1).padStart(2, '0') + ' ' + filename(category.name);
+      entries.push({ name: root + '/' + folder + '/', data: new Uint8Array(0) });
+      for (const [traitIndex, trait] of category.traits.entries()) {
+        const traitName = String(traitIndex + 1).padStart(3, '0') + ' ' + filename(trait.name);
+        entries.push({ name: root + '/' + folder + '/' + traitName + '.png', data: pngBytes(trait.data) });
+      }
+    }
+    entries.push({ name: root + '/project.json', data: new TextEncoder().encode(JSON.stringify(project, null, 2)) });
+    entries.push({ name: root + '/final.png', data: new Uint8Array(await finalBlob.arrayBuffer()) });
+    download(zipStored(entries), root + '.zip'); toast('ZIP balíček projektu je připravený ke stažení');
+  } finally { busy = false; render(); }
 }
 function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Soubor nelze přečíst.')); reader.onabort = () => reject(new Error('Načítání bylo přerušeno.')); reader.readAsDataURL(new Blob([file], { type: 'image/png' })); });
@@ -372,6 +432,8 @@ async function handleAction(action, id, element) {
       const i = state.cats.findIndex(cat => cat.id === id), j = i + (action === 'move-up' ? -1 : 1);
       if (i >= 0 && j >= 0 && j < state.cats.length) change(() => { [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; }); break;
     }
+    case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); $('traitFiles').click(); } break;
+    case 'export-package': await exportPackage(); break;
     case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { showPanel('traits'); $('traitFiles').click(); } break;
     case 'choose-trait': {
       const categoryId = element?.dataset.category || active;
