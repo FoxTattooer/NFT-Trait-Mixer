@@ -161,6 +161,10 @@ function renderOrganizerFolderRows(category, folders, assignments, parentId = nu
     </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, folder.id, depth + 1) : ''}`;
   }).join('');
 }
+function traitCategorySelect(trait, categoryId) {
+  const targets = state.cats.filter(c => c.id !== categoryId);
+  return targets.length ? `<select class="trait-category-select" data-action="move-trait-category" data-trait-id="${esc(trait.id)}" aria-label="Přesunout ${esc(trait.name)} do jiné kategorie"><option value="">Přesunout do…</option>${targets.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : '';
+}
 function renderTraits() {
   const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
@@ -179,7 +183,7 @@ function renderTraits() {
       <div class="organizer-folder-list">${renderOrganizerFolderRows(c, folders, assignments)}</div>
       <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
     $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
-    $('traits').innerHTML = visibleTraits.length ? visibleTraits.map(t => `<div class="trait-entry"><button class="trait-card ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button><select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
+    $('traits').innerHTML = visibleTraits.length ? visibleTraits.map(t => `<div class="trait-entry"><button class="trait-card ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button><select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
   }
   $('traitInfo').hidden = !selected;
   $('traitInfo').innerHTML = selected ? `<span class="eyebrow">VYBRANÝ TRAIT</span><strong class="selected-name">${esc(selected.name)}</strong><div class="trait-info-actions">${button('rename-trait', 'Přejmenovat', selected.id, 'edit')}${button('delete-trait', 'Smazat', selected.id, 'trash', 'class="danger"')}</div>` : '';
@@ -217,7 +221,7 @@ function renderSnapshotLayerLibrary() {
   const openCategories = new Set([...container.querySelectorAll('.library-category[open]')].map(details => details.dataset.category));
   container.innerHTML = state.cats.length ? state.cats.map((c, i) => {
     const selected = c.traits.find(t => t.id === state.selected[c.id]);
-    const items = c.traits.length ? c.traits.map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (t.id === selected?.id ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + (t.id === selected?.id) + '" title="' + esc(t.name) + '"><img src="' + t.data + '" alt="" loading="lazy"></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span></div>').join('') : '<p class="empty-list">V téhle kategorii zatím nejsou žádné traity.</p>';
+    const items = c.traits.length ? c.traits.map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (t.id === selected?.id ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + (t.id === selected?.id) + '" title="' + esc(t.name) + '"><img src="' + t.data + '" alt="" loading="lazy"></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span>' + traitCategorySelect(t, c.id) + '</div>').join('') : '<p class="empty-list">V téhle kategorii zatím nejsou žádné traity.</p>';
     return '<details class="library-category" data-category="' + esc(c.id) + '"><summary><span class="layer-index">' + String(i + 1).padStart(2, '0') + '</span><span class="library-category-name">' + esc(c.name) + '</span>' + (selected ? '<img class="library-current" src="' + selected.data + '" alt="" loading="lazy">' : '<span class="library-current-empty">∅</span>') + '<span class="library-count">' + c.traits.length + ' traitů</span></summary><button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="' + esc(c.id) + '" title="Přidat PNG do ' + esc(c.name) + '" aria-label="Přidat PNG do ' + esc(c.name) + '">' + icon('plus') + '</button><div class="library-traits">' + items + '</div></details>';
   }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
   for (const details of container.querySelectorAll('.library-category')) details.open = openCategories.has(details.dataset.category);
@@ -568,7 +572,30 @@ async function handleAction(action, id, element) {
     case 'update-app': if (await flushSave() && revision === persistedRevision) workerRegistration?.waiting?.postMessage({ type: 'SKIP_WAITING' }); else toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true); break;
   }
 }
+async function moveTraitFromControl(control) {
+  const targetId = control.value, traitId = control.dataset.traitId;
+  control.value = '';
+  if (!targetId || !ready || busy) return;
+  const found = M.locate(state, traitId), target = M.category(state, targetId);
+  if (!found || !target || found.cat.id === targetId) return;
+  const impact = M.moveTrait(M.clone(state), traitId, targetId);
+  if (impact.removedRules || impact.changedSnapshots) {
+    const details = [
+      impact.changedSnapshots ? `Změní se ${impact.changedSnapshots} uložených sestav. Pokud má cílová kategorie vybraný jiný trait, její výběr zůstane.` : '',
+      impact.removedRules ? `Odstraní se ${impact.removedRules} pravidel, která by po přesunu odkazovala uvnitř stejné kategorie.` : '',
+      'Přesun můžeš vrátit tlačítkem Zpět.'
+    ].filter(Boolean).join(' ');
+    if (!await ask({ title: `Přesunout „${found.trait.name}“ do „${target.name}“?`, description: details, confirm: true, submit: 'Přesunout' })) return;
+  }
+  if (busy) return;
+  change(() => {
+    M.moveTrait(state, traitId, targetId);
+    organizerSelection[targetId] = null;
+  }, `Trait přesunut do ${target.name} · Zpět vrátí přesun`);
+}
 document.addEventListener('change', event => {
+  const moveTraitControl = event.target.closest('[data-action="move-trait-category"]');
+  if (moveTraitControl) { moveTraitFromControl(moveTraitControl).catch(error => toast(error.message, true)); return; }
   const moveFolder = event.target.closest('[data-action="move-organizer-folder"]');
   if (moveFolder) {
     if (!ready || busy) { renderTraits(); return; }

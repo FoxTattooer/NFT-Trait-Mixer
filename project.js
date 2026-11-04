@@ -85,6 +85,33 @@
     if (p.organizer?.[categoryId]) delete p.organizer[categoryId].assignments[traitId];
     for (const s of p.snapshots) if (s.selected[categoryId] === traitId) s.selected[categoryId] = null;
   }
+  function moveTrait(p, traitId, targetCategoryId) {
+    const found = locate(p, traitId), target = category(p, targetCategoryId);
+    if (!found || !target) throw new Error('Trait nebo cílová kategorie už neexistuje.');
+    if (found.cat.id === target.id) return { removedRules: 0, changedSnapshots: 0 };
+    const source = found.cat;
+    source.traits = source.traits.filter(t => t.id !== traitId);
+    target.traits.push(found.trait);
+    if (p.organizer?.[source.id]) delete p.organizer[source.id].assignments[traitId];
+    if (p.selected[source.id] === traitId) {
+      p.selected[source.id] = null;
+      if (!p.selected[target.id]) p.selected[target.id] = traitId;
+    }
+    let changedSnapshots = 0;
+    for (const snapshot of p.snapshots) {
+      if (snapshot.selected[source.id] !== traitId) continue;
+      snapshot.selected[source.id] = null;
+      if (!snapshot.selected[target.id]) snapshot.selected[target.id] = traitId;
+      changedSnapshots++;
+    }
+    const before = p.rules.length;
+    p.rules = p.rules.filter(rule => {
+      if (rule.action === 'block' && rule.targetTrait === traitId) rule.targetCat = target.id;
+      if (rule.source !== traitId && rule.targetTrait !== traitId) return true;
+      return locate(p, rule.source)?.cat.id !== rule.targetCat;
+    });
+    return { removedRules: before - p.rules.length, changedSnapshots };
+  }
   function removeCategory(p, categoryId) {
     const removed = category(p, categoryId); if (!removed) return;
     const traits = new Set(removed.traits.map(t => t.id));
@@ -100,7 +127,7 @@
     // If every full combination conflicts, leave the conflicting target empty.
     for (const w of conflicts(p).warnings) p.selected[w.targetCat] = null;
   }
-  const api = { uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, removeCategory, randomize };
+  const api = { uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

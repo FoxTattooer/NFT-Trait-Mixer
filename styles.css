@@ -204,3 +204,6 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .app-header .header-end [data-panel="rules"]{white-space:nowrap;border-color:#625282;color:var(--purple)}
 #snapshotsPanel>.snapshot-library:first-child{margin-top:0;padding-top:0;border-top:0}
 @media(max-width:900px) and (orientation:landscape){.app-header .header-end [data-panel="rules"]{min-height:38px;padding:5px 8px;font-size:10px}}
+
+.trait-category-select{display:block;width:100%;min-width:0;min-height:34px;margin-top:4px;padding:5px 4px;font-size:10px;border:1px solid var(--line);border-radius:7px;background:#1b1d29;color:var(--text)}
+@media(pointer:coarse){.trait-category-select{min-height:40px;font-size:16px}}
