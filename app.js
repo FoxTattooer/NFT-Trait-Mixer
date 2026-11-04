@@ -151,10 +151,12 @@ function renderOrganizerFolderRows(category, folders, assignments, parentId = nu
     const count = Object.values(assignments).filter(id => id === folder.id).length;
     const selected = organizerSelection[category.id] === folder.id;
     const hasChildren = folders.some(f => f.parentId === folder.id);
+    const canDelete = count === 0 && !hasChildren;
     const expanded = organizerExpanded[category.id]?.has(folder.id);
-    return `<div class="organizer-folder-row ${selected ? 'is-selected' : ''}" style="padding-left:${depth*8}px">
+    return `<div class="organizer-folder-row ${selected ? 'is-selected' : ''}" data-category="${esc(category.id)}" style="padding-left:${depth*8}px">
       ${hasChildren ? `<button class="organizer-folder-toggle" data-action="organizer-toggle-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} ${esc(folder.name)}" aria-expanded="${!!expanded}">${expanded ? '⌄' : '›'}</button>` : '<span class="organizer-folder-spacer"></span>'}
       <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label">${esc(folder.name)}</span><span class="folder-count">${count}</span></button>
+      ${canDelete ? `<span class="organizer-folder-tools">${tool('delete-organizer-folder', `Smazat prázdnou složku ${folder.name}`, folder.id, 'trash', false, true)}</span>` : ''}
     </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, folder.id, depth + 1) : ''}`;
   }).join('');
 }
