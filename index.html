@@ -40,17 +40,17 @@
   </svg>
 
   <header class="app-header">
-    <div class="brand"><img src="icons/icon.svg" width="40" height="40" alt=""><span><strong>Trait Workshop</strong><small>TVŮJ NFT ATELIÉR</small></span></div>
+    <div class="brand"><img src="icons/icon.svg" width="40" height="40" alt="Trait Workshop"></div>
+  <div class="toolbar" aria-label="Akce projektu">
+    <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button><button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button></div>
+    <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
+    <input id="projectFile" type="file" accept="application/json,.json" hidden>
+  </div>
     <div class="header-end"><span class="version">v0.3</span><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
-  </div>
-  <div class="toolbar" aria-label="Akce projektu">
-    <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button><button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button></div>
-    <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
-    <input id="projectFile" type="file" accept="application/json,.json" hidden>
   </div>
   <div id="storageWarning" class="notice warning-notice" role="alert" hidden></div>
   <div id="updateNotice" class="notice" hidden>Je připravena nová verze aplikace. <button data-action="update-app">Aktualizovat</button></div>
