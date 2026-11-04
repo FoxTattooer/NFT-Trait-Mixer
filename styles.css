@@ -68,3 +68,20 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .library-trait span{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:900px){.library-traits{grid-template-columns:repeat(4,minmax(0,1fr));max-height:240px}}
 @media(max-width:900px) and (orientation:landscape){.snapshot-library{margin-top:16px;padding-top:12px}.library-category>summary{min-height:48px}.library-current,.library-current-empty{width:34px;height:34px;flex-basis:34px}.library-traits{grid-template-columns:repeat(4,minmax(0,1fr));max-height:180px}}
+
+/* Bonus ZIP export and controls in the expanded layer library. */
+.snapshot-export{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:#1d202c}
+.snapshot-export .panel-heading{margin:0}
+.snapshot-export h3{font-size:14px;font-weight:620;margin:7px 0 0}
+.snapshot-export .helper{margin:9px 0 12px}
+.library-category{position:relative}
+.library-category>summary{padding-right:56px}
+.library-add-trait{position:absolute;z-index:2;top:7px;right:7px;width:38px;height:38px;min-height:38px;padding:9px;border-radius:8px}
+.library-traits{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+.library-trait-item{position:relative;min-width:0}
+.library-trait-item .library-trait{width:100%;height:100%}
+.library-trait-actions{position:absolute;top:9px;right:9px;display:flex;gap:3px}
+.library-trait-actions .icon-button{width:29px;height:29px;min-height:29px;flex-basis:29px;padding:6px;background:#171a25ef;border-color:#45495d;border-radius:7px}
+.library-trait-actions .danger-icon{color:var(--danger)}
+.library-trait-actions .icon{width:15px;height:15px}
+@media(max-width:900px){.library-traits{grid-template-columns:repeat(4,minmax(0,1fr))}}
