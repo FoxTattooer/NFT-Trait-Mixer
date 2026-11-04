@@ -85,3 +85,39 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .library-trait-actions .danger-icon{color:var(--danger)}
 .library-trait-actions .icon{width:15px;height:15px}
 @media(max-width:900px){.library-traits{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* Personal-only folder tree for browsing traits; it never changes functional layers. */
+.trait-organizer{display:grid;grid-template-columns:minmax(104px,.72fr) minmax(0,1.55fr);gap:10px;margin-top:14px;align-items:start;min-width:0}
+.organizer-tree{min-width:0;padding:9px 7px;background:#1b1d29;border:1px solid var(--line);border-radius:10px;max-height:56vh;overflow:auto}
+.organizer-tree-heading{display:flex;flex-direction:column;gap:3px;padding:4px 5px 9px}
+.organizer-tree-heading strong{font-size:12px}.organizer-tree-heading span,.organizer-heading>div>span{font-size:9px;color:var(--muted)}
+.organizer-all{width:100%;min-height:34px;justify-content:space-between;padding:5px 7px;margin-bottom:4px;background:transparent;border-color:transparent;font-size:10px}
+.organizer-all.is-selected,.organizer-folder-row.is-selected>.organizer-folder-pick{background:#30283f;border-color:#625282;color:#e4dbff}
+.organizer-folder-list{display:flex;flex-direction:column;gap:3px}
+.organizer-folder-row{display:flex;align-items:center;gap:2px;min-width:0;padding-left:calc(var(--folder-depth)*8px)}
+.organizer-folder-toggle,.organizer-folder-spacer{flex:0 0 20px;width:20px;min-width:20px;min-height:30px;padding:0;background:transparent;border-color:transparent;color:var(--muted);font-size:16px}
+.organizer-folder-pick{display:flex;justify-content:space-between;flex:1;min-width:0;min-height:32px;padding:5px 4px;background:transparent;border-color:transparent;font-size:10px;text-align:left}
+.folder-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.folder-count{flex:0 0 auto;font-size:9px;color:var(--muted);padding-left:3px}
+.organizer-folder-tools{display:flex;gap:0;flex:0 0 auto}
+.organizer-folder-tools .icon-button{width:25px;min-width:25px;min-height:29px;padding:3px}
+.organizer-folder-tools .icon{width:13px;height:13px}
+.organizer-tree-actions{display:grid;gap:4px;margin-top:8px}
+.organizer-tree-actions button{min-height:32px;padding:5px 4px;font-size:9px;background:#222535}
+.organizer-browser{min-width:0}
+.organizer-heading{min-height:42px;margin:0 0 7px;padding:3px 2px}
+.organizer-current{display:flex;justify-content:space-between;align-items:center;gap:5px}
+.organizer-current>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.organizer-current strong{font-size:11px;overflow-wrap:anywhere}
+.organizer-current>span{flex:0 0 auto;font-size:9px;color:var(--muted)}
+.organizer-browser .traits{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0}
+.trait-entry{display:flex;flex-direction:column;min-width:0;gap:3px}
+.trait-entry .trait-card{width:100%;min-width:0}
+.trait-folder-select{width:100%;min-width:0;min-height:30px;padding:4px 5px;border:1px solid var(--line);border-radius:7px;background:#1b1d29;color:var(--muted);font-size:9px}
+.organizer-empty{grid-column:1/-1;padding:14px 8px;color:var(--muted);font-size:10px;text-align:center;border:1px dashed var(--line);border-radius:9px}
+@media(max-width:900px){.trait-organizer{grid-template-columns:minmax(122px,.7fr) minmax(0,1.5fr);gap:12px}.organizer-tree{max-height:50vh}.organizer-browser .traits{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.organizer-folder-pick{font-size:11px}.organizer-tree-actions button{font-size:10px}}
+@media(max-width:420px){.trait-organizer{grid-template-columns:minmax(106px,.7fr) minmax(0,1.45fr);gap:7px}.organizer-tree{padding:7px 5px}.organizer-browser .traits{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.organizer-folder-tools{display:none}.organizer-tree-actions button{font-size:9px}}
+
+.organizer-tree-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.organizer-tree-actions button{min-width:0;font-size:8px;padding-inline:2px;white-space:nowrap}
+@media(max-width:900px){.organizer-tree-actions button{font-size:9px}}
