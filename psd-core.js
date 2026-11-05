@@ -1,10 +1,10 @@
 /* PSD import logic, shared by the worker and tests. ag-psd is vendored locally. */
 (function (root) {
   'use strict';
-  const LIMITS = { file: 128 * 1024 * 1024, pixels: 16 * 1024 * 1024, nodes: 4000, depth: 48, selected: 500, output: 128 * 1024 * 1024 };
+  const LIMITS = { pixels: 16 * 1024 * 1024, nodes: 4000, depth: 48, selected: 500 };
   const clamp = n => Math.min(1, Math.max(0, n));
   function validateHeader(buffer) {
-    if (buffer.byteLength < 26 || buffer.byteLength > LIMITS.file) throw new Error('PSD musí mít nejvýše 128 MB a platnou hlavičku.');
+    if (buffer.byteLength < 26) throw new Error('PSD nemá platnou hlavičku.');
     const v = new DataView(buffer);
     if (v.getUint32(0) !== 0x38425053 || ![1, 2].includes(v.getUint16(4))) throw new Error('Soubor není platný PSD ani PSB.');
     const h = v.getUint32(14), w = v.getUint32(18), bits = v.getUint16(22), color = v.getUint16(24);

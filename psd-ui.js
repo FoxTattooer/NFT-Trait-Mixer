@@ -53,7 +53,6 @@
   }
   async function open(file) {
     if (!file || !ready || busy) return;
-    if (file.size > TraitPSD.LIMITS.file) { toast('Pro import v telefonu vyber PSD do 128 MB.', true); fileInput.value = ''; return; }
     dispose(); const current = epoch;
     busy = true; working = true; render();
     $('psdBody').hidden = true; $('psdConfirm').disabled = true; $('psdAck').checked = false;
@@ -100,13 +99,11 @@
     const current = epoch, mode = $('psdMode').value, targetId = $('psdTarget').value;
     working = true; update();
     try {
-      const plan = TraitPSD.plan(metadata, chosen(), mode, M.uid, targetId); let total = 0;
+      const plan = TraitPSD.plan(metadata, chosen(), mode, M.uid, targetId);
       for (const [i, job] of plan.jobs.entries()) {
         const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
         status(`Převádím ${i + 1} / ${plan.jobs.length}: ${trait.name}`);
         const buffer = await call('render', { nodeId: job.nodeId }); if (current !== epoch) return;
-        total += buffer.byteLength;
-        if (total > TraitPSD.LIMITS.output) throw new Error('Výsledné PNG přesáhly 128 MB. Vyber méně vrstev a importuj po částech.');
         trait.data = await dataURL(buffer); if (current !== epoch) return;
       }
       change(() => {
