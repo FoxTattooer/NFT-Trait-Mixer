@@ -130,9 +130,14 @@ function showPanel(panel) {
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
 }
+function renderCategoryStepper(c) {
+  const index = c.traits.findIndex(t => t.id === state.selected[c.id]);
+  const selected = c.traits[index];
+  return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${c.traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${c.traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!c.traits.length || (c.traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
+}
 function renderCategories(hidden) {
   $('catCount').textContent = state.cats.length;
-  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
+  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
 }
 function organizerFolders(categoryId) {
   return state.organizer?.[categoryId] || { folders: [], assignments: {} };
@@ -173,6 +178,10 @@ function renderTraits() {
   const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
   $('traitCount').textContent = c?.traits.length || 0;
+  const categoryIndex = state.cats.findIndex(cat => cat.id === active);
+  $('categoryPosition').textContent = c ? `Vrstva ${categoryIndex + 1} / ${state.cats.length}` : 'Žádné vrstvy';
+  $('categoryPrev').disabled = state.cats.length < 2 || busy;
+  $('categoryNext').disabled = !state.cats.length || (state.cats.length === 1 && !!c) || busy;
   $('addTrait').disabled = !c || busy;
   $('traitOrganizer').hidden = !c;
   if (!c) {
@@ -484,6 +493,27 @@ async function handleAction(action, id, element) {
   const c = M.category(state, id || active), located = M.locate(state, id);
   switch (action) {
     case 'show-panel': showPanel(element.dataset.panel); renderSnapshotLayerLibrary(); break;
+    case 'cycle-trait': {
+      if (!c || !c.traits.length) break;
+      const current = c.traits.findIndex(t => t.id === state.selected[c.id]);
+      const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
+      const next = current < 0 ? (direction < 0 ? c.traits.length - 1 : 0) : (current + direction + c.traits.length) % c.traits.length;
+      if (state.selected[c.id] !== c.traits[next].id) change(() => { state.selected[c.id] = c.traits[next].id; });
+      break;
+    }
+    case 'cycle-category': {
+      if (!state.cats.length) break;
+      const current = state.cats.findIndex(cat => cat.id === active);
+      const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
+      const next = current < 0 ? (direction < 0 ? state.cats.length - 1 : 0) : (current + direction + state.cats.length) % state.cats.length;
+      active = state.cats[next].id;
+      traitPage = 0;
+      organizerSelection[active] = null;
+      organizerExpanded[active] = new Set(organizerFolders(active).folders.map(folder => folder.id));
+      render();
+      showPanel('traits');
+      break;
+    }
     case 'trait-prev': traitPage = Math.max(0, traitPage - 1); renderTraits(); break;
     case 'trait-next': traitPage++; renderTraits(); break;
     case 'library-prev': libraryPages[id] = Math.max(0, (libraryPages[id] || 0) - 1); renderSnapshotLayerLibrary(); break;

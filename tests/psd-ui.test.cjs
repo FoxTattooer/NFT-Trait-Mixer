@@ -57,6 +57,20 @@ async function test(worker) {
   assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal($('traits').querySelectorAll('.trait-card').length,2);assert($('organizerTree').textContent.includes('HEADS'));
   assert.equal(w.testSelection(),'existing-trait');
   await choose(psd);$('psdConfirm').click();$('psdCancel').click();await new Promise(r=>setTimeout(r,30));assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal($('traits').querySelectorAll('.trait-card').length,2);
+  const nextTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="1"]');
+  const prevTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="-1"]');
+  nextTrait().click();assert.notEqual(w.testSelection(),'existing-trait');
+  nextTrait().click();assert.equal(w.testSelection(),'existing-trait');
+  prevTrait().click();assert.notEqual(w.testSelection(),'existing-trait');
+  $('undo').click();assert.equal(w.testSelection(),'existing-trait');
+  assert.equal($('cats').querySelectorAll('.layer-stepper img').length,0);
+  assert($('categoryNext').disabled);
+  await choose(psd);$('psdMode').value='structure';$('psdMode').dispatchEvent(new w.Event('change'));$('psdConfirm').click();
+  await waitFor(()=>!$('psdDialog').hasAttribute('open'));
+  assert(!$('categoryNext').disabled);
+  const titleBefore = $('catTitle').textContent;
+  $('categoryNext').click();assert.notEqual($('catTitle').textContent,titleBefore);
+  $('categoryPrev').click();assert.equal($('catTitle').textContent,titleBefore);
   await w.happyDOM.abort();w.close();
   console.log('PASS full import UI ('+(worker?'worker + bundled parser':'main-thread fallback')+'): tree, preview, cancel during import, PNG/category/folder import, undo, invalid file, warning acknowledgement and append to existing category');
 }

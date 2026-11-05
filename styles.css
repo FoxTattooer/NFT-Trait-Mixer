@@ -219,3 +219,14 @@ dialog{background:#1b1d29;color:var(--text);border:1px solid #494359;border-radi
 .psd-preview{margin:0;position:sticky;top:0;min-width:0}.psd-preview img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:repeating-conic-gradient(#343746 0 25%,#292c37 0 50%) 50%/16px 16px;border-radius:8px}.psd-preview img:not([src]){visibility:hidden}.psd-preview figcaption{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;overflow-wrap:anywhere}
 #psdAckRow{font-size:12px;line-height:1.5;align-items:start}#psdAckRow input{flex-shrink:0}.app-header #importPsd{white-space:nowrap}
 @media(max-width:500px){.psd-layout{grid-template-columns:minmax(0,1fr)}.psd-preview{position:static;max-width:180px;margin:auto}.psd-options{display:block}.psd-options select{font-size:16px}#psdDialog{padding:14px}}
+
+/* Text-only navigation keeps large projects light on memory. */
+.layer-stepper,.category-stepper{display:flex;align-items:center;gap:8px}
+.layer-stepper{padding:6px 10px 10px}
+.layer-stepper button{flex:0 0 44px;min-height:44px;font-size:24px;padding:0}
+.layer-stepper-label{flex:1;min-width:0;text-align:center}
+.layer-stepper-label strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-stepper-label small{display:block;font-size:11px;opacity:.65;margin-top:3px}
+.category-stepper{justify-content:space-between;margin-bottom:14px}
+.category-stepper button{min-height:44px;padding:8px 10px}
+.category-stepper span{font-size:12px;text-align:center}
