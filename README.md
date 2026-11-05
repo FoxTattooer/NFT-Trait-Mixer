@@ -53,3 +53,9 @@ python3 tests/browser_smoke.py
 Test prohlížeče potřebuje Python balíček `playwright` a Chromium; v připraveném cloudovém prostředí jsou dostupné. Pro jiný stroj: `python3 -m pip install -r requirements-dev.txt` a `python3 -m playwright install chromium`. Volitelná proměnná `CHROMIUM_EXECUTABLE` vybere systémový prohlížeč. Test spouští vlastní dočasný server a nepozměňuje projektová data uživatele. Kontroluje CRUD, vrácení smazání, pořadí PNG vrstev, pravidla, starší JSON, ukládání po obnovení, export, mobilní rozložení a offline spuštění z podadresáře.
 
 Při změně souborů aplikace navyš verzi cache v `sw.js`, aby již nainstalované aplikace dostaly novou verzi.
+
+
+## Import PSD / PSB (v0.4.0)
+
+Horní lišta obsahuje **Import PSD** s náhledem stromu, výběrem vrstev a převodem do kategorií. Podrobný popis podpory, omezení a testů je v [PSD-IMPORT.md](PSD-IMPORT.md). Parser je uložen lokálně a funguje i offline; npm je potřeba pouze pro vývoj a opětovné sestavení parseru.
+

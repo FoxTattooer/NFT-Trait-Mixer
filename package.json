@@ -1,0 +1,16 @@
+{
+  "name": "nft-trait-workshop",
+  "private": true,
+  "version": "0.4.0",
+  "scripts": {
+    "build:psd": "esbuild vendor-entry.js --bundle --format=iife --global-name=agPsd --minify --legal-comments=eof --outfile=vendor/ag-psd.js",
+    "test": "node --test tests/project.test.cjs && node tests/psd-import.test.cjs && node tests/psd-ui.test.cjs"
+  },
+  "devDependencies": {
+    "ag-psd": "34.1.0",
+    "esbuild": "0.25.12",
+    "happy-dom": "20.8.4",
+    "fake-indexeddb": "6.2.4",
+    "@napi-rs/canvas": "0.1.100"
+  }
+}

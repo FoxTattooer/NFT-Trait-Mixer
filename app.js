@@ -83,7 +83,7 @@ function change(mutator, message = '') {
   pruneCache(); render(); scheduleSave();
   if (message) toast(message);
 }
-function history(redo = false) {
+function restoreHistory(redo = false) {
   const from = redo ? redoStack : undoStack, to = redo ? undoStack : redoStack;
   if (!from.length) return;
   to.push(M.clone(state)); state = from.pop();
@@ -263,6 +263,7 @@ function render() {
   if (!M.category(state, active)) active = state.cats[0]?.id || null;
   const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state);
   $('projectName').textContent = state.name;
+  $('importPsd').disabled = busy;
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
@@ -553,8 +554,8 @@ async function handleAction(action, id, element) {
     case 'save-project': download(new Blob([JSON.stringify(state)], { type: 'application/json' }), `${filename(state.name)}.json`); toast('Záloha projektu je připravená ke stažení'); break;
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
-    case 'undo': history(); break;
-    case 'redo': history(true); break;
+    case 'undo': restoreHistory(); break;
+    case 'redo': restoreHistory(true); break;
     case 'delete-rule': change(() => { state.rules = state.rules.filter(r => r.id !== id); }, 'Pravidlo odstraněno'); break;
     case 'add-snapshot': {
       if (!state.cats.length) { toast('Nejdřív vytvoř svoji první kategorii.'); break; }
@@ -643,7 +644,7 @@ $('dropzone').addEventListener('dragleave', () => $('dropzone').classList.remove
 $('dropzone').addEventListener('drop', e => { e.preventDefault(); $('dropzone').classList.remove('is-dragging'); uploadFiles(e.dataTransfer.files); });
 document.addEventListener('keydown', event => {
   if (!ready || busy || document.querySelector('dialog[open]') || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable) return;
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); history(event.shiftKey); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 window.addEventListener('pagehide', flushSave);
@@ -674,3 +675,4 @@ async function init() {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
+
