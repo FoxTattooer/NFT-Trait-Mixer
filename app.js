@@ -242,6 +242,17 @@ function cachedImage(t) {
   if (imageCache.get(t.id)?.data !== t.data) imageCache.set(t.id, { data: t.data, promise: decodeImage(t.data) });
   return imageCache.get(t.id).promise;
 }
+async function paintLayers(canvas, layers, valid = () => true) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 1024, 1024);
+  for (const trait of layers) {
+    if (!valid()) return;
+    const image = await decodeImage(trait.data);
+    if (!valid()) { image.src = ''; return; }
+    ctx.drawImage(image, 0, 0, 1024, 1024);
+    image.src = '';
+  }
+}
 function paint(canvas, images) {
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, 1024, 1024);
@@ -250,10 +261,9 @@ function paint(canvas, images) {
 async function draw() {
   const ticket = ++drawTicket, layers = visibleLayers(state);
   try {
-    const images = await Promise.all(layers.map(cachedImage));
+    await paintLayers($('canvas'), layers, () => ticket === drawTicket);
     if (ticket !== drawTicket) return;
-    paint($('canvas'), images);
-    $('status').textContent = images.length ? `${images.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření';
+    $('status').textContent = layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření';
   } catch (error) {
     if (ticket !== drawTicket) return;
     $('status').textContent = error.message; $('export').disabled = true;
@@ -296,7 +306,7 @@ async function exportPNG() {
   exporting = true; render();
   try {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
-    paint(canvas, await Promise.all(visibleLayers(project).map(cachedImage)));
+    await paintLayers(canvas, visibleLayers(project));
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('PNG se nepodařilo vytvořit.');
     download(blob, `${filename(project.name)}.png`); toast('PNG je připravené ke stažení');
@@ -345,7 +355,7 @@ async function exportPackage() {
   busy = true; render();
   try {
     const root = filename(project.name), entries = [], canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1024; paint(canvas, await Promise.all(layers.map(cachedImage)));
+    canvas.width = canvas.height = 1024; await paintLayers(canvas, layers);
     const finalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!finalBlob) throw new Error('Finální PNG se nepodařilo vytvořit.');
     for (const [categoryIndex, category] of project.cats.entries()) {

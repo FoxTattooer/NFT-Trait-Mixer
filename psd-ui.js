@@ -1,4 +1,4 @@
-/* Local-only PSD import. The current project changes only after a complete import. */
+/* Local PSD import with durable batches of eight layers. */
 (() => {
   'use strict';
   const dialog = $('psdDialog'), fileInput = $('psdFile');
@@ -58,6 +58,7 @@
   async function open(file) {
     if (!file || !ready || busy) return;
     dispose(); const current = epoch;
+    $('psdCancel').textContent = 'Zrušit';
     busy = true; working = true; render();
     $('psdBody').hidden = true; $('psdConfirm').disabled = true; $('psdAck').checked = false;
     $('psdFileName').textContent = file.name; status('Čtu strukturu PSD…'); dialog.showModal();
@@ -102,25 +103,47 @@
     if (working || $('psdConfirm').disabled) return;
     const current = epoch, mode = $('psdMode').value, targetId = $('psdTarget').value;
     working = true; update();
+    $('psdCancel').textContent = 'Zastavit · uložené ponechat';
+    let completed = 0, savedCount = 0, historyAdded = false;
     try {
       const plan = TraitPSD.plan(metadata, chosen(), mode, M.uid, targetId);
-      for (const [i, job] of plan.jobs.entries()) {
-        const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
-        status(`Převádím ${i + 1} / ${plan.jobs.length}: ${trait.name}`);
-        const buffer = await call('render', { nodeId: job.nodeId }); if (current !== epoch) return;
-        trait.data = await dataURL(buffer); if (current !== epoch) return;
-      }
-      change(() => {
-        TraitPSD.apply(state, plan, mode, targetId);
+      const total = plan.jobs.length;
+      for (let offset = 0; offset < total; offset += 8) {
+        const jobs = plan.jobs.slice(offset, offset + 8);
+        for (const [index, job] of jobs.entries()) {
+          const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
+          status(`Uloženo ${savedCount} / ${total} · převádím ${offset + index + 1}: ${trait.name}`);
+          let buffer = await call('render', { nodeId: job.nodeId }); if (current !== epoch) return;
+          trait.data = await dataURL(buffer); buffer = null; if (current !== epoch) return;
+          await new Promise(resolve => setTimeout(resolve, 35));
+          if (current !== epoch) return;
+        }
+        if (!historyAdded) {
+          undoStack.push(M.clone(state)); if (undoStack.length > 30) undoStack.shift();
+          redoStack.length = 0; historyAdded = true;
+        }
+        TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
+        completed += jobs.length;
         active = mode === 'category' ? targetId : plan.cats[0].id;
         organizerSelection[active] = null;
-        organizerExpanded[active] = new Set(organizerFolders(active).folders.map(f => f.id));
-      });
-      const count = plan.jobs.length; close(); showPanel('traits');
-      const saved = await flushSave();
-      toast(saved ? `Importováno ${count} vrstev z PSD · přes Zpět vrátíš celý import` : `Importováno ${count} vrstev. Stáhni Zálohu JSON — automatické uložení se nepodařilo.`, !saved);
+        revision++; storageStatus('Ukládání dávky PSD…');
+        status(`Ukládám ${completed} / ${total} vrstev…`);
+        if (!await flushSave()) throw new Error('Úložiště nedokázalo uložit další dávku. Zavři import a stáhni Zálohu JSON.');
+        savedCount = completed;
+        if (current !== epoch) return;
+        status(`Uloženo ${savedCount} / ${total} · krátká pauza…`);
+        $('psdImportReason').textContent = `Průběžně uloženo ${savedCount} z ${total} vrstev.`;
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (current !== epoch) return;
+      }
+      close(); showPanel('traits');
+      toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
-      if (current === epoch) { status('Import nebyl proveden: ' + error.message + ' Projekt zůstal beze změny.'); working = false; update(); }
+      if (current === epoch) {
+        working = false; update(); $('psdConfirm').disabled = true;
+        status(`Import zastaven. Uloženo ${savedCount} vrstev, v projektu je ${completed}. ${error.message}`);
+        $('psdImportReason').textContent = 'Dokončené dávky zůstávají v projektu. Zavři toto okno.';
+      }
     }
   }
   $('importPsd').addEventListener('click', () => { if (ready && !busy) fileInput.click(); });

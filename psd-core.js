@@ -147,6 +147,29 @@
     }
     for (const c of plan.cats) if (!project.selected[c.id]) project.selected[c.id] = plan.jobs.find(j => j.categoryId === c.id && !j.hidden)?.traitId || null;
   }
-  const api = { LIMITS, validateHeader, parse, to8, applyMask, raster, plan, apply };
+  function applyBatch(project, plan, jobs, mode, targetId) {
+    const wanted = new Set(jobs.map(j => j.traitId));
+    const readyCats = plan.cats.map(c => ({ ...c, traits: c.traits.filter(t => wanted.has(t.id)) })).filter(c => c.traits.length);
+    if (readyCats.some(c => c.traits.some(t => !t.data.startsWith('data:image/png;base64,')))) throw new Error('Dávka není dokončená.');
+    if (mode === 'category' && !project.cats.some(c => c.id === targetId)) throw new Error('Cílová kategorie neexistuje.');
+    project.organizer ||= {};
+    const plannedIds = new Set(plan.cats.map(c => c.id));
+    for (const incoming of readyCats) {
+      let target = project.cats.find(c => c.id === incoming.id);
+      if (!target) {
+        target = { ...incoming, traits: [] };
+        const index = project.cats.filter(c => plannedIds.has(c.id)).length;
+        project.cats.splice(index, 0, target);
+      }
+      const ids = new Set(target.traits.map(t => t.id));
+      target.traits.push(...incoming.traits.filter(t => !ids.has(t.id)));
+      const org = project.organizer[target.id] ||= { folders: [], assignments: {} };
+      const folderIds = new Set(org.folders.map(f => f.id));
+      org.folders.push(...plan.organizer[target.id].folders.filter(f => !folderIds.has(f.id)));
+      for (const t of incoming.traits) if (plan.organizer[target.id].assignments[t.id]) org.assignments[t.id] = plan.organizer[target.id].assignments[t.id];
+      if (!project.selected[target.id]) project.selected[target.id] = jobs.find(j => j.categoryId === target.id && !j.hidden)?.traitId || null;
+    }
+  }
+  const api = { LIMITS, validateHeader, parse, to8, applyMask, raster, plan, apply, applyBatch };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TraitPSD = api;
 })(globalThis);

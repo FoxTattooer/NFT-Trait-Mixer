@@ -22,7 +22,7 @@ Efekty, vektorové masky, úpravy barev, ořezové masky mezi vrstvami a nenorm�
 
 Velikost vstupního souboru ani souhrnná velikost výsledných PNG nemá pevný limit. Zpracování závisí na dostupné paměti a úložišti zařízení. Počet vybraných vrstev nemá samostatný limit. Zůstává nejvýše 4 000 položek stromu, hloubka 48, nejvýše 16 milionů pixelů a 64 MiB dekódovaných barevných dat na jednu vrstvu či masku. Tyto limity nejsou zárukou dostupné paměti na každém telefonu. Pro větší projekty importuj po částech.
 
-Moderní prohlížeče zpracovávají PSD ve workeru s OffscreenCanvas. Ve starších prohlížečích je záložní zpracování na hlavním vlákně, které může během dekódování na chvíli blokovat rozhraní. Data se dekódují po jednotlivých vrstvách. Zrušení ukončí worker; žádná část rozpracovaného importu se nepřidá do projektu. Celý import se zapisuje jako jeden krok historie a lze jej vrátit. Pokud IndexedDB nedokáže výsledek uložit, aplikace vyzve k JSON záloze.
+Moderní prohlížeče zpracovávají PSD ve workeru s OffscreenCanvas. Ve starších prohlížečích je záložní zpracování na hlavním vlákně, které může během dekódování na chvíli blokovat rozhraní. Data se dekódují po jednotlivých vrstvách. Náhled a export rovněž dekódují obrázky postupně, ne všechny souběžně. Import přidává a ukládá dávky po osmi vrstvách, mezi dávkami krátce uvolní hlavní vlákno. Zastavení ukončí worker; již přidané dávky zůstávají v projektu, právě rozpracovaná dávka se zahodí. Úspěšné uložení se zobrazuje v počítadle. Celý import se zapisuje jako jeden krok historie a lze jej vrátit. Pokud IndexedDB nedokáže výsledek uložit, aplikace vyzve k JSON záloze.
 
 ## Vývoj a ověření
 
