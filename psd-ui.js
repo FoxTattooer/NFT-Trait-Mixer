@@ -14,9 +14,10 @@
   $('psdStatus').after(progressBox);
   function progress(converted, saved, total, detail = '') {
     progressBox.hidden = false;
-    const pct = total ? Math.round(converted / total * 100) : 100;
+    const pct = total ? Math.floor(saved / total * 100) : 100;
     progressBox.querySelector('[data-percent]').textContent = pct + ' %';
     progressBox.querySelector('[data-bar]').value = pct;
+    progressBox.querySelector('[data-bar]').setAttribute('aria-label', 'Bezpečně uloženo ' + saved + ' z ' + total + ' vrstev');
     progressBox.querySelector('[data-counts]').textContent =
       'Převedeno ' + converted + ' / ' + total + ' · bezpečně uloženo ' + saved + ' / ' + total + (detail ? ' · ' + detail : '');
   }
