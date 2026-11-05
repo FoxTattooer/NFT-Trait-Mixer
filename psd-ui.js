@@ -41,7 +41,11 @@
     $('psdSelection').textContent = `${ids.size} vybraných vrstev${warned ? ' · ' + warned + ' s upozorněním' : ''}`;
     $('psdAckRow').hidden = !warned;
     $('psdTargetRow').hidden = $('psdMode').value !== 'category';
-    $('psdConfirm').disabled = working || !ids.size || ids.size > TraitPSD.LIMITS.selected || (!!warned && !$('psdAck').checked) || ($('psdMode').value === 'category' && !$('psdTarget').value);
+    const reason = working ? 'Právě se zpracovává vrstva. Počkej na dokončení.' : !ids.size ? 'Vyber alespoň jednu vrstvu.' : (warned && !$('psdAck').checked) ? 'Potvrď import vrstev s omezeními vzhledu.' : ($('psdMode').value === 'category' && !$('psdTarget').value) ? 'Vyber cílovou kategorii v nabídce nahoře.' : '';
+    $('psdConfirm').disabled = !!reason;
+    $('psdImportReason').textContent = reason || ('Připraveno k importu: ' + ids.size + ' vrstev.');
+    $('psdConfirm').title = reason;
+
     $('psdMode').disabled = working; $('psdTarget').disabled = working;
     for (const e of $('psdTree').querySelectorAll('input,button')) e.disabled = working || e.dataset.unsupported === 'true';
     for (const id of ['psdAll', 'psdNone', 'psdVisible']) $(id).disabled = working;

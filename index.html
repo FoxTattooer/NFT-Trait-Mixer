@@ -50,7 +50,7 @@
     <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
   </div>
-    <div class="header-end"><span class="version">v0.4.1</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+    <div class="header-end"><span class="version">v0.4.2</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
@@ -113,7 +113,7 @@
       <div class="psd-layout"><div id="psdTree" class="psd-tree" aria-label="Vrstvy a skupiny PSD"></div><figure class="psd-preview"><img id="psdPreview" alt="Náhled vybrané vrstvy po převodu"><figcaption id="psdPreviewName">Klepni na Náhled u vrstvy.</figcaption></figure></div>
       <label id="psdAckRow" class="switch-row" hidden><input id="psdAck" type="checkbox"><span>Importovat i označené vrstvy s uvedenými omezeními vzhledu.</span></label>
     </div>
-    <div class="dialog-actions"><button id="psdConfirm" type="button" class="primary" disabled>Importovat vybrané vrstvy</button></div>
+    <p id="psdImportReason" class="helper" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="psdConfirm" type="button" class="primary" disabled>Importovat vybrané vrstvy</button></div>
   </dialog>
   <noscript><p class="notice">Pro práci s vrstvami zapni v prohlížeči JavaScript.</p></noscript>
 </body>

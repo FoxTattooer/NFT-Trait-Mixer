@@ -1,7 +1,7 @@
 /* PSD import logic, shared by the worker and tests. ag-psd is vendored locally. */
 (function (root) {
   'use strict';
-  const LIMITS = { pixels: 16 * 1024 * 1024, nodes: 4000, depth: 48, selected: 500 };
+  const LIMITS = { pixels: 16 * 1024 * 1024, nodes: 4000, depth: 48 };
   const clamp = n => Math.min(1, Math.max(0, n));
   function validateHeader(buffer) {
     if (buffer.byteLength < 26) throw new Error('PSD nemá platnou hlavičku.');
@@ -110,7 +110,7 @@
   }
   function plan(metadata, chosen, mode, uid, targetId) {
     const selected = new Set(chosen), cats = [], organizer = {}, jobs = [];
-    if (!selected.size || selected.size > LIMITS.selected) throw new Error('Vyber 1 až 500 vrstev.');
+    if (!selected.size) throw new Error('Vyber alespoň jednu vrstvu.');
     if (!['structure', 'layers', 'category'].includes(mode)) throw new Error('Neplatný způsob importu.');
     if (mode === 'category' && !targetId) throw new Error('Vyber cílovou kategorii.');
     const category = (name, id = uid()) => { const c = { id, name, visible: true, traits: [] }; cats.push(c); organizer[c.id] = { folders: [], assignments: {} }; return c; };
