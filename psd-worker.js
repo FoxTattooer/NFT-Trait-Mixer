@@ -1,5 +1,5 @@
 'use strict';
-importScripts('./vendor/ag-psd.js', './psd-core.js');
+importScripts('./vendor/ag-psd.js', './psd-core.js', './psd-file.js');
 agPsd.initializeCanvas((w, h) => new OffscreenCanvas(w, h), (width, height) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }));
 let session;
 let queue = Promise.resolve();
@@ -7,7 +7,7 @@ self.onmessage = ({ data }) => {
   queue = queue.then(async () => {
     try {
       if (data.type === 'parse') {
-        session = TraitPSD.parse(data.buffer, agPsd);
+        session = data.file ? await TraitPSDFile.parse(data.file, agPsd, TraitPSD) : TraitPSD.parse(data.buffer, agPsd);
         self.postMessage({ requestId: data.requestId, result: session.metadata });
       } else if (data.type === 'render') {
         if (!session) throw new Error('Nejdřív otevři PSD.');

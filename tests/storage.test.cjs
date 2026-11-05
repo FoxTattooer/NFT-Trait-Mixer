@@ -21,7 +21,7 @@ const image=i=>{const c=createCanvas(2,2),ctx=c.getContext('2d');ctx.fillStyle=`
  };
  await S.save(db,state);assert.equal(writes,610);const manifest=await get(db,'current');assert.equal(manifest.storageFormat,2);assert(!manifest.cats[0].traits[0].data);assert((await get(db,manifest.cats[0].traits[0].assetKey)) instanceof Blob);
  assert.deepEqual(await S.read(db),state);
- state.name='Renamed';state.selected.a='t4';writes=0;await S.save(db,state);assert.equal(writes,0);
+ state.name='Renamed';state.selected.a='t4';writes=0;let responsive=false;setTimeout(()=>{responsive=true;},0);await S.save(db,state);assert.equal(writes,0);assert(responsive,'metadata saves must yield to UI tasks');
  const persisted=structuredClone(state),priorKeys=await keys(db);
  for(let i=610;i<618;i++)state.cats[0].traits.push({id:'t'+i,name:'Layer '+i,data:image(i)});
  writes=0;failAt=3;await assert.rejects(S.save(db,state),e=>e.name==='QuotaExceededError');

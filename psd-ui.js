@@ -50,7 +50,7 @@
       worker.postMessage({ type, requestId, ...args }, args.buffer ? [args.buffer] : []);
     });
     await new Promise(resolve => setTimeout(resolve, 0));
-    if (type === 'parse') { localSession = TraitPSD.parse(args.buffer, window.agPsd); return localSession.metadata; }
+    if (type === 'parse') { localSession = args.file ? await TraitPSDFile.parse(args.file, window.agPsd, TraitPSD) : TraitPSD.parse(args.buffer, window.agPsd); return localSession.metadata; }
     if (!localSession) throw new Error('Import byl ukončen. Otevři PSD znovu.');
     return TraitPSD.raster(localSession, args.nodeId, window.agPsd, (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; });
   }
@@ -108,8 +108,7 @@
       const source = await TraitPSD.fingerprint(file, () => current !== epoch);
       if (current !== epoch) return;
       status('Čtu strukturu PSD…');
-      const buffer = await file.arrayBuffer(); if (current !== epoch) return;
-      const result = await call('parse', { buffer }); if (current !== epoch) return; metadata = { ...result, source };
+      const result = await call('parse', { file }); if (current !== epoch) return; metadata = { ...result, source };
       $('psdTree').innerHTML = treeHTML(metadata.tree);
       $('psdDimensions').textContent = `${metadata.width} × ${metadata.height} px → PNG 1024 × 1024. Poměr stran a pozice zůstanou zachované; obdélník se doplní průhlednými okraji.`;
       $('psdTarget').replaceChildren(new Option('Vyber kategorii…', ''), ...state.cats.map(c => new Option(c.name, c.id)));

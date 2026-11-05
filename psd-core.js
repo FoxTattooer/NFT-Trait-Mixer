@@ -31,6 +31,9 @@
   function parse(buffer, ag) {
     const header = validateHeader(buffer);
     const psd = ag.readPsd(buffer, { useRawData: true, skipCompositeImageData: true, skipThumbnail: true, skipLinkedFilesData: true, imageResourcesWhitelist: [], totalMemoryLimit: 192 * 1024 * 1024 });
+    return describe(psd, header);
+  }
+  function describe(psd, header) {
     const records = new Map(); let sequence = 0;
     function walk(layers, parents = []) {
       if (parents.length > LIMITS.depth) throw new Error('PSD má příliš hluboký strom skupin.');
@@ -84,15 +87,22 @@
     const record = session.records.get(id);
     if (!record?.node.supported) throw new Error('Tuto vrstvu nelze převést na PNG.');
     const { layer, parents } = record;
-    const pixels = to8(ag.getLayerImageData(layer));
+    let pixels;
+    try {
+      if (session.loadLayer) await session.loadLayer(layer, false);
+      pixels = to8(ag.getLayerImageData(layer));
+    } finally { session.releaseLayer?.(layer); }
     if (!pixels) throw new Error('Vrstva nemá obrazová data.');
     // Photoshop's realMask is the user mask; mask can contain the combined mask.
     // Prefer the combined raster mask and avoid applying the user mask twice.
     for (const owner of [...parents, layer]) {
       const mask = owner.mask || owner.realMask;
       if (!mask || mask.disabled) continue;
-      const data = owner.mask ? ag.getLayerMaskImageData(owner) : ag.getLayerRealMaskImageData(owner);
-      applyMask(pixels, layer, owner, mask, to8(data, true));
+      try {
+        if (session.loadLayer) await session.loadLayer(owner, true);
+        const data = owner.mask ? ag.getLayerMaskImageData(owner) : ag.getLayerRealMaskImageData(owner);
+        applyMask(pixels, layer, owner, mask, to8(data, true));
+      } finally { session.releaseLayer?.(owner); }
     }
     const opacity = [...parents, layer].reduce((v, l) => v * clamp(l.opacity ?? 1) * clamp(l.fillOpacity ?? 1), 1);
     if (opacity !== 1) for (let i = 3; i < pixels.data.length; i += 4) pixels.data[i] *= opacity;
@@ -216,7 +226,8 @@
       if (!project.selected[target.id]) project.selected[target.id] = jobs.find(j => j.categoryId === target.id && !j.hidden)?.traitId || null;
     }
   }
-  const api = { LIMITS, validateHeader, parse, to8, applyMask, raster, fingerprint, plan, apply, applyBatch };
+  const api = { LIMITS, validateHeader, parse, describe, to8, applyMask, raster, fingerprint, plan, apply, applyBatch };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TraitPSD = api;
 })(globalThis);
+
 

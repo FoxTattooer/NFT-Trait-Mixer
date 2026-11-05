@@ -25,8 +25,9 @@
       r.onblocked=()=>reject(new Error('Úložiště blokuje jiné otevřené okno aplikace.'));
     });
   }
-  function imageBytes(data) {
-    const base64=data.slice(data.indexOf(',')+1).replace(/[\r\n]/g,'');
+  const breathe = () => new Promise(resolve => setTimeout(resolve, 0));
+  async function imageBytes(data) {
+    const base64=data.slice(data.indexOf(',')+1);
     const parts=[];
     // Decode small aligned base64 blocks, avoiding a second giant binary string.
     for(let offset=0;offset<base64.length;offset+=65536) {
@@ -34,6 +35,7 @@
       const bytes=new Uint8Array(binary.length);
       for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
       parts.push(bytes);
+      if (offset && offset % 1048576 === 0) await breathe();
     }
     return new Blob(parts,{type:'image/png'});
   }
@@ -76,7 +78,7 @@
       for(let i=0;i<project.cats.length;i++)for(const trait of project.cats[i].traits) {
         let entry=cache.get(trait.id);
         if(!entry || entry.data!==trait.data || !existingKeys.has(entry.key)) {
-          const blob=imageBytes(trait.data);
+          const blob=await imageBytes(trait.data);
           const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
           const key='image:'+hash;
           if(!existingKeys.has(key)) {await transaction(db,store=>store.put(blob,key));written.add(key);existingKeys.add(key);}
@@ -86,6 +88,7 @@
         const {data,assetKey,...metadata}=trait;
         manifest.cats[i].traits.push({...metadata,assetKey:entry.key});
         progress(++done,total);
+        if (done % 32 === 0) await breathe();
       }
       // Publish only after every image is durable. On failure the previous project survives.
       const keep=references(manifest);

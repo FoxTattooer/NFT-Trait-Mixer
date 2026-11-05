@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Trait Mixer">
   <title>NFT Trait Mixer</title>
-  <link rel="icon" href="icons/icon-192-v047.png" type="image/png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v047.png">
+  <link rel="icon" href="icons/icon-192-v060.png" type="image/png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v060.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="design.css">
@@ -19,6 +19,7 @@
   <script src="app.js" defer></script>
   <script src="drag.js" defer></script>
   <script src="psd-core.js" defer></script>
+  <script src="psd-file.js" defer></script>
   <script src="psd-ui.js" defer></script>
 </head>
 <body>
@@ -45,7 +46,7 @@
   </svg>
 
   <header class="app-header">
-    <div class="brand"><img src="icons/icon-192-v047.png" width="48" height="48" alt=""><span><strong>NFT Trait Mixer</strong><small>Vrstvy pod kontrolou</small></span></div>
+    <div class="brand"><img src="icons/icon-192-v060.png" width="48" height="48" alt=""><span><strong>NFT Trait Mixer</strong><small>Vrstvy pod kontrolou</small></span></div>
   <div class="toolbar" aria-label="Akce projektu">
     <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button></div>
     <button id="importPsd" type="button" class="subtle" title="Načíst vrstvy a skupiny z Photoshopu">Import PSD</button>
@@ -53,7 +54,7 @@
     <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
   </div>
-    <div class="header-end"><span class="version">v0.5.3</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+    <div class="header-end"><span class="version">v0.6.0</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>

@@ -30,7 +30,7 @@ async function test(worker) {
   w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
   w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
-  const code=['project.js','storage.js','app.js','psd-core.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
+  const code=['project.js','storage.js','app.js','psd-core.js','psd-file.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
   w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave;');
   await waitFor(()=>w.document.querySelector('#appLayout').getAttribute('aria-busy')==='false');
   const $=id=>w.document.getElementById(id);
