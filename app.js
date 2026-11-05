@@ -33,10 +33,16 @@ function storageFailure(reason = '') {
   if (reason) $('storageWarning').textContent += ' Detail: ' + reason.slice(0, 180);
   $('storageWarning').hidden = false;
 }
+// Version 2 keeps large PNG payloads separate from lightweight project metadata.
+const persistedAssets = new Map();
 function openStorage() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('nft-trait-workshop', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('projects');
+    const request = indexedDB.open('nft-trait-workshop', 2);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains('projects')) database.createObjectStore('projects');
+      if (!database.objectStoreNames.contains('assets')) database.createObjectStore('assets');
+    };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
     request.onblocked = () => reject(new Error('Úložiště je blokováno jiným oknem.'));
@@ -44,9 +50,31 @@ function openStorage() {
 }
 function storedProject() {
   return new Promise((resolve, reject) => {
-    const request = db.transaction('projects').objectStore('projects').get('current');
-    request.onsuccess = () => resolve(request.result);
+    const transaction = db.transaction(['projects', 'assets'], 'readonly');
+    const request = transaction.objectStore('projects').get('current');
     request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const project = request.result;
+      if (!project) { resolve(null); return; }
+      const traits = project.cats.flatMap(c => c.traits);
+      const external = traits.filter(t => t.data === null && t.assetKey);
+      if (!external.length) { resolve(project); return; }
+      let pending = external.length, failed = false;
+      for (const trait of external) {
+        const get = transaction.objectStore('assets').get(trait.assetKey);
+        get.onerror = () => { if (!failed) { failed = true; reject(get.error); } };
+        get.onsuccess = () => {
+          if (failed) return;
+          if (typeof get.result !== 'string' || !get.result.startsWith('data:image/png;base64,')) {
+            failed = true; reject(new Error('Chybí uložený obrázek: ' + trait.assetKey)); return;
+          }
+          trait.data = get.result;
+          persistedAssets.set(trait.assetKey, get.result);
+          if (--pending === 0) resolve(project);
+        };
+      }
+    };
+    transaction.onabort = () => reject(transaction.error);
   });
 }
 function flushSave() {
@@ -54,14 +82,24 @@ function flushSave() {
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
   const savingRevision = revision, project = M.clone(state);
+  const changed = [];
+  for (const cat of project.cats) for (const trait of cat.traits) {
+    const key = trait.id;
+    if (persistedAssets.get(key) !== trait.data) changed.push([key, trait.data]);
+    trait.assetKey = key;
+    trait.data = null; // PNG bytes live only in the assets object store.
+  }
   queuedRevision = savingRevision;
   saveQueue = saveQueue.then(() => new Promise((resolve, reject) => {
-    const transaction = db.transaction('projects', 'readwrite');
+    const transaction = db.transaction(['projects', 'assets'], 'readwrite');
+    const assets = transaction.objectStore('assets');
+    for (const [key, data] of changed) assets.put(data, key);
     transaction.objectStore('projects').put(project, 'current');
-    transaction.oncomplete = resolve;
-    transaction.onabort = () => reject(transaction.error);
-    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error || new Error('Transakce byla zrušena.'));
+    transaction.onerror = () => reject(transaction.error || new Error('Chyba ukládání.'));
   })).then(() => {
+    for (const [key, data] of changed) persistedAssets.set(key, data);
     persistedRevision = savingRevision;
     if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
     return true;
