@@ -1,0 +1,13 @@
+<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Obnovení aplikace</title><body style="background:#12141e;color:white;font:18px system-ui;padding:30px"><h1>Obnovení aplikace</h1><p id="status">Načítám opravenou verzi. Uložené projekty se nemažou.</p><script>
+(async()=>{
+const s=document.getElementById('status');
+try{
+if('serviceWorker' in navigator){
+const r=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}); await r.update();
+if(r.installing) await new Promise((resolve,reject)=>{const w=r.installing;const timer=setTimeout(()=>reject(Error('Aktualizace trvá příliš dlouho. Obnov tuto stránku.')),60000);const done=()=>{if(['installed','activated','redundant'].includes(w.state)){clearTimeout(timer);resolve();}};w.addEventListener('statechange',done);done();});
+if(r.waiting){await new Promise(resolve=>{navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true});r.waiting.postMessage({type:'SKIP_WAITING'});setTimeout(resolve,5000);});}
+}
+location.replace('./?safe=1');
+}catch(e){s.textContent='Obnovení se nezdařilo: '+e.message;}
+})();
+</script></body></html>

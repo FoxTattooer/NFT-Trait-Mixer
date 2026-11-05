@@ -50,12 +50,13 @@
     <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
   </div>
-    <div class="header-end"><span class="version">v0.4.3</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+    <div class="header-end"><span class="version">v0.4.4</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
   </div>
+  <div id="recoveryNotice" class="notice" hidden>Obnovovací režim: obrázky se nenačítají. Nejdřív si stáhni Zálohu JSON. <button data-action="enable-previews">Zapnout náhledy</button></div>
   <div id="storageWarning" class="notice warning-notice" role="alert" hidden></div>
   <div id="updateNotice" class="notice" hidden>Je připravena nová verze aplikace. <button data-action="update-app">Aktualizovat</button></div>
 
