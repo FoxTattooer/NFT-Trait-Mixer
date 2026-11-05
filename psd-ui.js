@@ -4,10 +4,29 @@
   const dialog = $('psdDialog'), fileInput = $('psdFile');
   let worker, localSession, metadata, epoch = 0, request = 0, previewURL, working = false;
   const pending = new Map();
+  // Progress is created locally so existing installations retain their markup.
+  const progressBox = document.createElement('div');
+  progressBox.hidden = true;
+  progressBox.setAttribute('role', 'group');
+  progressBox.setAttribute('aria-label', 'Průběh importu PSD');
+  progressBox.style.cssText = 'margin:16px 0;padding:14px;border:1px solid #45495c;border-radius:14px';
+  progressBox.innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px"><strong>Import PSD</strong><strong data-percent>0 %</strong></div><progress data-bar max="100" value="0" style="display:block;width:100%;height:14px;margin:12px 0;accent-color:#55e6bd"></progress><div data-counts style="font-size:13px;opacity:.85">Připraveno</div>';
+  $('psdStatus').after(progressBox);
+  function progress(converted, saved, total, detail = '') {
+    progressBox.hidden = false;
+    const pct = total ? Math.floor(saved / total * 100) : 100;
+    progressBox.querySelector('[data-percent]').textContent = pct + ' %';
+    progressBox.querySelector('[data-bar]').value = pct;
+    progressBox.querySelector('[data-bar]').setAttribute('aria-label', 'Bezpečně uloženo ' + saved + ' z ' + total + ' vrstev');
+    progressBox.querySelector('[data-counts]').textContent =
+      'Převedeno ' + converted + ' / ' + total + ' · bezpečně uloženo ' + saved + ' / ' + total + (detail ? ' · ' + detail : '');
+  }
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+
   const allNodes = nodes => nodes.flatMap(n => [n, ...allNodes(n.children || [])]);
   const status = message => { $('psdStatus').textContent = message; };
   function dispose() {
-    epoch++; worker?.terminate(); worker = null; localSession = null; metadata = null; working = false;
+    progressBox.hidden = true; epoch++; worker?.terminate(); worker = null; localSession = null; metadata = null; working = false;
     for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error('Import zrušen.')); } pending.clear();
     if (previewURL) URL.revokeObjectURL(previewURL); previewURL = null;
     $('psdPreview').removeAttribute('src'); $('psdTree').replaceChildren(); fileInput.value = '';
@@ -124,46 +143,82 @@
     const current = epoch, mode = $('psdMode').value, targetId = $('psdTarget').value;
     working = true; update();
     $('psdCancel').textContent = 'Zastavit · uložené ponechat';
-    let completed = 0, savedCount = 0, historyAdded = false;
+    let completed = 0, savedCount = 0, historyAdded = false, totalForFailure = 0;
     try {
       const selected = new Set(chosen());
       const plan = TraitPSD.plan(metadata, allNodes(metadata.tree).filter(n => n.supported).map(n => n.id), mode, M.uid, targetId, state, $('psdLegacy').checked);
       plan.jobs = plan.jobs.filter(j => selected.has(j.nodeId));
       plan.cats = plan.cats.filter(c => plan.jobs.some(j => j.categoryId === c.id));
       const total = plan.jobs.length;
+      totalForFailure = total;
+      progress(0, 0, total);
+      // Adaptive persistence: try eight, then four, two and finally one layer.
+      // Each successful transaction is a durable checkpoint.
+      async function persistJobs(jobs) {
+        if (current !== epoch) return false;
+        const before = M.clone(state);
+        const previousActive = active;
+        TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
+        revision++;
+        let stored = false;
+        for (let attempt = 1; attempt <= 3 && !stored; attempt++) {
+          if (current !== epoch) break;
+          progress(completed, savedCount, total, 'Ukládám ' + jobs.length + ' vrstev · pokus ' + attempt + '/3');
+          stored = await flushSave();
+          if (!stored && attempt < 3) await pause(attempt * 750);
+        }
+        if (!stored) {
+          state = before;
+          active = previousActive;
+          revision++;
+          // Restore the last durable checkpoint before retrying a smaller batch.
+          if (jobs.length === 1) throw new Error('Vrstva ' + jobs[0].nodeId + ' se nedá uložit ani samostatně. Zkontroluj dostupné místo. Již uložené vrstvy zůstávají zachované.');
+          const middle = Math.ceil(jobs.length / 2);
+          await persistJobs(jobs.slice(0, middle));
+          await persistJobs(jobs.slice(middle));
+          return true;
+        }
+        completed += jobs.length;
+        savedCount = completed;
+        active = mode === 'category' ? targetId : plan.cats[0].id;
+        organizerSelection[active] = null;
+        progress(completed, savedCount, total, 'Bezpečně uloženo');
+        $('psdImportReason').textContent = 'Průběžně uloženo ' + savedCount + ' z ' + total + ' vrstev.';
+        return true;
+      }
       for (let offset = 0; offset < total; offset += 8) {
         const jobs = plan.jobs.slice(offset, offset + 8);
         for (const [index, job] of jobs.entries()) {
-          const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
-          status(`Uloženo ${savedCount} / ${total} · převádím ${offset + index + 1}: ${trait.name}`);
-          let buffer = await call('render', { nodeId: job.nodeId }); if (current !== epoch) return;
-          trait.data = await dataURL(buffer); buffer = null; if (current !== epoch) return;
-          await new Promise(resolve => setTimeout(resolve, 35));
           if (current !== epoch) return;
+          const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
+          status('Uloženo ' + savedCount + ' / ' + total + ' · převádím ' + (offset + index + 1) + ': ' + trait.name);
+          let buffer = await call('render', { nodeId: job.nodeId });
+          if (current !== epoch) return;
+          trait.data = await dataURL(buffer);
+          buffer = null;
+          if (current !== epoch) return;
+          progress(offset + index + 1, savedCount, total, 'Převádím vrstvy');
+          await pause(35);
         }
         if (!historyAdded) {
-          undoStack.push(M.clone(state)); if (undoStack.length > 30) undoStack.shift();
-          redoStack.length = 0; historyAdded = true;
+          undoStack.push(M.clone(state));
+          if (undoStack.length > 30) undoStack.shift();
+          redoStack.length = 0;
+          historyAdded = true;
         }
-        TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
-        completed += jobs.length;
-        active = mode === 'category' ? targetId : plan.cats[0].id;
-        organizerSelection[active] = null;
-        revision++; storageStatus('Ukládání dávky PSD…');
-        status(`Ukládám ${completed} / ${total} vrstev…`);
-        if (!await flushSave()) throw new Error('Úložiště nedokázalo uložit další dávku. Zavři import a stáhni Zálohu JSON.');
-        savedCount = completed;
+        status('Ukládám dávku ' + (offset + 1) + '–' + Math.min(total, offset + jobs.length) + ' / ' + total + '…');
+        await persistJobs(jobs);
         if (current !== epoch) return;
-        status(`Uloženo ${savedCount} / ${total} · krátká pauza…`);
-        $('psdImportReason').textContent = `Průběžně uloženo ${savedCount} z ${total} vrstev.`;
-        await new Promise(resolve => setTimeout(resolve, 150));
-        if (current !== epoch) return;
+        status('Uloženo ' + savedCount + ' / ' + total + ' · pokračuji…');
+        await pause(150);
       }
+      if (savedCount !== total) throw new Error('Kontrola dokončení selhala: nebyly potvrzeny všechny vrstvy.');
       close(); showPanel('traits');
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {
         working = false; update(); $('psdConfirm').disabled = true;
+        progress(completed, savedCount, totalForFailure, 'Import zastaven');
         status(`Import zastaven. Uloženo ${savedCount} vrstev, v projektu je ${completed}. ${error.message}`);
         $('psdImportReason').textContent = 'Dokončené dávky zůstávají v projektu. Zavři toto okno.';
       }
