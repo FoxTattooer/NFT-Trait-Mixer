@@ -132,8 +132,42 @@
     // If every full combination conflicts, leave the conflicting target empty.
     for (const w of conflicts(p).warnings) p.selected[w.targetCat] = null;
   }
-  const api = { uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  function moveCategory(p, sourceId, targetId, after = false) {
+    const source = category(p, sourceId), target = category(p, targetId);
+    if (!source || !target || source === target) return false;
+    const before = p.cats.map(c => c.id).join(',');
+    p.cats.splice(p.cats.indexOf(source), 1);
+    p.cats.splice(p.cats.indexOf(target) + Number(after), 0, source);
+    return before !== p.cats.map(c => c.id).join(',');
+  }
+  function moveFolder(p, sourceCatId, folderId, targetCatId, targetFolderId, placement = 'inside') {
+    if (!['before', 'after', 'inside'].includes(placement)) return false;
+    const sourceCat = category(p, sourceCatId), targetCat = category(p, targetCatId);
+    const source = p.organizer?.[sourceCatId], target = p.organizer?.[targetCatId];
+    const folder = source?.folders.find(f => f.id === folderId);
+    const destination = target?.folders.find(f => f.id === targetFolderId);
+    if (!sourceCat || !targetCat || !folder || (targetFolderId && !destination)) return false;
+    const subtree = new Set([folderId]);
+    for (let changed = true; changed;) { changed = false; for (const f of source.folders) if (subtree.has(f.parentId) && !subtree.has(f.id)) { subtree.add(f.id); changed = true; } }
+    if (sourceCatId === targetCatId && subtree.has(targetFolderId)) return false;
+    const parentId = placement === 'inside' ? targetFolderId || null : destination?.parentId || null;
+    const before = JSON.stringify([source.folders, target?.folders]);
+    const moving = source.folders.filter(f => subtree.has(f.id));
+    const assignments = Object.entries(source.assignments).filter(([, id]) => subtree.has(id));
+    source.folders = source.folders.filter(f => !subtree.has(f.id));
+    const next = p.organizer[targetCatId] ||= { folders: [], assignments: {} };
+    folder.parentId = parentId;
+    let index = next.folders.length;
+    if (placement !== 'inside' && destination) index = next.folders.indexOf(destination) + Number(placement === 'after');
+    next.folders.splice(index, 0, ...moving);
+    if (sourceCatId !== targetCatId) for (const [traitId, assignedId] of assignments) {
+      moveTrait(p, traitId, targetCatId); next.assignments[traitId] = assignedId;
+    }
+    return sourceCatId !== targetCatId || before !== JSON.stringify([source.folders, next.folders]);
+  }
+  const api = { moveCategory, moveFolder, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);
+
 

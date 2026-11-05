@@ -130,6 +130,9 @@ function showPanel(panel) {
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
 }
+function dragHandle(kind, id, categoryId, label) {
+  return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
+}
 function renderCategoryStepper(c) {
   const index = c.traits.findIndex(t => t.id === state.selected[c.id]);
   const selected = c.traits[index];
@@ -137,7 +140,7 @@ function renderCategoryStepper(c) {
 }
 function renderCategories(hidden) {
   $('catCount').textContent = state.cats.length;
-  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
+  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top drop-row" data-drop-kind="category" data-drop-id="${esc(c.id)}" data-category="${esc(c.id)}">${dragHandle('category', c.id, c.id, c.name)}<button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><svg class="icon"><use href="#i-folder"/></svg><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${c.id === active && organizerFolders(c.id).folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, organizerFolders(c.id).folders, organizerFolders(c.id).assignments)}</div>` : ''}${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
 }
 function organizerFolders(categoryId) {
   return state.organizer?.[categoryId] || { folders: [], assignments: {} };
@@ -163,9 +166,9 @@ function renderOrganizerFolderRows(category, folders, assignments, parentId = nu
     const hasChildren = folders.some(f => f.parentId === folder.id);
     const canDelete = count === 0 && !hasChildren;
     const expanded = organizerExpanded[category.id]?.has(folder.id);
-    return `<div class="organizer-folder-row ${selected ? 'is-selected' : ''}" data-category="${esc(category.id)}" style="padding-left:${depth*8}px">
+    return `<div class="organizer-folder-row drop-row ${selected ? 'is-selected' : ''}" data-drop-kind="folder" data-drop-id="${esc(folder.id)}" data-category="${esc(category.id)}" style="padding-left:${Math.min(depth, 6)*12}px">${dragHandle('folder', folder.id, category.id, folder.name)}
       ${hasChildren ? `<button class="organizer-folder-toggle" data-action="organizer-toggle-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} ${esc(folder.name)}" aria-expanded="${!!expanded}">${expanded ? '⌄' : '›'}</button>` : '<span class="organizer-folder-spacer"></span>'}
-      <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label">${esc(folder.name)}</span><span class="folder-count">${count}</span></button>
+      <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label"><svg class="icon"><use href="#i-folder"/></svg>${esc(folder.name)}</span><span class="folder-count">${count}</span></button>
       ${canDelete ? `<span class="organizer-folder-tools">${tool('delete-organizer-folder', `Smazat prázdnou složku ${folder.name}`, folder.id, 'trash', false, true)}</span>` : ''}
     </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, folder.id, depth + 1) : ''}`;
   }).join('');
@@ -192,7 +195,7 @@ function renderTraits() {
     if (folderId && !folders.some(f => f.id === folderId)) organizerSelection[c.id] = null;
     const currentFolder = organizerSelection[c.id] || null;
     const visibleTraits = currentFolder ? c.traits.filter(t => assignments[t.id] === currentFolder) : c.traits;
-    $('organizerTree').innerHTML = `<button class="organizer-all ${!currentFolder ? 'is-selected' : ''}" data-action="organizer-select-folder" data-category="${esc(c.id)}" data-id="" aria-pressed="${!currentFolder}"><span>Všechny traity</span><span class="folder-count">${c.traits.length}</span></button>
+    $('organizerTree').innerHTML = `<button data-drop-kind="folder-root" data-category="${esc(c.id)}" class="organizer-all drop-row ${!currentFolder ? 'is-selected' : ''}" data-action="organizer-select-folder" data-category="${esc(c.id)}" data-id="" aria-pressed="${!currentFolder}"><span>Všechny traity</span><span class="folder-count">${c.traits.length}</span></button>
       <div class="organizer-folder-list">${renderOrganizerFolderRows(c, folders, assignments)}</div>
       <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
     $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
@@ -520,17 +523,17 @@ async function handleAction(action, id, element) {
     case 'library-next': libraryPages[id] = (libraryPages[id] || 0) + 1; renderSnapshotLayerLibrary(); break;
     case 'enable-previews': safeMode = false; $('recoveryNotice').hidden = true; render(); break;
     case 'open-traits': showPanel('traits'); break;
-    case 'select-category': { traitPage = 0; active = id; organizerSelection[id] = null; organizerExpanded[id] = new Set(organizerFolders(id).folders.map(folder => folder.id)); render(); showPanel('traits'); break; }
+    case 'select-category': { traitPage = 0; active = id; organizerSelection[id] = null; organizerExpanded[id] = new Set(organizerFolders(id).folders.map(folder => folder.id)); render(); if (!element?.closest('#cats')) showPanel('traits'); break; }
     case 'organizer-toggle-folder': {
       const categoryId = element?.dataset.category || active;
       const expanded = organizerExpanded[categoryId] ||= new Set();
       if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
-      renderTraits();
+      render();
       break;
     }
     case 'organizer-select-folder': {
       const categoryId = element?.dataset.category || active, cat = M.category(state, categoryId);
-      if (cat && (!id || organizerFolders(categoryId).folders.some(f => f.id === id))) { active = categoryId; organizerSelection[categoryId] = id || null; renderTraits(); }
+      if (cat && (!id || organizerFolders(categoryId).folders.some(f => f.id === id))) { active = categoryId; organizerSelection[categoryId] = id || null; traitPage = 0; render(); }
       break;
     }
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
@@ -738,4 +741,5 @@ async function init() {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
+
 

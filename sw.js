@@ -1,8 +1,8 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.4.8';
-const SHELL = ['./', './index.html', './styles.css', './project.js', './app.js', './psd-core.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v047.png', './icons/icon-512-v047.png', './icons/apple-touch-icon-v047.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = PREFIX + 'v0.5.0';
+const SHELL = ['./', './index.html', './styles.css', './design.css', './drag.js', './project.js', './app.js', './psd-core.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v047.png', './icons/icon-512-v047.png', './icons/apple-touch-icon-v047.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL.map(path => new Request(path, { cache: 'reload' })))));
 });
@@ -25,5 +25,6 @@ self.addEventListener('fetch', event => {
     return await cache.match(key) || fetch(event.request);
   })());
 });
+
 
 
