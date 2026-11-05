@@ -151,50 +151,73 @@
       const total = plan.jobs.length;
       totalForFailure = total;
       progress(0, 0, total);
-      for (let offset = 0; offset < total; offset += 8) {
-        const jobs = plan.jobs.slice(offset, offset + 8);
-        for (const [index, job] of jobs.entries()) {
-          const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
-          status(`Uloženo ${savedCount} / ${total} · převádím ${offset + index + 1}: ${trait.name}`);
-          let buffer = await call('render', { nodeId: job.nodeId }); if (current !== epoch) return;
-          trait.data = await dataURL(buffer); buffer = null; if (current !== epoch) return;
-          progress(offset + index + 1, savedCount, total, 'Převádím vrstvy');
-          await new Promise(resolve => setTimeout(resolve, 35));
-          if (current !== epoch) return;
-        }
-        if (!historyAdded) {
-          undoStack.push(M.clone(state)); if (undoStack.length > 30) undoStack.shift();
-          redoStack.length = 0; historyAdded = true;
-        }
-        // Keep a rollback snapshot until IndexedDB confirms the batch.
-        const beforeBatch = M.clone(state);
+      // Adaptive persistence: try eight, then four, two and finally one layer.
+      // Each successful transaction is a durable checkpoint.
+      async function persistJobs(jobs) {
+        if (current !== epoch) return false;
+        const before = M.clone(state);
+        const previousActive = active;
         TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
-        completed += jobs.length;
-        active = mode === 'category' ? targetId : plan.cats[0].id;
-        organizerSelection[active] = null;
-        revision++; storageStatus('Ukládání dávky PSD…');
-        status(`Ukládám ${completed} / ${total} vrstev…`);
+        revision++;
         let stored = false;
         for (let attempt = 1; attempt <= 3 && !stored; attempt++) {
-          if (current !== epoch) return;
-          progress(completed, savedCount, total, 'Ukládám dávku · pokus ' + attempt + '/3');
+          if (current !== epoch) break;
+          progress(completed, savedCount, total, 'Ukládám ' + jobs.length + ' vrstev · pokus ' + attempt + '/3');
           stored = await flushSave();
           if (!stored && attempt < 3) await pause(attempt * 750);
         }
         if (!stored) {
-          state = beforeBatch;
-          completed -= jobs.length;
+          state = before;
+          active = previousActive;
           revision++;
-          throw new Error('Nepodařilo se uložit dávku ani po 3 pokusech. Poslední nepotvrzená dávka byla vrácena. Zkontroluj volné místo a stáhni zálohu JSON.');
+          // Restore the last durable checkpoint before retrying a smaller batch.
+          if (jobs.length === 1) throw new Error('Vrstva ' + jobs[0].nodeId + ' se nedá uložit ani samostatně. Zkontroluj dostupné místo. Již uložené vrstvy zůstávají zachované.');
+          const middle = Math.ceil(jobs.length / 2);
+          await persistJobs(jobs.slice(0, middle));
+          await persistJobs(jobs.slice(middle));
+          return true;
         }
+        completed += jobs.length;
         savedCount = completed;
-        progress(completed, savedCount, total, 'Dávka uložena');
-        if (current !== epoch) return;
-        status(`Uloženo ${savedCount} / ${total} · krátká pauza…`);
-        $('psdImportReason').textContent = `Průběžně uloženo ${savedCount} z ${total} vrstev.`;
-        await new Promise(resolve => setTimeout(resolve, 150));
-        if (current !== epoch) return;
+        active = mode === 'category' ? targetId : plan.cats[0].id;
+        organizerSelection[active] = null;
+        progress(completed, savedCount, total, 'Bezpečně uloženo');
+        $('psdImportReason').textContent = 'Průběžně uloženo ' + savedCount + ' z ' + total + ' vrstev.';
+        return true;
       }
+      for (let offset = 0; offset < total; offset += 8) {
+        const jobs = plan.jobs.slice(offset, offset + 8);
+        for (const [index, job] of jobs.entries()) {
+          if (current !== epoch) return;
+          const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
+          status('Uloženo ' + savedCount + ' / ' + total + ' · převádím ' + (offset + index + 1) + ': ' + trait.name);
+          let buffer = await call('render', { nodeId: job.nodeId });
+          if (current !== epoch) return;
+          trait.data = await dataURL(buffer);
+          buffer = null;
+          if (current !== epoch) return;
+          progress(offset + index + 1, savedCount, total, 'Převádím vrstvy');
+          await pause(35);
+        }
+        if (!historyAdded) {
+          undoStack.push(M.clone(state));
+          if (undoStack.length > 30) undoStack.shift();
+          redoStack.length = 0;
+          historyAdded = true;
+        }
+        status('Ukládám dávku ' + (offset + 1) + '–' + Math.min(total, offset + jobs.length) + ' / ' + total + '…');
+        await persistJobs(jobs);
+        if (current !== epoch) return;
+        status('Uloženo ' + savedCount + ' / ' + total + ' · pokračuji…');
+        // Drop rendered PNG strings from the import plan once persisted.
+        for (const job of jobs) {
+          const cat = plan.cats.find(c => c.id === job.categoryId);
+          const trait = cat.traits.find(t => t.id === job.traitId);
+          if (trait) trait.data = '';
+        }
+        await pause(150);
+      }
+      if (savedCount !== total) throw new Error('Kontrola dokončení selhala: nebyly potvrzeny všechny vrstvy.');
       close(); showPanel('traits');
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
