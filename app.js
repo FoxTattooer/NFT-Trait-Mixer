@@ -27,9 +27,10 @@ function storageStatus(text, error = false) {
   $('saveStatus').textContent = text;
   $('saveStatus').classList.toggle('is-error', error);
 }
-function storageFailure() {
+function storageFailure(reason = '') {
   storageStatus('V zařízení se nepodařilo uložit změny', true);
   $('storageWarning').textContent = 'Automatické ukládání není dostupné nebo je úložiště plné. Stáhni si Zálohu JSON, abys nepřišel o projekt.';
+  if (reason) $('storageWarning').textContent += ' Detail: ' + reason.slice(0, 180);
   $('storageWarning').hidden = false;
 }
 function openStorage() {
@@ -64,7 +65,7 @@ function flushSave() {
     persistedRevision = savingRevision;
     if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
     return true;
-  }).catch(() => { queuedRevision = persistedRevision; storageFailure(); return false; });
+  }).catch(error => { queuedRevision = persistedRevision; storageFailure(error?.name + ': ' + error?.message); return false; });
   return saveQueue;
 }
 function scheduleSave() {
@@ -321,6 +322,8 @@ function render() {
     $('emptyDescription').textContent = hasTraits ? 'Vyber trait a zapni viditelnost jeho kategorie.' : 'Nahraj varianty do vybrané kategorie. Průhlednost zůstane zachovaná.';
     $('emptyAction').textContent = hasTraits ? 'Vybrat traity' : '＋ Nahrát PNG'; $('emptyAction').dataset.action = hasTraits ? 'open-traits' : 'add-traits';
   }
+  // Avoid rebuilding hundreds of DOM nodes and decoding previews while importing PSD.
+  if (busy) return;
   renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); draw();
 }
 function download(blob, name) {
