@@ -30,8 +30,8 @@ async function test(worker) {
   w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
   w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
-  const code=['project.js','app.js','psd-core.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
-  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target;');
+  const code=['project.js','storage.js','app.js','psd-core.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
+  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave;');
   await waitFor(()=>w.document.querySelector('#appLayout').getAttribute('aria-busy')==='false');
   const $=id=>w.document.getElementById(id);
   async function choose(bytes,name='example.psd') {
@@ -88,6 +88,20 @@ async function test(worker) {
   assert.equal($('cats').querySelectorAll('.category-card').length,categoryCount);
   assert.equal($('traits').querySelectorAll('.trait-card').length,3);
   await choose(partial);assert($('psdConfirm').disabled);$('psdCancel').click();
+  const saveOriginal=w.TraitStorage.save;
+  w.TraitStorage.save=async()=>{throw new w.DOMException('Simulated quota','QuotaExceededError');};
+  w.testRename();assert.equal(await w.testFlush(),false);
+  assert(!$('storageWarning').hidden);assert($('storageWarning').textContent.includes('nedostatku místa'));
+  w.TraitStorage.save=saveOriginal;$('storageWarning').querySelector('[data-action="retry-save"]').click();
+  await waitFor(()=>$('storageWarning').hidden);
+  await w.testFlush();
+  let releaseSave;
+  w.TraitStorage.save=(...args)=>new Promise((resolve,reject)=>{releaseSave=()=>saveOriginal(...args).then(resolve,reject);});
+  await choose(ag.writePsd({...source,width:7}));$('psdConfirm').click();
+  await waitFor(()=>!!releaseSave);$('psdCancel').click();
+  assert($('psdDialog').hasAttribute('open'),'Cancellation must wait for the pending write');
+  releaseSave();await waitFor(()=>!$('psdDialog').hasAttribute('open'));
+  w.TraitStorage.save=saveOriginal;
   await w.happyDOM.abort();w.close();
   console.log('PASS full import UI ('+(worker?'worker + bundled parser':'main-thread fallback')+'): tree, preview, cancel during import, PNG/category/folder import, undo, invalid file, warning acknowledgement and append to existing category');
 }

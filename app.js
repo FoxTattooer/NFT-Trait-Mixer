@@ -27,45 +27,33 @@ function storageStatus(text, error = false) {
   $('saveStatus').textContent = text;
   $('saveStatus').classList.toggle('is-error', error);
 }
-function storageFailure(reason = '') {
-  storageStatus('V zařízení se nepodařilo uložit změny', true);
-  $('storageWarning').textContent = 'Automatické ukládání není dostupné nebo je úložiště plné. Stáhni si Zálohu JSON, abys nepřišel o projekt.';
-  if (reason) $('storageWarning').textContent += ' Detail: ' + reason.slice(0, 180);
-  $('storageWarning').hidden = false;
+let lastStorageError = null;
+function storageFailure(error = lastStorageError) {
+  lastStorageError = error;
+  const quota = error?.name === 'QuotaExceededError';
+  storageStatus(quota ? 'V úložišti prohlížeče není dost místa' : 'V zařízení se nepodařilo uložit změny', true);
+  const warning = $('storageWarning');
+  const explanation = quota ? 'Prohlížeč odmítl zápis kvůli nedostatku místa. Uvolni místo v zařízení a zkus uložení znovu.' : 'Uložení se nezdařilo' + (error ? ' (' + (error.name || 'Chyba') + ': ' + error.message + ')' : '') + '. Změny zůstávají v otevřené aplikaci.';
+  const text = document.createElement('span'); text.textContent = explanation + ' Před zavřením stránky stáhni Zálohu JSON. ';
+  const retry = document.createElement('button'); retry.dataset.action = 'retry-save'; retry.textContent = 'Zkusit uložit znovu';
+  const backup = document.createElement('button'); backup.dataset.action = 'save-project'; backup.textContent = 'Záloha JSON';
+  warning.replaceChildren(text,retry,backup);warning.hidden = false;
 }
-function openStorage() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('nft-trait-workshop', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('projects');
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error('Úložiště je blokováno jiným oknem.'));
-  });
-}
-function storedProject() {
-  return new Promise((resolve, reject) => {
-    const request = db.transaction('projects').objectStore('projects').get('current');
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
+function openStorage() { return TraitStorage.open(); }
+function storedProject() { return TraitStorage.read(db, (done,total) => storageStatus(`Obnovuji vrstvy ${done} / ${total}…`)); }
 function flushSave() {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
   const savingRevision = revision, project = M.clone(state);
   queuedRevision = savingRevision;
-  saveQueue = saveQueue.then(() => new Promise((resolve, reject) => {
-    const transaction = db.transaction('projects', 'readwrite');
-    transaction.objectStore('projects').put(project, 'current');
-    transaction.oncomplete = resolve;
-    transaction.onabort = () => reject(transaction.error);
-    transaction.onerror = () => reject(transaction.error);
+  saveQueue = saveQueue.then(() => TraitStorage.save(db, project, (done,total) => {
+    if (revision === savingRevision) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
   })).then(() => {
     persistedRevision = savingRevision;
     if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
     return true;
-  }).catch(error => { queuedRevision = persistedRevision; storageFailure(error?.name + ': ' + error?.message); return false; });
+  }).catch(error => { queuedRevision = persistedRevision; storageFailure(error); return false; });
   return saveQueue;
 }
 function scheduleSave() {
@@ -619,6 +607,10 @@ async function handleAction(action, id, element) {
       if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) { change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven'); showPanel('layers'); }
       break;
     case 'open-project': $('projectFile').click(); break;
+    case 'retry-save':
+      if (!db) { toast('Nejdřív stáhni Zálohu JSON. Úložiště není otevřené.', true); break; }
+      if (await flushSave()) toast('Projekt je uložený v zařízení');
+      break;
     case 'save-project': download(new Blob([JSON.stringify(state)], { type: 'application/json' }), `${filename(state.name)}.json`); toast('Záloha projektu je připravená ke stažení'); break;
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
@@ -738,11 +730,12 @@ async function init() {
     if (saved) state = M.normalize(saved);
     storageStatus(saved ? 'Projekt obnoven z tohoto zařízení' : 'Automatické ukládání je zapnuté');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
-  } catch { storageFailure(); }
+  } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;
   ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
+
 
 

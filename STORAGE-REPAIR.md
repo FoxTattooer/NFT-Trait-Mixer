@@ -1,0 +1,7 @@
+# Storage repair, 2026-11-05
+
+Audited main `2be233fc6c683a1db0ce0fd27b35180730824413` against the deployed design commit `c09ef4e47d45fa958212e0e347491fcf799bcf6a` and experimental branch `fix/psd-asset-storage-v2` (`85346611da96074737cc6c0d153700f5989ceed3`). Main had adaptive retries, durable progress and a busy rendering guard, but still wrote every PNG as Base64 inside a single IndexedDB current-project record. The asset-storage branch was not deployed.
+
+The repair retains the current importer and rendering guard, adds per-image binary records and a small current-project manifest, and publishes that manifest only after the new image records have been written. Unchanged images are not rewritten. Failed attempts retain the previous manifest and clean up their staged records. Quota failures are distinguished from other errors and can be retried. Import cancellation waits for an active batch write to finish or roll back. Existing inline projects and experimental v2 assets remain readable. No database is deleted.
+
+Validation: model, real generated PSD/PSB raster fixtures, import UI simulation with worker and fallback, resume and drag tests; 610 generated small PNG storage records, migration, metadata-only saves, eight-image batch, simulated quota/manifest failures, retry, deduplication, delete/undo and database reopen. These are automated tests, not a reproduction using the user's 559-layer PSD on a physical iPhone. Device quota, memory exhaustion and Safari-specific failures remain possible.

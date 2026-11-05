@@ -3,6 +3,7 @@
   'use strict';
   const dialog = $('psdDialog'), fileInput = $('psdFile');
   let worker, localSession, metadata, epoch = 0, request = 0, previewURL, working = false;
+  let savingBatch = false, cancelRequested = false;
   const pending = new Map();
   // Progress is created locally so existing installations retain their markup.
   const progressBox = document.createElement('div');
@@ -32,7 +33,7 @@
     $('psdPreview').removeAttribute('src'); $('psdTree').replaceChildren(); fileInput.value = '';
     busy = false; render();
   }
-  function close() { dialog.close(); dispose(); }
+  function close() { if (savingBatch) { cancelRequested = true; status('Dokončuji probíhající zápis. Pak import zastavím.'); return; } cancelRequested = false; dialog.close(); dispose(); }
   function loadLibrary() {
     if (window.agPsd) return Promise.resolve();
     return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = './vendor/ag-psd.js'; script.onload = resolve; script.onerror = () => { script.remove(); reject(new Error('Podporu PSD nelze načíst. Připoj se a aktualizuj aplikaci.')); }; document.head.append(script); });
@@ -145,6 +146,13 @@
     $('psdCancel').textContent = 'Zastavit · uložené ponechat';
     let completed = 0, savedCount = 0, historyAdded = false, totalForFailure = 0;
     try {
+      status('Kontroluji uložení dosavadního projektu…');
+      savingBatch = true;
+      let initialSaved;
+      try { initialSaved = await flushSave(); } finally { savingBatch = false; }
+      if (cancelRequested) { close(); return; }
+      if (!initialSaved) throw new Error('Dosavadní projekt není uložený. Zavři import a použij Zkusit uložit znovu nebo Zálohu JSON.');
+      if (current !== epoch) return;
       const selected = new Set(chosen());
       const plan = TraitPSD.plan(metadata, allNodes(metadata.tree).filter(n => n.supported).map(n => n.id), mode, M.uid, targetId, state, $('psdLegacy').checked);
       plan.jobs = plan.jobs.filter(j => selected.has(j.nodeId));
@@ -161,21 +169,31 @@
         TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
         revision++;
         let stored = false;
+        savingBatch = true;
         for (let attempt = 1; attempt <= 3 && !stored; attempt++) {
           if (current !== epoch) break;
           progress(completed, savedCount, total, 'Ukládám ' + jobs.length + ' vrstev · pokus ' + attempt + '/3');
+          savingBatch = true;
           stored = await flushSave();
+          if (cancelRequested) {
+            savingBatch = false;
+            if (!stored) { state = before; active = previousActive; revision++; }
+            close(); return false;
+          }
+          if (lastStorageError?.name === 'QuotaExceededError' && !stored) break;
           if (!stored && attempt < 3) await pause(attempt * 750);
         }
+        savingBatch = false;
         if (!stored) {
           state = before;
           active = previousActive;
           revision++;
           // Restore the last durable checkpoint before retrying a smaller batch.
           if (jobs.length === 1) throw new Error('Vrstva ' + jobs[0].nodeId + ' se nedá uložit ani samostatně. Zkontroluj dostupné místo. Již uložené vrstvy zůstávají zachované.');
+          if (lastStorageError?.name === 'QuotaExceededError') throw new Error('Úložiště odmítlo zápis kvůli nedostatku místa. Opakování stejného zápisu nepomůže; uložené dávky zůstaly zachované.');
           const middle = Math.ceil(jobs.length / 2);
-          await persistJobs(jobs.slice(0, middle));
-          await persistJobs(jobs.slice(middle));
+          if (!await persistJobs(jobs.slice(0, middle))) return false;
+          if (!await persistJobs(jobs.slice(middle))) return false;
           return true;
         }
         completed += jobs.length;
@@ -207,7 +225,7 @@
           historyAdded = true;
         }
         status('Ukládám dávku ' + (offset + 1) + '–' + Math.min(total, offset + jobs.length) + ' / ' + total + '…');
-        await persistJobs(jobs);
+        if (!await persistJobs(jobs)) return;
         if (current !== epoch) return;
         status('Uloženo ' + savedCount + ' / ' + total + ' · pokračuji…');
         await pause(150);
@@ -239,4 +257,5 @@
     update();
   });
 })();
+
 
