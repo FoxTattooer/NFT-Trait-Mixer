@@ -1,0 +1,46 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { createCanvas } = require('@napi-rs/canvas');
+const PSD = require('../psd-core.js'), M = require('../project.js');
+let sequence = 0; const uid = () => 'test-' + (++sequence);
+const png = createCanvas(1,1).toDataURL('image/png');
+const leaf = i => ({ id:'psd-'+(i+3), name:'Trait '+i, supported:true, warnings:[], hidden:false });
+const metadata = { source:'a'.repeat(64), tree:[{id:'psd-1',name:'Category',group:true,children:[{id:'psd-2',name:'Folder',group:true,children:Array.from({length:610},(_,i)=>leaf(i))}]}] };
+const ids = metadata.tree[0].children[0].children.map(n=>n.id);
+function fill(plan) {for(const c of plan.cats)for(const t of c.traits)t.data=png;}
+(async()=>{
+  let state = M.empty();
+  let plan = PSD.plan(metadata,ids,'structure',uid,null,state); fill(plan);
+  // Persist only the first batch, as if the page had crashed immediately afterwards.
+  PSD.applyBatch(state,plan,plan.jobs.slice(0,8),'structure');
+  state = M.normalize(JSON.parse(JSON.stringify(state)));
+  state.cats[0].name='Renamed category';state.cats[0].traits[0].name='Renamed trait';
+  const catId=state.cats[0].id, folderId=state.organizer[catId].folders[0].id;
+  plan=PSD.plan(metadata,ids,'structure',uid,null,state);
+  assert.equal(plan.jobs.length,602);assert.equal(plan.skipped.length,8);assert.equal(plan.cats[0].id,catId);
+  assert.equal(plan.organizer[catId].folders[0].id,folderId);fill(plan);
+  for(let i=0;i<plan.jobs.length;i+=8)PSD.applyBatch(state,plan,plan.jobs.slice(i,i+8),'structure');
+  state=M.normalize(state);assert.equal(state.cats.length,1);assert.equal(state.cats[0].traits.length,610);assert.equal(state.organizer[catId].folders.length,1);
+  assert.equal(PSD.plan(metadata,ids,'structure',uid,null,state).jobs.length,0);
+  const second={id:uid(),name:'Other',visible:true,traits:[]};state.cats.push(second);
+  M.moveTrait(state,state.cats[0].traits[0].id,second.id);
+  assert.equal(PSD.plan(metadata,ids,'layers',uid,null,state).jobs.length,0);
+  assert.equal(PSD.plan(metadata,ids,'category',uid,second.id,state).jobs.length,0);
+  M.removeTrait(state,second.id,second.traits[0].id);
+  assert.equal(PSD.plan(metadata,ids,'structure',uid,null,state).jobs.length,1);
+  assert.equal(PSD.plan({...metadata,source:'b'.repeat(64)},ids,'structure',uid,null,state).jobs.length,610);
+  const legacy=M.empty(), old=PSD.plan({...metadata,source:undefined},ids,'structure',uid);fill(old);PSD.applyBatch(legacy,old,old.jobs.slice(0,8),'structure');
+  assert.equal(PSD.plan(metadata,ids,'structure',uid,null,legacy).jobs.length,610);
+  const resumed=PSD.plan(metadata,ids,'structure',uid,null,legacy,true);
+  assert.equal(resumed.jobs.length,602);assert.equal(resumed.cats[0].id,legacy.cats[0].id);fill(resumed);PSD.applyBatch(legacy,resumed,resumed.jobs,'structure');
+  assert.equal(legacy.cats.length,1);assert.equal(legacy.cats[0].traits.length,610);
+  assert.equal(PSD.plan(metadata,ids,'structure',uid,null,legacy,true).jobs.length,0);
+  const ambiguous=structuredClone(metadata);ambiguous.tree[0].children[0].children[1].name='Trait 0';
+  const legacySmall=M.empty(), dup=PSD.plan({...ambiguous,source:undefined},ids,'structure',uid);fill(dup);PSD.applyBatch(legacySmall,dup,dup.jobs.slice(0,1),'structure');
+  assert.equal(PSD.plan(ambiguous,ids,'structure',uid,null,legacySmall,true).skipped.length,0);
+  const blob=new Blob([new Uint8Array(4*1024*1024+1)]), same=new Blob([new Uint8Array(blob.size)]), changed=new Blob([new Uint8Array(blob.size-1),new Uint8Array([1])]);
+  assert.equal(await PSD.fingerprint(blob),await PSD.fingerprint(same));
+  assert.notEqual(await PSD.fingerprint(blob),await PSD.fingerprint(changed));
+  await assert.rejects(()=>PSD.fingerprint(blob,()=>true));
+  console.log('PASS resume: 610 layers, saved batch/reload, renamed/moved/deleted traits, JSON origins, folder reuse, legacy opt-in, ambiguous names, chunk fingerprint and cancellation');
+})().catch(e=>{console.error(e);process.exitCode=1;});

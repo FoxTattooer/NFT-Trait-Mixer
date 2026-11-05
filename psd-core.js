@@ -108,32 +108,77 @@
     canvas.width = canvas.height = 1;
     return blob.arrayBuffer();
   }
-  function plan(metadata, chosen, mode, uid, targetId) {
-    const selected = new Set(chosen), cats = [], organizer = {}, jobs = [];
+  // Hash bounded chunks: no second full-file buffer on memory-constrained phones.
+  async function fingerprint(file, cancelled = () => false) {
+    const hashes = [];
+    const hex = buffer => Array.from(new Uint8Array(buffer), b => b.toString(16).padStart(2, '0')).join('');
+    for (let offset = 0; offset < file.size; offset += 4 * 1024 * 1024) {
+      if (cancelled()) throw new Error('Import zrušen.');
+      const bytes = await file.slice(offset, offset + 4 * 1024 * 1024).arrayBuffer();
+      hashes.push(hex(await crypto.subtle.digest('SHA-256', bytes)));
+    }
+    if (cancelled()) throw new Error('Import zrušen.');
+    return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(file.size + ':' + hashes.join(':'))));
+  }
+  function plan(metadata, chosen, mode, uid, targetId, project, legacy = false) {
+    const selected = new Set(chosen), cats = [], organizer = {}, jobs = [], skipped = [];
     if (!selected.size) throw new Error('Vyber alespoň jednu vrstvu.');
     if (!['structure', 'layers', 'category'].includes(mode)) throw new Error('Neplatný způsob importu.');
     if (mode === 'category' && !targetId) throw new Error('Vyber cílovou kategorii.');
-    const category = (name, id = uid()) => { const c = { id, name, visible: true, traits: [] }; cats.push(c); organizer[c.id] = { folders: [], assignments: {} }; return c; };
+    const key = id => metadata.source ? metadata.source + ':' + id : undefined;
+    const existingSources = new Set((project?.cats || []).flatMap(c => c.traits.map(t => t.psdSource).filter(Boolean)));
+    const unique = list => list.length === 1 ? list[0] : null;
+    const category = (name, nodeId, id) => {
+      const source = key(mode + ':' + nodeId);
+      const match = id ? project?.cats.find(c => c.id === id) : unique((project?.cats || []).filter(c => source && c.psdSource === source)) ||
+        (legacy ? unique((project?.cats || []).filter(c => !c.psdSource && c.name === name)) : null);
+      const c = { id: match?.id || id || uid(), name, visible: true, traits: [], ...(source && !id ? { psdSource: source } : {}) };
+      cats.push(c); organizer[c.id] = { folders: [], assignments: {} }; return c;
+    };
     const contains = node => node.group ? node.children.some(contains) : node.supported && selected.has(node.id);
+    let visited = 0;
     function visit(node, c, parentId = null, root = false) {
       if (!contains(node)) return;
       if (node.group) {
-        const folderId = root ? null : uid();
-        if (folderId) organizer[c.id].folders.push({ id: folderId, name: node.name.slice(0, 100), parentId });
+        let folderId = null;
+        if (!root) {
+          const source = key(node.id), existing = project?.organizer?.[c.id]?.folders || [];
+          const match = unique(existing.filter(f => source && f.psdSource === source)) ||
+            (legacy ? unique(existing.filter(f => !f.psdSource && f.name === node.name.slice(0, 100) && f.parentId === parentId)) : null);
+          folderId = match?.id || uid();
+          organizer[c.id].folders.push({ id: folderId, name: node.name.slice(0, 100), parentId, ...(source ? { psdSource: source } : {}) });
+        }
         node.children.forEach(n => visit(n, c, folderId));
       } else {
-        const traitId = uid(); c.traits.push({ id: traitId, name: node.name, data: '' });
+        visited++;
+        const source = key(node.id), traitId = uid();
+        c.traits.push({ id: traitId, name: node.name, data: '', ...(source ? { psdSource: source } : {}) });
         if (parentId) organizer[c.id].assignments[traitId] = parentId;
         jobs.push({ nodeId: node.id, categoryId: c.id, traitId, hidden: node.hidden, warnings: node.warnings });
       }
     }
     if (mode === 'category') {
-      const c = category('', targetId); metadata.tree.forEach(n => visit(n, c));
+      const c = category('', '', targetId); metadata.tree.forEach(n => visit(n, c));
     } else if (mode === 'layers') {
-      const walk = nodes => nodes.forEach(n => { if (n.group) walk(n.children); else if (contains(n)) visit(n, category(n.name)); }); walk(metadata.tree);
-    } else metadata.tree.forEach(n => { if (contains(n)) visit(n, category(n.name), null, n.group); });
-    if (jobs.length !== selected.size) throw new Error('Výběr obsahuje nepodporovanou nebo neexistující vrstvu.');
-    return { cats, organizer, jobs };
+      const walk = nodes => nodes.forEach(n => { if (n.group) walk(n.children); else if (contains(n)) visit(n, category(n.name, n.id)); }); walk(metadata.tree);
+    } else metadata.tree.forEach(n => { if (contains(n)) visit(n, category(n.name, n.id), null, n.group); });
+    if (visited !== selected.size) throw new Error('Výběr obsahuje nepodporovanou nebo neexistující vrstvu.');
+    const remaining = jobs.filter(job => {
+      const c = cats.find(c => c.id === job.categoryId), trait = c.traits.find(t => t.id === job.traitId);
+      let exists = trait.psdSource && existingSources.has(trait.psdSource);
+      if (!exists && legacy) {
+        const folder = organizer[c.id].assignments[trait.id] || null;
+        const same = t => t.name === trait.name && (organizer[c.id].assignments[t.id] || null) === folder;
+        const oldOrg = project?.organizer?.[c.id];
+        const matches = (project?.cats.find(x => x.id === c.id)?.traits || []).filter(t => !t.psdSource && t.name === trait.name && (oldOrg?.assignments[t.id] || null) === folder);
+        exists = c.traits.filter(same).length === 1 && matches.length === 1;
+      }
+      if (exists) skipped.push(job.nodeId);
+      return !exists;
+    });
+    const wanted = new Set(remaining.map(j => j.traitId));
+    for (const c of cats) c.traits = c.traits.filter(t => wanted.has(t.id));
+    return { cats: cats.filter(c => c.traits.length), organizer, jobs: remaining, skipped, source: metadata.source };
   }
   function apply(project, plan, mode, targetId) {
     if (plan.cats.some(c => c.traits.some(t => !t.data.startsWith('data:image/png;base64,')))) throw new Error('Import není dokončen.');
@@ -152,6 +197,7 @@
     const readyCats = plan.cats.map(c => ({ ...c, traits: c.traits.filter(t => wanted.has(t.id)) })).filter(c => c.traits.length);
     if (readyCats.some(c => c.traits.some(t => !t.data.startsWith('data:image/png;base64,')))) throw new Error('Dávka není dokončená.');
     if (mode === 'category' && !project.cats.some(c => c.id === targetId)) throw new Error('Cílová kategorie neexistuje.');
+    if (plan.source && jobs.length) project.psdImports = { ...project.psdImports, [plan.source]: { mode, targetId: mode === 'category' ? targetId : null } };
     project.organizer ||= {};
     const plannedIds = new Set(plan.cats.map(c => c.id));
     for (const incoming of readyCats) {
@@ -170,6 +216,7 @@
       if (!project.selected[target.id]) project.selected[target.id] = jobs.find(j => j.categoryId === target.id && !j.hidden)?.traitId || null;
     }
   }
-  const api = { LIMITS, validateHeader, parse, to8, applyMask, raster, plan, apply, applyBatch };
+  const api = { LIMITS, validateHeader, parse, to8, applyMask, raster, fingerprint, plan, apply, applyBatch };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TraitPSD = api;
 })(globalThis);
+

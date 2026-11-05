@@ -14,6 +14,7 @@
     return null;
   }
   const selection = (p, values) => Object.fromEntries(p.cats.map(c => [c.id, c.traits.some(t => t.id === values?.[c.id]) ? values[c.id] : null]));
+  const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?psd-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw) {
     const fail = message => { throw new Error(message); };
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !raw.selected || typeof raw.selected !== 'object' || Array.isArray(raw.selected) || !Array.isArray(raw.rules)) fail('Soubor není platný projekt Trait Workshop.');
@@ -24,11 +25,15 @@
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
-      return { id: unique(c.id), name: name(c.name, 'Kategorie'), visible: c.visible !== false, traits: c.traits.map(t => {
+      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !/^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) || !t.data.startsWith('data:image/png;base64,iVBORw0KGgo')) fail('Projekt obsahuje neplatný PNG obrázek.');
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data };
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t) };
       }) };
     });
+    p.psdImports = {};
+    for (const [source, entry] of Object.entries(raw.psdImports || {})) {
+      if (/^[a-f0-9]{64}$/.test(source) && entry && ['structure', 'layers', 'category'].includes(entry.mode) && (entry.mode !== 'category' || validId(entry.targetId))) p.psdImports[source] = { mode: entry.mode, targetId: entry.mode === 'category' ? entry.targetId : null };
+    }
     p.selected = selection(p, raw.selected);
     const traitIds = new Set(p.cats.flatMap(c => c.traits.map(t => t.id)));
     p.organizer = {};
@@ -38,7 +43,7 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 100), parentId: f.parentId == null ? null : f.parentId };
+        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f), parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
       for (const f of folders) if (f.parentId !== null && !folderIds.has(f.parentId)) fail('Projekt obsahuje složku s neplatným rodičem.');
@@ -131,3 +136,4 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);
+
