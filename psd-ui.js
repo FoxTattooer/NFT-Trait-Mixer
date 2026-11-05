@@ -209,12 +209,6 @@
         await persistJobs(jobs);
         if (current !== epoch) return;
         status('Uloženo ' + savedCount + ' / ' + total + ' · pokračuji…');
-        // Drop rendered PNG strings from the import plan once persisted.
-        for (const job of jobs) {
-          const cat = plan.cats.find(c => c.id === job.categoryId);
-          const trait = cat.traits.find(t => t.id === job.traitId);
-          if (trait) trait.data = '';
-        }
         await pause(150);
       }
       if (savedCount !== total) throw new Error('Kontrola dokončení selhala: nebyly potvrzeny všechny vrstvy.');
