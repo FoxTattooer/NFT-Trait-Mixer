@@ -332,3 +332,34 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
  .compact-header .brand img{width:32px;height:32px}
  .app-layout{height:calc(100dvh - 50px - env(safe-area-inset-bottom))}
 }
+
+/* v0.7.18 reference-aligned compact controls; retain actual functionality. */
+:root{--mint:#c5a9c5;--accent:#fa258e;--purple:#ff5eae}
+.compact-header .history-actions{display:flex!important;gap:3px!important;flex:0 0 auto!important}
+.compact-header .history-actions .icon-button{width:34px!important;min-width:34px!important;flex:0 0 34px!important;height:35px!important;min-height:35px!important;padding:7px!important;border-radius:10px!important;background:#17141d!important;border:1px solid #49404d!important}
+.compact-header .history-actions .icon{width:17px;height:17px}
+.compact-header .compact-toolbar{overflow-x:auto!important}
+.compact-header .header-menu-content{max-height:min(70dvh,360px);overflow-y:auto}
+.compact-header .compact-tool:active,.header-menu>summary:active{transform:scale(.95)}
+.compact-header .compact-tool:focus-visible{border-color:#ff4e9e!important;box-shadow:0 0 0 2px #ff4e9e55!important}
+.stage .preview-meta{display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;padding:7px 3px 1px!important;margin:0!important}
+.stage .preview-meta #status{font-size:11px!important;color:#b8a7b6!important;flex:1 1 auto!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage .preview-meta .canvas-size{font-size:10px!important;color:#948a98!important}
+.stage .preview-inline-actions{display:flex!important;gap:5px!important}
+.stage .preview-inline-actions button{display:inline-flex!important;width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important;padding:6px!important;border:1px solid #793356!important;background:#21121e!important;border-radius:9px!important;box-shadow:none!important}
+.stage .preview-inline-actions button .icon{width:16px!important;height:16px!important}
+.stage .canvas-wrap{box-shadow:0 0 0 1px #ff3e9c,0 0 9px #ff168647!important;border:1px solid #ff469f!important}
+.stage{padding:7px!important}
+.stage-actions{display:none!important}
+@media(max-width:900px) and (orientation:portrait){
+ .compact-header .history-actions{display:none!important}
+ .app-header.compact-header{min-height:54px!important}
+ .stage .preview-meta{gap:4px!important}
+ .stage .preview-meta #status{font-size:10px!important}
+ .stage .preview-inline-actions button{width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important}
+}
+@media(max-width:900px) and (orientation:landscape){
+ .stage .preview-meta{display:flex!important}
+ .stage .preview-meta #status{font-size:9px!important}
+ .stage .preview-inline-actions button{height:24px!important;min-height:24px!important;width:25px!important;min-width:25px!important}
+}
