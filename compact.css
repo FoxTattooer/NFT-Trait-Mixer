@@ -307,3 +307,5 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
     to {opacity:1;transform:translateX(0)}
   }
 }
+body.compact-workspace .header-menu-content .showroom-placeholder:disabled {opacity:1}
+.showroom-placeholder small {font-size:.82em;opacity:.67;margin-inline-start:.2em}

@@ -95,6 +95,9 @@ assert.equal(M.normalize(JSON.parse(await w.__downloads[0].blob.text())).cats[0]
 const get = id => w.document.getElementById(id);
 const find = selector => w.document.querySelector(selector);
 const click = selector => find(selector).click();
+const showroom = find('.header-end .header-menu-content .showroom-placeholder');
+assert.equal(showroom.textContent.replace(/\s+/g,' ').trim(),'Showroom (beta)');
+assert(showroom.disabled && !showroom.hasAttribute('data-action'),'Showroom remains a placeholder');
 const treeIds = () => Array.from(get('layerTree').querySelectorAll('.layer-tree-main')).map(button => button.dataset.id);
 const header = get('layerPanelHeading');
 assert([...header.querySelectorAll('.layer-panel-actions button')].every(b=>b.classList.contains('icon-button')));
@@ -252,7 +255,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.70'));
+assert(get('toast').textContent.includes('v0.7.71'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

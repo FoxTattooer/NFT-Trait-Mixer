@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.71 | checkpoint/v0.7.71-showroom-beta | Neaktivní položka Showroom (beta) v horní nabídce |
 | 0.7.70 | checkpoint/v0.7.70-graphite-grey | Graphite Grey se standardním vzorkem, odstranění obrázků |
 | 0.7.69 | Nahrazeno verzí 0.7.70 | Starší vydání grafitového schématu |
 | 0.7.68 | checkpoint/v0.7.68-settings-and-layer-nav | Rozbalovací volba palet, sladěné stavy ovládání a kompaktní lišta vrstev na výšku |
