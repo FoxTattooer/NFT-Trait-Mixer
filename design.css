@@ -292,3 +292,12 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
  .stage-actions{margin-top:7px}
  .stage-actions button{width:36px;height:34px;min-height:34px}
 }
+
+/* Inline preview actions alongside layer count and resolution. */
+.preview-meta{display:flex;align-items:center;gap:8px;min-width:0}
+.preview-meta #status{min-width:0;flex:1 1 auto}
+.preview-inline-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.preview-inline-actions button{width:31px;height:30px;min-height:30px;padding:5px!important;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.preview-inline-actions button .icon{width:16px;height:16px}
+.preview-meta .canvas-size{font-size:10px;white-space:nowrap;flex:0 0 auto;margin:0}
+@media(max-width:380px){.preview-meta{gap:4px}.preview-inline-actions{gap:3px}.preview-inline-actions button{width:28px;height:28px}}
