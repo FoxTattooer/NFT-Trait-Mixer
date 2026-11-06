@@ -16,11 +16,11 @@
   <link rel="stylesheet" href="design.css?build=0768">
   <link rel="stylesheet" href="compact.css?build=0773">
   <link rel="stylesheet" href="schemes.css?build=0772">
-  <link rel="stylesheet" href="showroom.css?build=0775">
+  <link rel="stylesheet" href="showroom.css?build=0777">
   <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0776" defer></script>
-  <script src="showroom.js?build=0775" defer></script>
+  <script src="diagnostics.js?build=0777" defer></script>
+  <script src="showroom.js?build=0777" defer></script>
   <script src="app.js?build=0773" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
@@ -84,8 +84,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.76" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.76</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.77" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.77</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -214,10 +214,11 @@
     <div class="showroom-shell">
       <header class="showroom-header">
         <div class="showroom-title">
-          <h2 id="showroomTitle">Showroom <span>by DRIPD</span></h2><span class="showroom-beta">BETA 0.0.1</span>
+          <h2 id="showroomTitle" tabindex="-1" autofocus>Showroom <span>by DRIPD</span></h2><span class="showroom-beta">BETA<span class="showroom-beta-version"> 0.0.1</span></span>
         </div>
-        <button type="button" id="showroomExit" autofocus>
-          <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg> Zpět do editoru
+        <button type="button" id="showroomExit" aria-label="Zpět do editoru">
+          <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+          <span class="showroom-exit-full">Zpět do editoru</span><span class="showroom-exit-short">Editor</span>
         </button>
       </header>
       <div class="showroom-layout">
@@ -232,11 +233,10 @@
           </div>
         </figure>
         <section class="showroom-control" aria-labelledby="showroomStep">
-          <div class="showroom-progress-line">
-            <span>TVŮJ AVATAR</span><span id="showroomProgress"></span>
+          <div class="showroom-step-heading">
+            <h3 id="showroomStep" tabindex="-1"></h3><span id="showroomProgress"></span>
           </div>
           <progress id="showroomMeter" value="0" max="1" aria-label="Postup tvorby"></progress>
-          <h3 id="showroomStep" tabindex="-1"></h3>
           <div class="showroom-choice">
             <div id="showroomCarousel">
               <button type="button" id="showroomPrevious" aria-label="Předchozí varianta">
@@ -257,6 +257,9 @@
             <button type="button" id="showroomSave" hidden>
               <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Stáhnout PNG
             </button>
+            <button type="button" id="showroomReset" aria-label="Začít od začátku" title="Začít od začátku" hidden>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v5h5M4 10a8 8 0 1 1 1.8 7.4"/></svg>
+            </button>
           </div>
           <p id="showroomStatus" role="status"></p>
         </section>
@@ -266,6 +269,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.77-showroom-portrait" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.77 – Showroom na výšku</strong><small>Kompaktní mobilní rozložení a reset výběru postavy.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.76-dripd-offline-intro" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.76 – DRIPD offline</strong><small>Vstupní artwork se při pomalém připojení načte přímo z offline mezipaměti.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.75-dripd-showroom-intro" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.75 – Showroom by DRIPD</strong><small>Plynulé zhasnutí editoru a odhalení Showroomu s originálním artworkem DRIPD.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.74-dark-showroom" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.74 – Tmavý Showroom</strong><small>Téměř černé prostředí s jemnou rudou odezvou a dostupným návratem do editoru.</small></span><span class="version-tag">Uloženo</span></a>

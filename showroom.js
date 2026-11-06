@@ -37,7 +37,7 @@
         catId: cat.id, traitId: trait.id, label: trait.name,
         color: swatches ? palette.find(([pattern]) => pattern.test(normalize(trait.name)))?.[1] || '#68717e' : null,
       })));
-      steps.push({ label, swatches, required, variants: required ? variants : [null, ...variants] });
+      steps.push({ label, swatches, variants: required ? variants : [null, ...variants] });
     }
     for (const [index, { label, matches, swatches }] of featured.entries()) {
       add(label, cats.filter(cat => matches.test(normalize(cat.name).replace(/[^a-z0-9]/g, ''))), swatches, index < 2);
@@ -66,7 +66,7 @@
     function pick(index, variant) {
       picks[index] = variant;
       for (let i = index + 1; i < picks.length; i++) {
-        if (picks[i] && !options(i).includes(picks[i])) picks[i] = null;
+        if (picks[i] && !options(i).includes(picks[i])) picks[i] = undefined;
       }
     }
     return { steps, picks, composition, options, pick };
@@ -79,7 +79,9 @@
     const status = get('showroomStatus'), swatches = get('showroomSwatches');
     const previous = get('showroomPrevious'), next = get('showroomNext');
     const carousel = get('showroomCarousel'), back = get('showroomBack'), advance = get('showroomAdvance');
-    const save = get('showroomSave');
+    const save = get('showroomSave'), reset = get('showroomReset');
+    const layout = dialog.querySelector('.showroom-layout');
+    const choice = get('showroomChoice');
     let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false;
 
     function update() {
@@ -90,15 +92,16 @@
       const available = step ? builder.options(index) : [];
       const variants = available.filter(Boolean);
       const current = picks[index];
-      get('showroomProgress').textContent = steps.length ? (done ? 'HOTOVO' :
-        `${String(index + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`) : 'BETA';
+      get('showroomProgress').textContent = step ?
+        `${String(index + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}` : '';
       get('showroomMeter').hidden = !steps.length;
       get('showroomMeter').value = steps.length ? (done ? 1 : (index + 1) / steps.length) : 0;
-      get('showroomStep').textContent = step?.label || (done ? 'Tvoje postava' : 'Prázdný Showroom');
-      get('showroomChoice').textContent = current?.label ||
-        (!step ? (done ? 'Připraveno ke stažení' : 'Otevři v editoru projekt s obrázky.') :
-          !variants.length ? 'Bez dostupných variant' : step.required ? 'Vyber variantu' : 'Bez doplňku');
+      get('showroomStep').textContent = step?.label || (done ? 'Hotovo' : 'Prázdný Showroom');
+      choice.textContent = current?.label ||
+        (!step ? (done ? '' : 'Otevři v editoru projekt s obrázky.') :
+          !variants.length ? 'Bez dostupných variant' : current === null ? 'Bez doplňku' : 'Vyber variantu');
       carousel.hidden = !step || step.swatches || !variants.length;
+      choice.parentElement.hidden = carousel.hidden && !choice.textContent;
       previous.disabled = next.disabled = available.length < 2 && !!current;
       swatches.hidden = !step?.swatches || !variants.length;
       swatches.replaceChildren(...(step?.swatches ? variants.map(variant => {
@@ -112,22 +115,28 @@
         button.addEventListener('click', () => {
           builder.pick(index, variant);
           for (const tile of swatches.children) tile.setAttribute('aria-pressed', String(tile === button));
-          get('showroomChoice').textContent = variant.label;
+          choice.textContent = variant.label;
+          choice.parentElement.hidden = false;
+          reset.disabled = false;
           advance.disabled = false;
+          advance.setAttribute('data-selected', '');
           requestPreview();
         });
         return button;
       }) : []));
       back.hidden = index === 0;
       advance.hidden = !step;
-      advance.disabled = !!(step?.required && variants.length && !current);
+      advance.disabled = variants.length > 0 && current === undefined;
+      advance.toggleAttribute('data-selected', current !== undefined);
       advance.textContent = index === steps.length - 1 ? 'Dokončit' : 'Pokračovat';
       save.hidden = !done;
+      reset.hidden = !steps.length;
       updateExport();
     }
 
     function updateExport() {
       back.disabled = exporting;
+      reset.disabled = exporting || (!session.index && !session.builder.picks.some(pick => pick !== undefined));
       save.disabled = save.hidden || session.safe || exporting || rendering ||
         !visibleLayers(session.builder.composition()).length;
     }
@@ -189,10 +198,16 @@
     function navigate(delta) {
       session.index += delta;
       update();
-      get('showroomStep').focus();
+      get('showroomStep').focus({ preventScroll: true });
     }
     back.addEventListener('click', () => navigate(-1));
     advance.addEventListener('click', () => navigate(1));
+    reset.addEventListener('click', () => {
+      session.builder.picks.length = 0;
+      navigate(-session.index);
+      layout.scrollTop = 0;
+      requestPreview();
+    });
     get('showroomIntro').addEventListener('animationend', event => {
       if (event.animationName === 'showroom-intro') delete dialog.dataset.intro;
     });
@@ -247,6 +262,7 @@
       update();
       if (!safe) dialog.dataset.intro = "";
       dialog.showModal();
+      layout.scrollTop = 0;
       requestPreview();
     };
   }

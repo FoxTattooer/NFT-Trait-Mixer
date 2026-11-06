@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.77 | checkpoint/v0.7.77-showroom-portrait | Kompaktní Showroom na výšku a reset výběru postavy |
 | 0.7.76 | checkpoint/v0.7.76-dripd-offline-intro | Logo se při vstupu do Showroomu načte z offline mezipaměti |
 | 0.7.75 | checkpoint/v0.7.75-dripd-showroom-intro | Plynulý vstup do Showroom by DRIPD s originálním artworkem |
 | 0.7.74 | checkpoint/v0.7.74-dark-showroom | Téměř černý Showroom s jemnou rudou odezvou a návratem do editoru |

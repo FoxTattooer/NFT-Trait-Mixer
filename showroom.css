@@ -95,10 +95,14 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   background: linear-gradient(150deg, #171717, #101010 70%);
   box-shadow: 0 14px 32px #0005, inset 0 1px #ffffff09;
 }
-#showroomDialog .showroom-progress-line {
+#showroomDialog .showroom-step-heading {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 10px;
+}
+#showroomProgress {
+  flex: none;
   color: var(--showroom-muted);
   font: 650 11px/1.3 ui-monospace, monospace;
   letter-spacing: .13em;
@@ -118,7 +122,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 #showroomMeter::-webkit-progress-value { background: var(--showroom-accent); }
 #showroomMeter::-moz-progress-bar { background: var(--showroom-accent); }
 #showroomStep {
-  margin: 0 0 9px;
+  margin: 0;
   color: var(--showroom-ink);
   font-size: clamp(23px, 4vw, 42px);
   line-height: 1.07;
@@ -151,7 +155,9 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   inset: 0;
   pointer-events: none;
 }
-#showroomCarousel button { pointer-events: auto; padding-inline: 0; }
+#showroomCarousel button, #showroomDialog #showroomReset { padding-inline: 0; }
+#showroomCarousel button { pointer-events: auto; }
+.showroom-exit-short { display: none; }
 #showroomChoice {
   padding-block: 5px;
   color: var(--showroom-muted);
@@ -183,7 +189,16 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 #showroomStatus { color: var(--showroom-muted); margin: 9px 0 0; font-size: 13px; }
 #showroomStatus:empty { display: none; }
 
-#showroomDialog :is(#showroomAdvance, #showroomSave):enabled { border-color: #a14e54; }
+#showroomDialog #showroomSave:enabled { border-color: #a14e54; }
+#showroomDialog #showroomAdvance[data-selected]:enabled {
+  border-color: #52a875;
+  background: #19472f;
+  color: #eaffef;
+}
+#showroomDialog #showroomAdvance[data-selected]:is(:focus-visible, :hover):enabled {
+  border-color: #79cb94;
+  box-shadow: 0 0 12px #45a87026;
+}
 @media (hover: hover) and (pointer: fine) {
   #showroomDialog button:hover:not(:disabled) {
     border-color: var(--showroom-accent);
@@ -200,6 +215,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   #showroomSwatches { max-height: 67px; }
 }
 
+#showroomTitle:focus, #showroomStep:focus { outline: none; }
 #showroomTitle span {
   display: inline-block;
   color: var(--showroom-muted);
@@ -271,4 +287,56 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
     0%, 75% { opacity: 0; }
     to { opacity: 1; }
   }
+}
+
+@media (orientation: portrait) and (max-width: 680px) {
+  #showroomDialog {
+    --showroom-top: calc(env(safe-area-inset-top, 0px) + 6px);
+    --showroom-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    height: 100dvh;
+    padding: var(--showroom-top) max(12px, env(safe-area-inset-right))
+      var(--showroom-bottom) max(12px, env(safe-area-inset-left));
+    overflow: hidden;
+  }
+  #showroomDialog .showroom-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+  }
+  #showroomDialog .showroom-header {
+    position: static;
+    padding-bottom: 8px;
+    background: none;
+    gap: 8px;
+  }
+  #showroomDialog .showroom-title { gap: 5px 7px; }
+  #showroomDialog h2 { font-size: clamp(20px, 5.7vw, 27px); }
+  #showroomDialog .showroom-beta { padding: 3px 4px; font-size: 9px; }
+  #showroomDialog :is(.showroom-beta-version, .showroom-exit-full) { display: none; }
+  #showroomDialog .showroom-exit-short { display: inline; }
+  #showroomDialog #showroomExit { padding-inline: 8px; gap: 3px; }
+  #showroomDialog .showroom-layout {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 8px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 2px 2px 6px;
+  }
+  #showroomDialog .showroom-stage {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 510px);
+    width: min(100%, 510px, max(144px, calc(100dvh - var(--showroom-top) - var(--showroom-bottom) - 268px)));
+  }
+  #showroomDialog .showroom-control { padding: 10px; }
+  #showroomDialog .showroom-step-heading {
+    display: grid;
+    grid-template-columns: minmax(58px, 1fr) minmax(0, auto) minmax(58px, 1fr);
+    gap: 4px;
+  }
+  #showroomStep { grid-column: 2; font-size: 22px; text-align: center; }
+  #showroomProgress { justify-self: end; }
+  #showroomMeter { margin: 6px 0 8px; }
+  #showroomSwatches { max-height: 104px; }
+  #showroomDialog .showroom-actions { margin-top: 8px; }
 }
