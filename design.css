@@ -908,3 +908,13 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  .app-header>.header-end button,.app-header>.header-end summary{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important}
  .app-header .brand img{width:32px!important;height:32px!important}
 }
+
+@media (orientation:landscape) {
+.app-header>.landscape-preview-actions:not([hidden]){display:flex!important;visibility:visible!important;position:static!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important}
+.app-header>.landscape-preview-actions>button{display:inline-flex!important;width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important}
+.app-header>.history-actions{display:flex!important;align-items:center!important;gap:4px!important}
+.app-header>.history-actions>button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important}
+.app-header{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:5px!important}
+.app-header>.toolbar{display:flex!important;flex:0 1 auto!important;min-width:0!important;justify-content:center!important;gap:4px!important}
+.app-header>.header-end{display:flex!important;flex:0 0 auto!important}
+}
