@@ -323,6 +323,7 @@ function renderLayerTree() {
   grid.setAttribute('aria-pressed', String(overview && compactView));
   tree.hidden = overview;
   const back = mobilePanel === 'layers' && !overview;
+  $('layersTab').toggleAttribute('data-back', back);
   $('layersTabIcon').setAttribute('href', back ? '#i-back' : '#i-layers');
   $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět na kategorie' : 'Vrstvy');
   if (overview || mobilePanel !== 'layers') { tree.replaceChildren(); treeMarkup = ''; mountThumbnails(); return; }
@@ -1147,7 +1148,9 @@ function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
   for (const choice of $('settingsDialog').querySelectorAll('[data-scheme]')) {
-    choice.setAttribute('aria-pressed', String(choice.dataset.scheme === scheme));
+    const selected = choice.dataset.scheme === scheme;
+    choice.setAttribute('aria-pressed', String(selected));
+    if (selected) $('currentSchemeName').textContent = choice.textContent.trim();
   }
 }
 function restoreColorScheme() {
@@ -1361,7 +1364,10 @@ async function handleAction(action, id, element) {
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
     case 'close-category-sort': $('categorySortDialog').close(); break;
-    case 'open-settings': $('settingsDialog').showModal(); break;
+    case 'open-settings':
+      $('colorSchemes').open = false;
+      $('settingsDialog').showModal();
+      break;
     case 'close-settings': $('settingsDialog').close(); break;
     case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;

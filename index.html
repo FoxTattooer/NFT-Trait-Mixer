@@ -12,14 +12,14 @@
   <link rel="icon" href="icons/icon-192-v073.png" type="image/png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v073.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?build=0747">
-  <link rel="stylesheet" href="design.css?build=0756">
-  <link rel="stylesheet" href="compact.css?build=0765">
-  <link rel="stylesheet" href="schemes.css?build=0767">
+  <link rel="stylesheet" href="styles.css?build=0768">
+  <link rel="stylesheet" href="design.css?build=0768">
+  <link rel="stylesheet" href="compact.css?build=0768">
+  <link rel="stylesheet" href="schemes.css?build=0768">
   <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0767" defer></script>
-  <script src="app.js?build=0767" defer></script>
+  <script src="diagnostics.js?build=0768" defer></script>
+  <script src="app.js?build=0768" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
@@ -82,8 +82,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.67" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.67</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.68" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.68</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -125,7 +125,14 @@
       
     </section>
     <nav class="workspace-tabs" aria-label="Pracovní panely">
-      <button id="layersTab" data-action="show-panel" data-panel="layers" class="is-active" aria-pressed="true"><svg class="icon"><use id="layersTabIcon" href="#i-layers"/></svg>Vrstvy</button>
+      <button id="layersTab" data-action="show-panel" data-panel="layers" class="is-active" aria-pressed="true">
+        <svg class="icon layer-tab-icon" aria-hidden="true"><use id="layersTabIcon" href="#i-layers"/></svg>
+        <span class="layer-tab-label">Vrstvy</span>
+        <span class="layer-tab-back" aria-hidden="true">
+          <svg class="icon layer-tab-arrow"><path d="M20 12H4m0 0 7-7m-7 7 7 7"/></svg>
+          <svg class="icon"><use href="#i-layers"/></svg>
+        </span>
+      </button>
       <button data-action="show-panel" data-panel="traits" aria-pressed="false"><svg class="icon"><use href="#i-grid"/></svg>Správa</button>
       <button data-action="show-panel" data-panel="snapshots" aria-pressed="false"><svg class="icon"><use href="#i-bookmark"/></svg>Sestavy</button>
     </nav>
@@ -165,27 +172,35 @@
       <h2 id="settingsTitle">Nastavení</h2>
       <button type="button" class="icon-button subtle" data-action="close-settings" aria-label="Zavřít nastavení">×</button>
     </div>
-    <div class="scheme-grid" role="group" aria-label="Color scheme">
-      <div class="scheme-group" role="group" aria-label="Magic Eden">
-        <button type="button" data-action="set-color-scheme" data-scheme="pink" aria-pressed="true"><span class="scheme-swatch" aria-hidden="true"></span><span>Magic Eden</span></button>
-        <button type="button" data-action="set-color-scheme" data-scheme="blue" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Magic Eden Blue</span></button>
-        <button type="button" data-action="set-color-scheme" data-scheme="eden-new" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>The Magic Eden New</span></button>
+    <details id="colorSchemes" class="settings-section">
+      <summary>
+        <span>Color schemes</span>
+        <span id="currentSchemeName" class="current-scheme-name" aria-hidden="true">Magic Eden</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </summary>
+      <div class="scheme-grid" role="group" aria-label="Color schemes">
+        <div class="scheme-group" role="group" aria-label="Magic Eden">
+          <button type="button" data-action="set-color-scheme" data-scheme="pink" aria-pressed="true"><span class="scheme-swatch" aria-hidden="true"></span><span>Magic Eden</span></button>
+          <button type="button" data-action="set-color-scheme" data-scheme="blue" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Magic Eden Blue</span></button>
+          <button type="button" data-action="set-color-scheme" data-scheme="eden-new" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>The Magic Eden New</span></button>
+        </div>
+        <div class="scheme-group" role="group" aria-label="Jantar a fialová">
+          <button type="button" data-action="set-color-scheme" data-scheme="amber" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Jantar</span></button>
+          <button type="button" data-action="set-color-scheme" data-scheme="violet" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Fialový neon</span></button>
+        </div>
+        <div class="scheme-group" role="group" aria-label="Další barevné režimy">
+          <button type="button" data-action="set-color-scheme" data-scheme="icy" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Icy</span></button>
+          <button type="button" data-action="set-color-scheme" data-scheme="deep-water" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Deep Water Blue</span></button>
+          <button type="button" data-action="set-color-scheme" data-scheme="mono" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Black &amp; White</span></button>
+        </div>
       </div>
-      <div class="scheme-group" role="group" aria-label="Jantar a fialová">
-        <button type="button" data-action="set-color-scheme" data-scheme="amber" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Jantar</span></button>
-        <button type="button" data-action="set-color-scheme" data-scheme="violet" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Fialový neon</span></button>
-      </div>
-      <div class="scheme-group" role="group" aria-label="Další barevné režimy">
-        <button type="button" data-action="set-color-scheme" data-scheme="icy" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Icy</span></button>
-        <button type="button" data-action="set-color-scheme" data-scheme="deep-water" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Deep Water Blue</span></button>
-        <button type="button" data-action="set-color-scheme" data-scheme="mono" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Black &amp; White</span></button>
-      </div>
-    </div>
-    <p id="schemeStatus" class="helper" role="status" hidden></p>
+      <p id="schemeStatus" class="helper" role="status" hidden></p>
+    </details>
   </dialog>
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.68-settings-and-layer-nav" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.68 – Nastavení a navigace vrstev</strong><small>Rozbalovací volba palet, odezva podle schématu a nižší lišta vrstev na výšku.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.67-palette-surfaces" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.67 – The Magic Eden New</strong><small>Nová paleta vedle obou původních variant Magic Eden a výraznější přechody v nových paletách.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.66-cool-schemes" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.66 – Led, hlubina a černobílá</strong><small>Nové režimy Icy, Deep Water Blue a Black &amp; White. Přehlednější výběr palet.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.65-color-schemes" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.65 – Nastavení vzhledu</strong><small>Čtyři barevná schémata a sjednocená tlačítka vrstev.</small></span><span class="version-tag">Uloženo</span></a>
