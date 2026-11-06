@@ -467,3 +467,25 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
 .compact-header .header-refresh .icon{width:18px;height:18px}
 .compact-header .header-refresh:active{border-color:#fa2d94!important;color:#ff70b9!important}
 @media(max-width:900px){.compact-header .compact-toolbar{gap:clamp(2px,1.1vw,6px)!important}.compact-header .compact-header-end{gap:4px!important}.compact-header .compact-tool{width:33px!important;min-width:33px!important;flex-basis:33px!important}}
+
+/* Slightly roomier header while keeping all controls in a single row. */
+.app-header.compact-header{min-height:66px!important;padding-top:max(11px,env(safe-area-inset-top))!important;padding-bottom:11px!important}
+.compact-header .brand{flex-basis:40px!important;width:40px!important;min-width:40px!important}
+.compact-header .brand img{width:40px!important;height:40px!important}
+.compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{width:39px!important;min-width:39px!important;height:39px!important;min-height:39px!important;padding:8px!important}
+.compact-header .compact-tool{flex:0 0 39px!important}
+.compact-header .compact-header-end{gap:5px!important}
+@media(max-width:900px){
+ .app-header.compact-header{min-height:64px!important;padding-left:9px!important;padding-right:9px!important;gap:4px!important}
+ .compact-header .brand{flex-basis:38px!important;width:38px!important;min-width:38px!important}
+ .compact-header .brand img{width:38px!important;height:38px!important}
+ .compact-header .compact-toolbar{gap:clamp(2px,1vw,6px)!important}
+ .compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{width:37px!important;min-width:37px!important;height:39px!important;min-height:39px!important;padding:7px!important}
+ .compact-header .compact-tool{flex:0 0 37px!important}
+ .compact-header .compact-header-end{gap:3px!important}
+}
+@media(max-width:360px){
+ .compact-header .brand{flex-basis:34px!important;width:34px!important;min-width:34px!important}
+ .compact-header .brand img{width:34px!important;height:34px!important}
+ .compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{width:34px!important;min-width:34px!important;flex-basis:34px!important}
+}
