@@ -376,3 +376,61 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 #traits .layer-tree-folder .drag-handle { width: 33px; }
 #traits .trait-note { margin-inline: 5px; }
 #traits .trait-note summary { min-height: 32px; }
+
+.trait-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+  margin-bottom: 8px;
+  min-width: 0;
+  border: 1px solid var(--scheme-stroke);
+  border-radius: 999px;
+  background: var(--scheme-bg);
+  box-shadow: inset 0 2px 8px #0008, 0 1px #ffffff12;
+  color: var(--scheme-text);
+}
+.trait-search-field:focus-within { border-color: var(--control-accent, var(--scheme-accent)); }
+#traitSearch {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 0;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--scheme-text);
+  font: inherit;
+  font-size: 16px;
+}
+.trait-search-results {
+  display: grid;
+  gap: 5px;
+  max-height: min(350px, 48dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid var(--scheme-stroke);
+  border-radius: 14px;
+  background: var(--scheme-bg);
+}
+button.trait-search-result {
+  justify-content: flex-start;
+  min-width: 0;
+  gap: 8px;
+  padding: 6px;
+  border-color: var(--scheme-stroke);
+  background: var(--scheme-control);
+  text-align: start;
+}
+.trait-search-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.trait-search-copy strong, .trait-search-copy small { display: block; }
+.trait-search-copy strong { font-size: 13px; }
+.trait-search-copy small { margin-top: 3px; color: var(--scheme-text); opacity: .8; }
+.trait-search-result > .icon { width: 15px; color: var(--scheme-text); }
+#layerTree .layer-tree-main:focus {
+  outline: 2px solid var(--control-accent, var(--scheme-accent));
+  outline-offset: -2px;
+}

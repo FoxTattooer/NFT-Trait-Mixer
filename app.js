@@ -12,6 +12,7 @@ const libraryOpen = new Set(), libraryPages = {};
 let libraryHeaderMarkup = '';
 const libraryBodyMarkup = new WeakMap();
 const PAGE_SIZE = 24;
+let traitSearchLimit = PAGE_SIZE, traitSearchMarkup = '';
 let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, dialogResolve;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
 let installPrompt = null, workerRegistration = null;
@@ -259,7 +260,8 @@ function showPanel(panel) {
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
 }
 let layerOverview = false;
-let layerLimit = 48;
+const LAYER_BATCH = 48;
+let layerLimit = LAYER_BATCH;
 let layerContextTrigger;
 
 function layerThumbnail(category, trait, className = '') {
@@ -686,9 +688,60 @@ function renderSnapshotCategoryTraits(c) {
     button('library-next', '›', c.id, '', (page + 1) * PAGE_SIZE >= c.traits.length ? 'disabled' : '') +
     '</div>';
 }
+const foldTraitName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function renderTraitSearch() {
+  const terms = foldTraitName($('traitSearch').value).trim().split(/\s+/).filter(Boolean);
+  const searching = mobilePanel === 'snapshots' && terms.length > 0;
+  const results = $('traitSearchResults');
+  results.hidden = !searching;
+  $('snapshotLayerLibrary').hidden = searching;
+  let markup = '';
+  if (searching) {
+    const prefix = [], other = [];
+    for (const cat of state.cats) for (const trait of cat.traits) {
+      const name = foldTraitName(trait.name);
+      if (terms.every(term => name.includes(term))) {
+        (name.startsWith(terms[0]) ? prefix : other).push({ cat, trait });
+      }
+    }
+    const matches = [...prefix, ...other];
+    markup = matches.length ? matches.slice(0, traitSearchLimit).map(({ cat, trait }) =>
+      button('reveal-trait', `<span class="layer-thumb">${safeMode ? '' : layerThumbnail(cat, trait)}</span>
+        <span class="trait-search-copy"><strong>${esc(trait.name)}</strong><small>${esc(cat.name)}</small></span>${icon('chevron')}`,
+        trait.id, '', 'type="button" class="trait-search-result"')).join('') :
+      '<p class="empty-list" role="status">Žádné traity neodpovídají hledání.</p>';
+    if (matches.length > traitSearchLimit) {
+      markup += button('more-trait-results', 'Zobrazit další shody', '', 'down', 'type="button" class="subtle trait-search-more"');
+    }
+  }
+  if (traitSearchMarkup !== markup) {
+    results.innerHTML = markup;
+    traitSearchMarkup = markup;
+  }
+  return searching;
+}
+function revealTrait({ cat, trait }) {
+  const { folders, assignments } = organizerFolders(cat.id);
+  const parents = new Map(folders.map(folder => [folder.id, folder.parentId]));
+  const expanded = organizerExpanded[cat.id] ||= new Set();
+  for (let folder = assignments[trait.id]; folder; folder = parents.get(folder)) expanded.add(folder);
+  const index = mixedLayerRows(cat).findIndex(row => row.kind === 'traits' && row.item.id === trait.id);
+  if (index < 0) return;
+  $('traitSearch').blur();
+  active = cat.id;
+  layerOverview = false;
+  layerLimit = Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH;
+  showPanel('layers');
+  render(true);
+  const row = Array.from($('layerTree').querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === trait.id);
+  if (!row) return;
+  row.focus({ preventScroll: true });
+  row.scrollIntoView({ block: 'center', inline: 'nearest' });
+}
 function renderSnapshotLayerLibrary() {
   const container = $('snapshotLayerLibrary');
-  const canShow = !safeMode && mobilePanel === 'snapshots';
+  const searching = renderTraitSearch();
+  const canShow = !safeMode && !searching && mobilePanel === 'snapshots';
   const markup = state.cats.length ? state.cats.map((c, i) => {
     const cover = canShow && (c.traits.find(t => t.id === state.selected[c.id]) || c.traits[0]);
     return `<details class="library-category" data-category="${esc(c.id)}">
@@ -1252,6 +1305,14 @@ async function handleAction(action, id, element) {
       renderSnapshotThumbnails();
       break;
     }
+    case 'reveal-trait': if (located) revealTrait(located); break;
+    case 'more-trait-results': {
+      const offset = traitSearchLimit;
+      traitSearchLimit += PAGE_SIZE;
+      renderSnapshotLayerLibrary();
+      $('traitSearchResults').querySelectorAll('.trait-search-result')[offset]?.focus();
+      break;
+    }
     case 'open-layer-menu': openLayerContext(element, id); break;
     case 'reorder-trait-up': case 'reorder-trait-down': {
       if (!located) break;
@@ -1261,7 +1322,7 @@ async function handleAction(action, id, element) {
       if (target) change(() => M.reorderTrait(state, located.cat.id, id, target.id, after), 'Pořadí traitů změněno');
       break;
     }
-    case 'show-more-layers': layerLimit += 48; renderLayerTree(); break;
+    case 'show-more-layers': layerLimit += LAYER_BATCH; renderLayerTree(); break;
     case 'toggle-tree-folder': {
       const expanded = organizerExpanded[active] ||= new Set();
       if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
@@ -1295,7 +1356,7 @@ async function handleAction(action, id, element) {
     case 'open-traits': layerOverview = false; showPanel('layers'); break;
     case 'select-category': {
       if (!c) break;
-      layerLimit = 48; layerOverview = false; active = id;
+      layerLimit = LAYER_BATCH; layerOverview = false; active = id;
       organizerSelection[id] = null;
       render(true);
       break;
@@ -1613,6 +1674,23 @@ document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   if (target?.dataset.action !== 'open-layer-menu' && (!$('layerContext').contains(event.target) || target?.tagName === 'BUTTON')) closeLayerContext();
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
+});
+$('traitSearch').addEventListener('input', () => {
+  traitSearchLimit = PAGE_SIZE;
+  renderSnapshotLayerLibrary();
+  $('traitSearchResults').scrollTop = 0;
+});
+$('traitSearch').addEventListener('keydown', event => {
+  if (event.isComposing) return;
+  if (event.key === 'Enter') {
+    const first = $('traitSearchResults').querySelector('.trait-search-result');
+    if (first) { event.preventDefault(); first.click(); }
+  } else if (event.key === 'Escape' && event.currentTarget.value) {
+    event.preventDefault();
+    event.currentTarget.value = '';
+    traitSearchLimit = PAGE_SIZE;
+    renderSnapshotLayerLibrary();
+  }
 });
 $('traitFiles').addEventListener('change', event => uploadFiles(event.target.files));
 $('projectFile').addEventListener('change', event => loadProject(event.target.files[0]));

@@ -397,6 +397,62 @@ assert.equal(w.__downloads.at(-1).name,'trait-mixer-crash-log.txt');
 click('[data-action="close-diagnostics"]');assert(get('versionHistoryDialog').open);
 for (let i=0;i<60;i++) w.TraitDiagnostics.saved('psd-import',i);
 assert.equal(w.TraitDiagnostics.report().trim().split('\n').length,50,'diagnostics keeps only 48 records');
+click('[data-action="close-version-history"]');
+const searchProject = w.inspectState();
+searchProject.cats[0].traits[0].name = 'Golden hood';
+const sharedPng = searchProject.cats[0].traits[0].data;
+const searchTraits = Array.from({length: 62}, (_, index) => ({
+  id: 'search-' + index,
+  name: index === 61 ? 'Góku Aqua – dlouhý název varianty' : index < 28 ? 'Goku #' + index : 'Trait ' + index,
+  data: sharedPng,
+}));
+searchProject.cats.push({id:'search-cat', name:'Vlasy', visible:true, traits:searchTraits});
+searchProject.organizer['search-cat'] = {
+  folders: [
+    {id:'search-root', name:'Postavy', parentId:null},
+    {id:'search-child', name:'Podbarvy', parentId:'search-root'},
+  ],
+  assignments: Object.fromEntries(searchTraits.map(trait => [trait.id, 'search-child'])),
+};
+const beforeSearch = JSON.stringify(searchProject);
+const search = value => {
+  get('traitSearch').value = value;
+  get('traitSearch').dispatchEvent(new w.Event('input', { bubbles:true }));
+};
+click('.workspace-tabs [data-panel="snapshots"]');
+search('go');
+assert(get('snapshotLayerLibrary').hidden);
+assert.equal(get('traitSearchResults').querySelectorAll('.trait-search-result').length,24);
+click('[data-action="more-trait-results"]');
+assert.equal(get('traitSearchResults').querySelectorAll('.trait-search-result').length,30);
+assert(find('.trait-search-result[data-id="t0"]'), 'partial search covers other categories');
+search('neexistující');
+assert.match(get('traitSearchResults').textContent, /Žádné traity/);
+search('GOKU Aqua');
+const result = find('.trait-search-result[data-id="search-61"]');
+assert.equal(result.querySelector('strong').textContent, searchTraits[61].name);
+assert.equal(result.querySelector('small').textContent, 'Vlasy');
+const resultImage = result.querySelector('[data-layer-thumbnail]');
+assert.equal(resultImage.dataset.trait, 'search-61');
+intersect(resultImage, true);
+await waitFor(() => resultImage.hasAttribute('src'));
+let scrolledTrait;
+const scrollIntoView = w.HTMLElement.prototype.scrollIntoView;
+w.HTMLElement.prototype.scrollIntoView = function () { scrolledTrait = this.dataset.id; };
+result.click();
+w.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+assert.equal(get('appLayout').dataset.mobilePanel, 'layers');
+assert.equal(get('layerCategory').value, 'search-cat');
+assert.equal(scrolledTrait, 'search-61');
+assert.equal(w.document.activeElement.dataset.id, 'search-61');
+for (const folder of ['search-root', 'search-child']) {
+  assert.equal(find(`#layerTree [data-id="${folder}"]`).getAttribute('aria-expanded'), 'true');
+}
+assert.equal(JSON.stringify(w.inspectState()), beforeSearch, 'jumping does not apply the trait or edit the project');
+click('.workspace-tabs [data-panel="snapshots"]');
+assert(find('.trait-search-result[data-id="search-61"]'), 'returning to Sestavy preserves the query');
+get('traitSearch').dispatchEvent(new w.KeyboardEvent('keydown', { key:'Escape', bubbles:true }));
+assert(get('traitSearchResults').hidden && !get('snapshotLayerLibrary').hidden);
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');
@@ -411,7 +467,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.81'));
+assert(get('toast').textContent.includes('v0.7.82'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';
