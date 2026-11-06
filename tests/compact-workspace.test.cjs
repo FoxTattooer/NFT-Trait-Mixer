@@ -34,7 +34,7 @@ w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get
 w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
-w.eval(['project.js','storage.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','diagnostics.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -137,5 +137,19 @@ click('.workspace-tabs [data-panel="snapshots"]');click('#snapshots [data-id="pr
 click('[data-action="delete-snapshot"]');assert(get('editDialog').open);
 get('dialogForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
 await waitFor(()=>w.inspectState().snapshots.length===0);
-await w.happyDOM.abort();w.close();console.log('PASS compact workspace: menus, orientation, backup, ordered layer tree, snapshot edit and PNG');
+w.eval(`TraitDiagnostics.error('runtime', new TypeError('private-artwork.psd'), 'https://nft.test/app.js?build=0759:123:4');`);
+click('[data-action="open-version-history"]');
+assert(get('versionHistoryDialog').open);
+assert(!get('versionHistoryDialog').textContent.includes('TypeError'));
+click('[data-action="open-diagnostics"]');
+assert(!get('versionHistoryDialog').open);assert(get('diagnosticsDialog').open);
+assert(get('diagnosticsReport').textContent.includes('app.js:123:4'));
+assert(get('diagnosticsReport').textContent.includes('png-export'));
+assert(!get('diagnosticsReport').textContent.includes('private-artwork'));
+click('[data-action="download-diagnostics"]');
+assert.equal(w.__downloads.at(-1).name,'trait-mixer-crash-log.txt');
+click('[data-action="close-diagnostics"]');assert(get('versionHistoryDialog').open);
+for (let i=0;i<60;i++) w.TraitDiagnostics.saved('psd-import',i);
+assert.equal(w.TraitDiagnostics.report().trim().split('\n').length,50,'diagnostics keeps only 48 records');
+await w.happyDOM.abort();w.close();console.log('PASS compact workspace: menus, orientation, backup, ordered layer tree, snapshot edit, PNG and private diagnostics');
 })().catch(e=>{console.error(e);process.exitCode=1;});

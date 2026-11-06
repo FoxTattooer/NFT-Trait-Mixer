@@ -33,6 +33,7 @@ function storageStatus(text, error = false) {
 let lastStorageError = null;
 function storageFailure(error = lastStorageError) {
   lastStorageError = error;
+  window.TraitDiagnostics?.error('storage', error);
   const quota = error?.name === 'QuotaExceededError';
   storageStatus(quota ? 'V úložišti prohlížeče není dost místa' : 'V zařízení se nepodařilo uložit změny', true);
   const warning = $('storageWarning');
@@ -827,6 +828,7 @@ async function draw() {
     updatePreviewStatus(layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření');
   } catch (error) {
     if (ticket !== drawTicket) return;
+    window.TraitDiagnostics?.error('preview', error);
     updatePreviewStatus(error.message, true);
     $('export').disabled = true;
   }
@@ -871,6 +873,7 @@ function download(blob, name) {
 const filename = name => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'nft-projekt';
 async function exportPNG(project = M.clone(state)) {
   if (exporting || M.conflicts(project).warnings.length || !visibleLayers(project).length) return;
+  const finishLog = window.TraitDiagnostics?.start('png-export');
   exporting = true; render(true);
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
   try {
@@ -878,7 +881,8 @@ async function exportPNG(project = M.clone(state)) {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('PNG se nepodařilo vytvořit.');
     download(blob, `${filename(project.name)}.png`); toast('PNG je připravené ke stažení');
-  } finally { canvas.width = canvas.height = 1; exporting = false; render(true); }
+  } catch (error) { window.TraitDiagnostics?.error('png-export', error); throw error; }
+  finally { finishLog?.(); canvas.width = canvas.height = 1; exporting = false; render(true); }
 }
 
 function crc32(bytes) {
@@ -920,6 +924,7 @@ async function exportPackage() {
   const project = M.clone(state), layers = visibleLayers(project);
   if (!layers.length) throw new Error('Nejdřív vyber alespoň jeden viditelný trait.');
   if (M.conflicts(project).warnings.length) throw new Error('Nejdřív uprav zakázanou kombinaci traitů.');
+  const finishLog = window.TraitDiagnostics?.start('zip-export');
   busy = true; render();
   try {
     const root = filename(project.name), entries = [], canvas = document.createElement('canvas');
@@ -937,7 +942,8 @@ async function exportPackage() {
     entries.push({ name: root + '/project.json', data: new Uint8Array(await (await TraitStorage.backup(db,project)).arrayBuffer()) });
     entries.push({ name: root + '/final.png', data: new Uint8Array(await finalBlob.arrayBuffer()) });
     download(zipStored(entries), root + '.zip'); toast('ZIP balíček projektu je připravený ke stažení');
-  } finally { busy = false; render(); }
+  } catch (error) { window.TraitDiagnostics?.error('zip-export', error); throw error; }
+  finally { finishLog?.(); busy = false; render(); }
 }
 function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Soubor nelze přečíst.')); reader.onabort = () => reject(new Error('Načítání bylo přerušeno.')); reader.readAsDataURL(new Blob([file], { type: 'image/png' })); });
@@ -947,6 +953,7 @@ async function uploadFiles(files) {
   if (files.length > 500) { toast('Vyber nejvýše 500 PNG souborů najednou.', true); return; }
   const categoryId = active;
   if (!M.category(state, categoryId)) { toast('Nejdřív přidej kategorii.', true); return; }
+  const finishLog = window.TraitDiagnostics?.start('png-import');
   busy = true; render();
   const added = [], failed = [];
   try {
@@ -960,11 +967,12 @@ async function uploadFiles(files) {
       } catch (error) { failed.push(`${file.name}: ${error.message}`); }
     }
     if (added.length && M.category(state, categoryId)) change(() => { const c = M.category(state, categoryId); c.traits.push(...added); if (!state.selected[c.id]) state.selected[c.id] = added[0].id; }, `Přidáno ${added.length} PNG traitů`);
-    if (failed.length) toast(failed.join(' '), true);
-  } finally { busy = false; $('uploadStatus').textContent = failed.length ? `${added.length} přidáno · ${failed.length} souborů se nepodařilo načíst` : added.length ? `${added.length} PNG připraveno` : ''; $('traitFiles').value = ''; render(); }
+    if (failed.length) { window.TraitDiagnostics?.error('png-import'); toast(failed.join(' '), true); }
+  } finally { finishLog?.(); busy = false; $('uploadStatus').textContent = failed.length ? `${added.length} přidáno · ${failed.length} souborů se nepodařilo načíst` : added.length ? `${added.length} PNG připraveno` : ''; $('traitFiles').value = ''; render(); }
 }
 async function loadProject(file) {
   if (!file || busy) return;
+  const finishLog = window.TraitDiagnostics?.start('json-open');
   busy = true; render();
   try {
     const next = M.normalize(JSON.parse(await file.text()));
@@ -972,8 +980,8 @@ async function loadProject(file) {
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     layerOverview = false; showPanel('layers');
-  } catch (error) { toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
-  finally { busy = false; $('projectFile').value = ''; render(); }
+  } catch (error) { window.TraitDiagnostics?.error('json-open', error); toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
+  finally { finishLog?.(); busy = false; $('projectFile').value = ''; render(); }
 }
 
 async function refreshApp() {
@@ -1200,9 +1208,11 @@ async function handleAction(action, id, element) {
       break;
     case 'save-project': {
       if(busy)return;
+      const finishLog = window.TraitDiagnostics?.start('json-backup');
       const project=M.clone(state);busy=true;render();storageStatus('Připravuji zálohu po vrstvách…');
       try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');storageStatus('Záloha dokončena'); }
-      finally {busy=false;render(true);}
+      catch (error) { window.TraitDiagnostics?.error('json-backup', error); throw error; }
+      finally { finishLog?.(); busy=false;render(true);}
       break;
     }
     case 'export': await exportPNG(); break;
@@ -1214,6 +1224,15 @@ async function handleAction(action, id, element) {
     case 'close-category-sort': $('categorySortDialog').close(); break;
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
+    case 'open-diagnostics':
+      $('diagnosticsReport').textContent = window.TraitDiagnostics?.report() || 'Záznam není k dispozici.';
+      $('versionHistoryDialog').close();
+      $('diagnosticsDialog').showModal();
+      break;
+    case 'close-diagnostics': $('diagnosticsDialog').close(); $('versionHistoryDialog').showModal(); break;
+    case 'download-diagnostics':
+      if (window.TraitDiagnostics) download(new Blob([window.TraitDiagnostics.report()], { type: 'text/plain;charset=utf-8' }), 'trait-mixer-crash-log.txt');
+      break;
     case 'open-history': $('historyDialog').showModal(); renderHistoryPanel(); document.querySelector('#historyList .is-current')?.scrollIntoView({ block: 'nearest' }); break;
     case 'close-history': $('historyDialog').close(); break;
     case 'jump-history': jumpHistory(Number(id)); break;
@@ -1436,6 +1455,7 @@ async function setupOffline() {
   } catch { /* Online editing remains usable if the browser disallows offline storage. */ }
 }
 async function init() {
+  const finishLog = window.TraitDiagnostics?.start('startup');
   try {
     db = await openStorage();
     const saved = await storedProject();
@@ -1447,6 +1467,7 @@ async function init() {
   $('recoveryNotice').hidden = !safeMode;
   ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
+  finishLog?.();
 }
 init();
 

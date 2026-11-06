@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.59 | checkpoint/v0.7.59-local-diagnostics | Lokální diagnostický záznam chyb a průběhu dlouhých operací |
 | 0.7.58 | checkpoint/v0.7.58-layer-tree | Strom vrstev a složek, pás miniatur na výšku, náhledy a PNG sestav |
 | 0.7.57 | checkpoint/v0.7.57-portrait-preview | Bezpečný odstup lišty na iPhonu, název ve složce a čistší náhled na výšku |
 | 0.7.56 | checkpoint/v0.7.56-compact-workspace | Ikonové nabídky, levý ovládací panel a maximální náhled na šířku |

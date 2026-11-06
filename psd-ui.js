@@ -90,6 +90,7 @@
   }
   async function open(file) {
     if (!file || !ready || busy) return;
+    const finishLog = window.TraitDiagnostics?.start('psd-open');
     dispose(); const current = epoch;
     $('psdCancel').textContent = 'Zrušit';
     busy = true; working = true; render();
@@ -101,7 +102,7 @@
       if (typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
         worker = new Worker('./psd-worker.js');
         worker.onmessage = ({ data }) => { const p = pending.get(data.requestId); if (!p) return; clearTimeout(p.timer); pending.delete(data.requestId); data.error ? p.reject(new Error(data.error)) : p.resolve(data.result); };
-        worker.onerror = () => failWorker('Zpracování PSD se přerušilo. Zkus menší soubor a ověř, že má aplikace aktuální verzi.');
+        worker.onerror = event => { window.TraitDiagnostics?.error('psd-worker', event.error); failWorker('Zpracování PSD se přerušilo. Zkus menší soubor a ověř, že má aplikace aktuální verzi.'); };
       } else await loadLibrary();
       if (current !== epoch) return;
       status('Kontroluji totožnost PSD po částech…');
@@ -120,8 +121,9 @@
       status('Vyber vrstvy a způsob rozdělení. Projekt se změní až po potvrzení.');
     } catch (error) {
       if (current !== epoch) return;
+      window.TraitDiagnostics?.error('psd-open', error);
       working = false; $('psdConfirm').disabled = true; status('PSD se nepodařilo otevřít: ' + error.message);
-    }
+    } finally { finishLog?.(); }
   }
   async function preview(nodeId) {
     if (working) return;
@@ -140,6 +142,8 @@
   }
   async function confirm() {
     if (working || $('psdConfirm').disabled) return;
+    const finishLog = window.TraitDiagnostics?.start('psd-import');
+    let lastLoggedSave = 0;
     const current = epoch, mode = $('psdMode').value, targetId = $('psdTarget').value;
     working = true; update();
     $('psdCancel').textContent = 'Zastavit · uložené ponechat';
@@ -197,6 +201,10 @@
         }
         completed += jobs.length;
         savedCount = completed;
+        if (savedCount === total || Date.now() - lastLoggedSave >= 5000) {
+          window.TraitDiagnostics?.saved('psd-import', savedCount);
+          lastLoggedSave = Date.now();
+        }
         active = mode === 'category' ? targetId : plan.cats[0].id;
         organizerSelection[active] = null;
         progress(completed, savedCount, total, 'Bezpečně uloženo');
@@ -234,12 +242,13 @@
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {
+        window.TraitDiagnostics?.error('psd-import', error);
         working = false; update(); $('psdConfirm').disabled = true;
         progress(completed, savedCount, totalForFailure, 'Import zastaven');
         status(`Import zastaven. Uloženo ${savedCount} vrstev, v projektu je ${completed}. ${error.message}`);
         $('psdImportReason').textContent = 'Dokončené dávky zůstávají v projektu. Zavři toto okno.';
       }
-    }
+    } finally { finishLog?.(); }
   }
   $('importPsd').addEventListener('click', () => { if (ready && !busy) { fileInput.value = ''; fileInput.click(); } });
   fileInput.addEventListener('change', () => open(fileInput.files[0]));
