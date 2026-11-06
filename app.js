@@ -246,9 +246,140 @@ function showPanel(panel) {
   if (panel !== 'layers') inspectorPanel = panel;
   $('appLayout').dataset.mobilePanel = mobilePanel;
   syncLandscapeTraitPlacement();
+  renderLayerTree();
   document.querySelectorAll('.workspace-tabs button').forEach(b => { const selected = b.dataset.panel === mobilePanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
+}
+let layerOverview = false;
+let layerLimit = 48;
+let layerContextTrigger;
+
+function layerThumbnail(category, trait) {
+  return `<img data-layer-thumbnail data-category="${esc(category.id)}" data-trait="${esc(trait.id)}" alt="" decoding="async" loading="lazy">`;
+}
+function mixedLayerRows(category) {
+  const { folders, assignments } = organizerFolders(category.id);
+  const siblings = new Map();
+  const add = (parent, kind, item) => {
+    if (!siblings.has(parent)) siblings.set(parent, { folders: [], traits: [] });
+    const origin = /^([a-f0-9]{64}):psd-(\d+)$/.exec(item.psdSource || '');
+    siblings.get(parent)[kind].push({ item, kind, source: origin?.[1], order: Number(origin?.[2]) });
+  };
+  folders.forEach(folder => add(folder.parentId || null, 'folders', folder));
+  category.traits.forEach(trait => add(assignments[trait.id] || null, 'traits', trait));
+  function merge(parent) {
+    const group = siblings.get(parent);
+    if (!group) return [];
+    const rows = [];
+    let f = 0, t = 0;
+    while (f < group.folders.length || t < group.traits.length) {
+      const folder = group.folders[f], trait = group.traits[t];
+      // The stored folder and trait sequences retain explicit edits. The original
+      // PSD positions recover interleaving when both siblings come from one file.
+      const traitFirst = trait && (!folder || (trait.source && (!folder.source ||
+        (trait.source === folder.source && trait.order < folder.order))));
+      rows.push(traitFirst ? group.traits[t++] : group.folders[f++]);
+    }
+    return rows;
+  }
+  const visible = [];
+  const stack = merge(null).reverse().map(row => ({ ...row, depth: 0 }));
+  const expanded = organizerExpanded[category.id];
+  while (stack.length) {
+    const row = stack.pop();
+    visible.push(row);
+    if (row.kind === 'folders' && expanded?.has(row.item.id)) {
+      const children = merge(row.item.id);
+      for (let i = children.length - 1; i >= 0; i--) stack.push({ ...children[i], depth: row.depth + 1 });
+    }
+  }
+  return visible;
+}
+function renderLayerTree() {
+  const c = M.category(state, active), tree = $('layerTree');
+  const overview = !c || layerOverview;
+  $('categoryOverview').hidden = !overview;
+  tree.hidden = overview;
+  const back = mobilePanel === 'layers' && !overview;
+  $('layersTabIcon').setAttribute('href', back ? '#i-back' : '#i-layers');
+  $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět na kategorie' : 'Vrstvy');
+  if (overview || mobilePanel !== 'layers') { tree.replaceChildren(); treeMarkup = ''; mountThumbnails(); return; }
+  if (busy) return;
+  const rows = mixedLayerRows(c);
+  tree.setAttribute('aria-label', `Vrstvy · ${c.name}`);
+  const entries = rows.slice(0, layerLimit).map(({ item, kind, depth }) => {
+    const id = esc(item.id), folder = kind === 'folders';
+    const expanded = folder && !!organizerExpanded[c.id]?.has(item.id);
+    const indent = Math.min(7, depth);
+    const image = folder || safeMode ? '' : layerThumbnail(c, item);
+    return `<div class="layer-tree-row ${folder ? 'layer-tree-folder drop-row' : ''}" style="--depth:${indent}"${folder ? ` data-drop-kind="folder" data-drop-id="${id}" data-category="${esc(c.id)}"` : ''}>
+      <button type="button" class="layer-tree-main" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
+        ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
+        <span class="layer-tree-label">${esc(item.name)}</span>${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+      </button>
+      <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
+    </div>`;
+  }).join('');
+  const more = rows.length > layerLimit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', 'class="outline full-width"') : '';
+  const empty = rows.length ? '' : '<p class="empty-list">Tato kategorie je zatím prázdná.</p>';
+  const tools = `<div class="layer-tree-tools">${button('add-traits', 'Přidat PNG', '', 'upload')}${button('add-organizer-folder', 'Přidat složku', '', 'folder')}</div>`;
+  const markup = entries + more + empty + tools;
+  // Keep existing thumbnail elements and the focused row on selection changes.
+  if (treeMarkup !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup = markup; }
+  const selected = state.selected[c.id];
+  const visible = !M.conflicts(state).hidden.has(c.id);
+  for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
+    const picked = row.dataset.id === selected;
+    row.setAttribute('aria-pressed', String(picked));
+    row.querySelector('.layer-tree-check').hidden = !picked || !visible;
+  }
+  mountThumbnails();
+}
+let treeMarkup = '';
+function closeLayerContext(focus = false) {
+  const menu = $('layerContext');
+  menu.hidden = true;
+  if (layerContextTrigger) {
+    layerContextTrigger.setAttribute('aria-expanded', 'false');
+    if (focus && layerContextTrigger.isConnected) layerContextTrigger.focus();
+    layerContextTrigger = null;
+  }
+}
+function openLayerContext(trigger, id) {
+  if (layerContextTrigger === trigger) { closeLayerContext(true); return; }
+  closeLayerContext();
+  const c = M.category(state, active), menu = $('layerContext');
+  if (!c) return;
+  const { folders, assignments } = organizerFolders(c.id);
+  const attributes = `data-category="${esc(c.id)}"`;
+  if (trigger.dataset.kind === 'folder') {
+    const folder = folders.find(item => item.id === id);
+    if (!folder) return;
+    const excluded = organizerDescendants(folders, id);
+    menu.innerHTML = button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
+      button('rename-organizer-folder', 'Přejmenovat', id, 'edit', attributes) +
+      `<label>Přesunout složku<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(f => !excluded.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` +
+      button('delete-organizer-folder', 'Smazat složku', id, 'trash', `${attributes} class="danger"`);
+  } else {
+    const trait = c.traits.find(item => item.id === id);
+    if (!trait) return;
+    const shown = state.selected[c.id] === id && c.visible !== false;
+    menu.innerHTML = button('toggle-trait-visibility', shown ? 'Skrýt v náhledu' : 'Zobrazit v náhledu', id, shown ? 'eye-off' : 'eye') +
+      button('rename-trait', 'Přejmenovat', id, 'edit') +
+      (folders.length ? `<label>Přesunout do složky<select data-action="assign-trait-folder" ${attributes} data-trait-id="${esc(id)}"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` : '') +
+      (state.cats.length > 1 ? `<label>Přesunout do kategorie${traitCategorySelect(trait, c.id)}</label>` : '') +
+      button('delete-trait', 'Smazat', id, 'trash', 'class="danger"');
+  }
+  layerContextTrigger = trigger;
+  trigger.setAttribute('aria-expanded', 'true');
+  menu.hidden = false;
+  const rect = trigger.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const width = viewport?.width || window.innerWidth, height = viewport?.height || window.innerHeight;
+  menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, width - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, height - menu.offsetHeight - 8))}px`;
+  menu.querySelector('button')?.focus();
 }
 function dragHandle(kind, id, categoryId, label) {
   return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
@@ -265,15 +396,14 @@ function renderQuickTraits() {
  const strip = $('quickTraits'), list = $('quickTraitsItems');
  if (!strip || !list) return;
  const c = M.category(state, active);
- strip.hidden = !c || !c.traits.length || safeMode;
- if (strip.hidden) { list.replaceChildren(); quickCategoryId = null; return; }
- $('quickTraitsTitle').textContent = c.name + ' (' + c.traits.length + ')';
+ strip.hidden = !c || !c.traits.length || safeMode || busy || mobilePanel !== 'layers' || window.innerWidth > window.innerHeight;
+ if (strip.hidden) { list.replaceChildren(); list.dataset.ids = ''; quickCategoryId = null; return; }
  const ids = c.traits.map(t => t.id).join('|');
  const needsBuild = list.dataset.category !== c.id || list.dataset.ids !== ids;
  if (needsBuild) {
    list.dataset.category = c.id;
    list.dataset.ids = ids;
-   list.innerHTML = c.traits.map(t => '<button class="quick-trait" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '"><img ' + imageAttributes(t.data) + ' alt="" loading="lazy"><span class="quick-check" hidden>✓</span></button>').join('');
+   list.innerHTML = c.traits.map(t => '<button class="quick-trait" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '">' + layerThumbnail(c, t) + '<span class="quick-check" hidden>✓</span></button>').join('');
    mountThumbnails();
  }
  const selected = state.selected[c.id];
@@ -365,6 +495,7 @@ function renderTraits() {
   $('categoryPrev').disabled = state.cats.length < 2 || busy;
   $('categoryNext').disabled = !state.cats.length || (state.cats.length === 1 && !!c) || busy;
   $('addTrait').disabled = !c || busy;
+  $('manageSort').disabled = state.cats.length < 2 || busy;
   $('traitOrganizer').hidden = !c;
   if (!c) {
     $('traits').innerHTML = '<p class="helper">Nejdřív si vytvoř kategorii v panelu Vrstvy.</p>';
@@ -413,10 +544,98 @@ function renderRules() {
   updateRuleTargets();
   $('rules').innerHTML = state.rules.length ? state.rules.map(r => `<article class="saved-card"><strong>${esc(M.locate(state, r.source)?.trait.name || '?')}</strong><p>${r.action === 'hide' ? 'Skryje kategorii' : 'Nesmí se kombinovat s'} ${esc(M.category(state, r.targetCat)?.name || '?')}${r.targetTrait ? ' / ' + esc(M.locate(state, r.targetTrait)?.trait.name || '?') : ''}</p><div class="saved-actions">${button('delete-rule', 'Odstranit pravidlo', r.id, 'trash')}</div></article>`).join('') : '<p class="empty-list">Pravidla jsou volitelná.<br>Přidej je, až budeš mít více vrstev.</p>';
 }
-function renderSnapshots() {
-  $('snapshots').innerHTML = state.snapshots.length ? state.snapshots.map(s => `<article class="saved-card"><strong>${esc(s.name)}</strong><p>${Object.values(s.selected).filter(Boolean).length} vybraných traitů</p><div class="saved-actions">${button('load-snapshot', 'Použít', s.id)}${tool('rename-snapshot', `Přejmenovat sestavu ${s.name}`, s.id, 'edit')}${tool('delete-snapshot', `Smazat sestavu ${s.name}`, s.id, 'trash')}</div></article>`).join('') : '<p class="empty-list">Oblíbená kombinace?<br>Ulož si ji pro příště.</p>';
-  renderSnapshotLayerLibrary();
+const SNAPSHOT_PAGE_SIZE = 12;
+let snapshotPage = 0;
+let snapshotPreviewTicket = 0;
+let snapshotThumbBusy = false;
+const snapshotThumbQueue = new Set(), snapshotThumbWatching = new Set();
+const snapshotThumbObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+  for (const { target, isIntersecting } of entries) {
+    if (isIntersecting && target.isConnected) snapshotThumbQueue.add(target);
+    else snapshotThumbQueue.delete(target);
+  }
+  pumpSnapshotThumbnails();
+}, { rootMargin: '40px' }) : null;
+function snapshotProject(snapshot) {
+  return {
+    ...state,
+    name: snapshot.name,
+    selected: M.selection(state, snapshot.selected),
+    cats: state.cats.map(c => ({ ...c, visible: snapshot.visibility[c.id] ?? c.visible })),
+    rulesEnabled: snapshot.rulesEnabled
+  };
 }
+function renderSnapshots() {
+  const pages = Math.max(1, Math.ceil(state.snapshots.length / SNAPSHOT_PAGE_SIZE));
+  snapshotPage = Math.min(snapshotPage, pages - 1);
+  const start = snapshotPage * SNAPSHOT_PAGE_SIZE;
+  const cards = state.snapshots.slice(start, start + SNAPSHOT_PAGE_SIZE).map(s => `<button type="button" class="snapshot-tile" data-action="open-snapshot" data-id="${esc(s.id)}" title="${esc(s.name)}"><span class="snapshot-art"><canvas data-snapshot-thumb="${esc(s.id)}" width="56" height="56" aria-hidden="true"></canvas></span><span>${esc(s.name)}</span></button>`).join('');
+  const pager = pages > 1 ? `<div class="snapshot-pager">${button('previous-snapshot-page', 'Předchozí', '', 'back', snapshotPage === 0 ? 'disabled' : '')}<span>${snapshotPage + 1} / ${pages}</span>${button('next-snapshot-page', 'Další', '', 'chevron', snapshotPage + 1 === pages ? 'disabled' : '')}</div>` : '';
+  $('snapshots').innerHTML = cards ? `<div class="snapshot-tiles">${cards}</div>${pager}` : '<p class="empty-list">Zatím žádná uložená sestava.</p>';
+  renderSnapshotLayerLibrary();
+  renderSnapshotThumbnails();
+}
+function renderSnapshotThumbnails() {
+  for (const canvas of snapshotThumbWatching) if (!canvas.isConnected || mobilePanel !== 'snapshots') {
+    snapshotThumbObserver?.unobserve(canvas);
+    snapshotThumbWatching.delete(canvas);
+    snapshotThumbQueue.delete(canvas);
+  }
+  if (safeMode || busy || exporting || mobilePanel !== 'snapshots') return;
+  for (const canvas of $('snapshots').querySelectorAll('[data-snapshot-thumb]')) {
+    if (canvas.dataset.painted || snapshotThumbWatching.has(canvas)) continue;
+    if (snapshotThumbObserver) { snapshotThumbWatching.add(canvas); snapshotThumbObserver.observe(canvas); }
+    else snapshotThumbQueue.add(canvas);
+  }
+  pumpSnapshotThumbnails();
+}
+async function pumpSnapshotThumbnails() {
+  if (snapshotThumbBusy || safeMode || busy || exporting || mobilePanel !== 'snapshots') return;
+  for (const canvas of snapshotThumbQueue) {
+    snapshotThumbQueue.delete(canvas);
+    const snapshot = state.snapshots.find(s => s.id === canvas.dataset.snapshotThumb);
+    if (!canvas.isConnected || canvas.dataset.painted || !snapshot) continue;
+    const valid = () => canvas.isConnected && mobilePanel === 'snapshots' && !busy && !exporting && !safeMode;
+    snapshotThumbBusy = true;
+    try {
+      await paintLayers(canvas, visibleLayers(snapshotProject(snapshot)), valid);
+      if (valid()) canvas.dataset.painted = 'true';
+    } catch { canvas.dataset.painted = 'failed'; }
+    finally { snapshotThumbBusy = false; }
+    if (valid()) {
+      snapshotThumbObserver?.unobserve(canvas);
+      snapshotThumbWatching.delete(canvas);
+    }
+    break;
+  }
+  if (snapshotThumbQueue.size && mobilePanel === 'snapshots' && !busy && !exporting && !safeMode) queueMicrotask(pumpSnapshotThumbnails);
+}
+async function openSnapshot(snapshot) {
+  const ticket = ++snapshotPreviewTicket;
+  const dialog = $('snapshotDialog'), canvas = $('snapshotCanvas'), status = $('snapshotStatus');
+  const project = snapshotProject(snapshot), layers = visibleLayers(project);
+  const warnings = M.conflicts(project).warnings;
+  $('snapshotTitle').textContent = snapshot.name;
+  $('snapshotActions').innerHTML = button('edit-snapshot', 'Otevřít ve Vrstvách', snapshot.id, 'layers') +
+    button('export-snapshot', 'Export PNG', snapshot.id, 'download', !layers.length || warnings.length || safeMode ? 'disabled' : '') +
+    button('rename-snapshot', 'Přejmenovat', snapshot.id, 'edit') +
+    button('delete-snapshot', 'Smazat', snapshot.id, 'trash', 'class="danger"');
+  status.textContent = safeMode ? 'Náhled je v obnovovacím režimu vypnutý.' : 'Načítám náhled…';
+  canvas.width = canvas.height = 320;
+  if (!dialog.open) dialog.showModal();
+  if (safeMode) return;
+  const valid = () => dialog.open && ticket === snapshotPreviewTicket;
+  try {
+    await paintLayers(canvas, layers, valid);
+    if (valid()) status.textContent = warnings.length ? warnings.map(w => w.message).join(' · ') : `${layers.length} viditelných vrstev`;
+  } catch (error) { if (valid()) status.textContent = error.message; }
+}
+$('snapshotDialog').addEventListener('close', () => {
+  if ($('snapshotDialog').open) return;
+  snapshotPreviewTicket++;
+  const canvas = $('snapshotCanvas');
+  canvas.width = canvas.height = 1;
+});
 function renderSnapshotLayerLibrary() {
   const container = $('snapshotLayerLibrary');
   const openCategories = libraryOpen;
@@ -436,30 +655,112 @@ function renderSnapshotLayerLibrary() {
   mountThumbnails();
 }
 const thumbnailURLs = new Map(), thumbnailQueue = new Set(), thumbnailWatching = new Set();
+const nearbyThumbnails = new Set();
+const thumbnailSources = new WeakMap();
 let thumbnailJobs = 0;
 const thumbnailObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
-  for(const entry of entries)if(entry.isIntersecting){thumbnailObserver.unobserve(entry.target);thumbnailWatching.delete(entry.target);thumbnailQueue.add(entry.target);}
+  for (const { target, isIntersecting } of entries) {
+    if (!target.isConnected) continue;
+    if (target.hasAttribute('data-layer-thumbnail')) {
+      if (isIntersecting) {
+        nearbyThumbnails.add(target);
+        if (!thumbnailSources.has(target)) thumbnailQueue.add(target);
+      } else {
+        nearbyThumbnails.delete(target);
+        thumbnailQueue.delete(target);
+        clearLayerThumbnail(target);
+      }
+    } else if (isIntersecting) {
+      thumbnailObserver.unobserve(target);
+      thumbnailWatching.delete(target);
+      thumbnailQueue.add(target);
+    }
+  }
   pumpThumbnails();
-}, {rootMargin:'80px'}) : null;
+}, { rootMargin: '80px' }) : null;
 function imageAttributes(data) { return TraitStorage.isAsset(data) ? 'data-asset="'+esc(data)+'"' : 'src="'+esc(data)+'"'; }
+function layerThumbnailSource(img) {
+  return M.category(state, img.dataset.category)?.traits.find(t => t.id === img.dataset.trait)?.data;
+}
+function clearLayerThumbnail(img) {
+  if (thumbnailURLs.has(img)) {
+    URL.revokeObjectURL(thumbnailURLs.get(img));
+    thumbnailURLs.delete(img);
+  }
+  if (thumbnailSources.delete(img)) img.removeAttribute('src');
+}
 function mountThumbnails() {
-  for(const [img,url] of thumbnailURLs)if(!img.isConnected){URL.revokeObjectURL(url);thumbnailURLs.delete(img);}
-  for(const img of thumbnailWatching)if(!img.isConnected){thumbnailObserver?.unobserve(img);thumbnailWatching.delete(img);}
-  for(const img of document.querySelectorAll('img[data-asset]')) {
-    if(img.dataset.assetLoading || thumbnailWatching.has(img))continue;
-    if(thumbnailObserver){thumbnailWatching.add(img);thumbnailObserver.observe(img);}else thumbnailQueue.add(img);
+  for (const [img, url] of thumbnailURLs) if (!img.isConnected) {
+    URL.revokeObjectURL(url); thumbnailURLs.delete(img);
+  }
+  for (const img of thumbnailWatching) if (!img.isConnected) {
+    thumbnailObserver?.unobserve(img);
+    thumbnailWatching.delete(img);
+    nearbyThumbnails.delete(img);
+    thumbnailQueue.delete(img);
+  }
+  for (const img of nearbyThumbnails) if (thumbnailSources.has(img) && thumbnailSources.get(img) !== layerThumbnailSource(img)) {
+    clearLayerThumbnail(img); thumbnailQueue.add(img);
+  }
+  for (const img of document.querySelectorAll('img[data-asset], img[data-layer-thumbnail]')) {
+    if (img.dataset.assetLoading || thumbnailWatching.has(img) || thumbnailSources.has(img)) continue;
+    if (thumbnailObserver) { thumbnailWatching.add(img); thumbnailObserver.observe(img); }
+    else thumbnailQueue.add(img);
   }
   pumpThumbnails();
 }
+const smallThumbnailCache = new Map();
+async function thumbnailBlob(source, managed, valid) {
+  if (!TraitStorage.isAsset(source)) return null;
+  if (managed && smallThumbnailCache.has(source)) return smallThumbnailCache.get(source);
+  const blob = await TraitStorage.imageBlob(db, source);
+  if (!managed || !valid()) return blob;
+  const url = URL.createObjectURL(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 96;
+  let image;
+  try {
+    image = await decodeImage(url);
+    if (!valid()) return blob;
+    canvas.getContext('2d').drawImage(image, 0, 0, 96, 96);
+    const thumbnail = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!thumbnail) return blob;
+    smallThumbnailCache.set(source, thumbnail);
+    if (smallThumbnailCache.size > 64) smallThumbnailCache.delete(smallThumbnailCache.keys().next().value);
+    return thumbnail;
+  } catch { return blob; }
+  finally {
+    if (image) image.src = '';
+    canvas.width = canvas.height = 1;
+    URL.revokeObjectURL(url);
+  }
+}
 function pumpThumbnails() {
-  while(thumbnailJobs<2 && thumbnailQueue.size) {
-    const img=thumbnailQueue.values().next().value;thumbnailQueue.delete(img);
-    if(!img.isConnected || img.dataset.assetLoading)continue;
-    img.dataset.assetLoading='true';thumbnailJobs++;
-    TraitStorage.imageBlob(db,img.dataset.asset).then(blob=>{
-      if(!img.isConnected)return;
-      const url=URL.createObjectURL(blob);thumbnailURLs.set(img,url);img.src=url;img.removeAttribute('data-asset');
-    }).catch(()=>{if(img.isConnected)img.alt='Náhled nelze načíst';}).finally(()=>{thumbnailJobs--;pumpThumbnails();});
+  while (thumbnailJobs < 2 && thumbnailQueue.size) {
+    const img = thumbnailQueue.values().next().value;
+    thumbnailQueue.delete(img);
+    if (!img.isConnected || img.dataset.assetLoading) continue;
+    const managed = img.hasAttribute('data-layer-thumbnail');
+    const source = managed ? layerThumbnailSource(img) : img.dataset.asset;
+    if (!source || (managed && thumbnailObserver && !nearbyThumbnails.has(img))) continue;
+    img.dataset.assetLoading = 'true';
+    thumbnailJobs++;
+    const valid = () => img.isConnected && (!managed || !thumbnailObserver || nearbyThumbnails.has(img));
+    thumbnailBlob(source, managed, valid).then(blob => {
+      if (!valid()) return;
+      if (managed && source !== layerThumbnailSource(img)) { thumbnailQueue.add(img); return; }
+      const url = blob ? URL.createObjectURL(blob) : source;
+      if (blob) thumbnailURLs.set(img, url);
+      img.src = url;
+      if (managed) thumbnailSources.set(img, source);
+      else img.removeAttribute('data-asset');
+    }).catch(() => {
+      if (img.isConnected) img.alt = 'Náhled nelze načíst';
+    }).finally(() => {
+      delete img.dataset.assetLoading;
+      thumbnailJobs--;
+      pumpThumbnails();
+    });
   }
 }
 function visibleLayers(project) {
@@ -480,7 +781,7 @@ function cachedImage(t) {
 }
 async function paintLayers(canvas, layers, valid = () => true) {
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 1024, 1024);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const trait of layers) {
     if (!valid()) return;
     let url=null,image;
@@ -497,7 +798,7 @@ async function paintLayers(canvas, layers, valid = () => true) {
         image=await decodeImage(data);
       }
       if(!valid())return;
-      ctx.drawImage(image,0,0,1024,1024);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
     } finally { if(image)image.src='';if(url)URL.revokeObjectURL(url); }
   }
 }
@@ -539,8 +840,6 @@ function render(keepPreview = false) {
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
-  renderQuickTraits();
-  syncLandscapeTraitPlacement();
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
   syncLandscapeControls();
@@ -560,6 +859,8 @@ function render(keepPreview = false) {
   }
   // Avoid rebuilding hundreds of DOM nodes and decoding previews while importing PSD.
   if (busy) return;
+  fillSelect($('layerCategory'), state.cats.map(c => [c.id, c.name]), 'Vyber kategorii');
+  if (active) $('layerCategory').value = active;
   renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
 function download(blob, name) {
@@ -568,17 +869,16 @@ function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 const filename = name => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'nft-projekt';
-async function exportPNG() {
-  const project = M.clone(state);
-  if (M.conflicts(project).warnings.length || !visibleLayers(project).length) return;
-  exporting = true; render();
+async function exportPNG(project = M.clone(state)) {
+  if (exporting || M.conflicts(project).warnings.length || !visibleLayers(project).length) return;
+  exporting = true; render(true);
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
   try {
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
     await paintLayers(canvas, visibleLayers(project));
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('PNG se nepodařilo vytvořit.');
     download(blob, `${filename(project.name)}.png`); toast('PNG je připravené ke stažení');
-  } finally { exporting = false; render(); }
+  } finally { canvas.width = canvas.height = 1; exporting = false; render(true); }
 }
 
 function crc32(bytes) {
@@ -671,7 +971,7 @@ async function loadProject(file) {
     for (const c of next.cats) for (const t of c.traits) await decodeImage(t.data);
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
-    showPanel('traits');
+    layerOverview = false; showPanel('layers');
   } catch (error) { toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
   finally { busy = false; $('projectFile').value = ''; render(); }
 }
@@ -734,7 +1034,24 @@ async function handleAction(action, id, element) {
   if (busy && !['show-panel', 'select-category', 'install'].includes(action)) { toast('Počkej prosím na dokončení načítání.'); return; }
   const c = M.category(state, id || active), located = M.locate(state, id);
   switch (action) {
-    case 'show-panel': showPanel(element.dataset.panel); renderSnapshotLayerLibrary(); break;
+    case 'show-panel': {
+      closeLayerContext();
+      const panel = element.dataset.panel;
+      if (panel === 'layers' && mobilePanel === 'layers') layerOverview = !layerOverview;
+      showPanel(panel);
+      renderSnapshotLayerLibrary();
+      renderSnapshotThumbnails();
+      break;
+    }
+    case 'open-layer-menu': openLayerContext(element, id); break;
+    case 'show-more-layers': layerLimit += 48; renderLayerTree(); break;
+    case 'toggle-tree-folder': {
+      const expanded = organizerExpanded[active] ||= new Set();
+      if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+      renderLayerTree();
+      Array.from($('layerTree').querySelectorAll('[data-action="toggle-tree-folder"]')).find(b => b.dataset.id === id)?.focus();
+      break;
+    }
     case 'cycle-trait': {
       if (!c || !c.traits.length) break;
       const current = c.traits.findIndex(t => t.id === state.selected[c.id]);
@@ -761,8 +1078,14 @@ async function handleAction(action, id, element) {
     case 'library-prev': libraryPages[id] = Math.max(0, (libraryPages[id] || 0) - 1); renderSnapshotLayerLibrary(); break;
     case 'library-next': libraryPages[id] = (libraryPages[id] || 0) + 1; renderSnapshotLayerLibrary(); break;
     case 'enable-previews': safeMode = false; $('recoveryNotice').hidden = true; render(); break;
-    case 'open-traits': showPanel('traits'); break;
-    case 'select-category': { traitPage = 0; active = id; organizerSelection[id] = null; organizerExpanded[id] = new Set(organizerFolders(id).folders.map(folder => folder.id)); render(); if (!element?.closest('#cats')) showPanel('traits'); break; }
+    case 'open-traits': layerOverview = false; showPanel('layers'); break;
+    case 'select-category': {
+      if (!c) break;
+      traitPage = 0; layerLimit = 48; layerOverview = false; active = id;
+      organizerSelection[id] = null;
+      render(true);
+      break;
+    }
     case 'organizer-toggle-folder': {
       const categoryId = element?.dataset.category || active;
       const expanded = organizerExpanded[categoryId] ||= new Set();
@@ -778,8 +1101,8 @@ async function handleAction(action, id, element) {
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
       const categoryId = element?.dataset.category || active, cat = M.category(state, categoryId);
       if (!cat) break;
-      const parentId = action === 'add-organizer-subfolder' ? organizerSelection[categoryId] || null : null;
-      if (action === 'add-organizer-subfolder' && !parentId) break;
+      const parentId = action === 'add-organizer-subfolder' ? id || organizerSelection[categoryId] || null : null;
+      if (action === 'add-organizer-subfolder' && !organizerFolders(categoryId).folders.some(f => f.id === parentId)) break;
       const name = await ask({ title: parentId ? 'Nová podsložka' : 'Nová složka', description: 'Organizační složka změní jen přehled traitů. Skládání zůstane stejné.' });
       if (name) {
         const folderId = M.uid();
@@ -811,7 +1134,7 @@ async function handleAction(action, id, element) {
     }
     case 'add-category': {
       const name = await ask({ title: 'Nová kategorie', description: 'Například Pozadí, Tělo, Oči nebo Doplňky.', submit: 'Přidat kategorii' });
-      if (name) { const nextId = M.uid(); change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána'); showPanel('traits'); }
+      if (name) { const nextId = M.uid(); layerOverview = false; change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána'); showPanel('layers'); }
       break;
     }
     case 'rename-category': {
@@ -834,7 +1157,7 @@ async function handleAction(action, id, element) {
     }
     case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); $('traitFiles').click(); } break;
     case 'export-package': await exportPackage(); break;
-    case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { showPanel('traits'); $('traitFiles').click(); } break;
+    case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { $('traitFiles').click(); } break;
     case 'toggle-trait-visibility': {
       const found=M.locate(state,id);if(!found)break;
       change(()=>{
@@ -848,8 +1171,14 @@ async function handleAction(action, id, element) {
     case 'choose-trait': {
       const categoryId = element?.dataset.category || active;
       if (M.category(state, categoryId) && (!id || M.category(state, categoryId).traits.some(t => t.id === id))) {
+        const category = M.category(state, categoryId);
+        const fromLayers = !!element?.closest('#layerTree, #quickTraits');
+        if (active === categoryId && state.selected[categoryId] === id && (!fromLayers || category.visible !== false)) break;
         active = categoryId;
-        change(() => { state.selected[categoryId] = id || null; });
+        change(() => {
+          state.selected[categoryId] = id || null;
+          if (id && fromLayers) category.visible = true;
+        });
       }
       break;
     }
@@ -894,11 +1223,57 @@ async function handleAction(action, id, element) {
     case 'add-snapshot': {
       if (!state.cats.length) { toast('Nejdřív vytvoř svoji první kategorii.'); break; }
       const name = await ask({ title: 'Uložit sestavu', value: `Sestava ${state.snapshots.length + 1}`, submit: 'Uložit sestavu' });
-      if (name) change(() => state.snapshots.push({ id: M.uid(), name, selected: { ...state.selected }, visibility: Object.fromEntries(state.cats.map(c => [c.id, c.visible])), rulesEnabled: state.rulesEnabled }), 'Sestava uložena'); break;
+      if (name) {
+        snapshotPage = Math.floor(state.snapshots.length / SNAPSHOT_PAGE_SIZE);
+        change(() => state.snapshots.push({ id: M.uid(), name, selected: { ...state.selected }, visibility: Object.fromEntries(state.cats.map(c => [c.id, c.visible])), rulesEnabled: state.rulesEnabled }), 'Sestava uložena');
+      }
+      break;
     }
-    case 'load-snapshot': { const s = state.snapshots.find(s => s.id === id); if (s) change(() => { state.selected = M.selection(state, s.selected); for (const c of state.cats) if (c.id in s.visibility) c.visible = s.visibility[c.id]; state.rulesEnabled = s.rulesEnabled; }, 'Sestava použita'); break; }
-    case 'rename-snapshot': { const s = state.snapshots.find(s => s.id === id); if (!s) break; const name = await ask({ title: 'Přejmenovat sestavu', value: s.name }); if (name) change(() => { s.name = name; }); break; }
-    case 'delete-snapshot': { const s = state.snapshots.find(s => s.id === id); if (s && await ask({ title: `Smazat sestavu „${s.name}“?`, confirm: true, submit: 'Smazat sestavu', danger: true })) change(() => { state.snapshots = state.snapshots.filter(s => s.id !== id); }, 'Sestava smazána'); break; }
+    case 'previous-snapshot-page': snapshotPage = Math.max(0, snapshotPage - 1); renderSnapshots(); break;
+    case 'next-snapshot-page': snapshotPage++; renderSnapshots(); break;
+    case 'open-snapshot': {
+      const snapshot = state.snapshots.find(s => s.id === id);
+      if (snapshot) await openSnapshot(snapshot);
+      break;
+    }
+    case 'close-snapshot': $('snapshotDialog').close(); break;
+    case 'export-snapshot': {
+      const snapshot = state.snapshots.find(s => s.id === id);
+      if (snapshot && !safeMode) await exportPNG(snapshotProject(snapshot));
+      break;
+    }
+    case 'edit-snapshot': case 'load-snapshot': {
+      const snapshot = state.snapshots.find(s => s.id === id);
+      if (!snapshot) break;
+      if ($('snapshotDialog').open) $('snapshotDialog').close();
+      change(() => {
+        state.selected = M.selection(state, snapshot.selected);
+        for (const c of state.cats) if (c.id in snapshot.visibility) c.visible = snapshot.visibility[c.id];
+        state.rulesEnabled = snapshot.rulesEnabled;
+      }, 'Sestava použita');
+      if (action === 'edit-snapshot') { layerOverview = false; showPanel('layers'); }
+      break;
+    }
+    case 'rename-snapshot': {
+      const snapshot = state.snapshots.find(s => s.id === id);
+      if (!snapshot) break;
+      const detail = $('snapshotDialog').open;
+      if (detail) $('snapshotDialog').close();
+      const name = await ask({ title: 'Přejmenovat sestavu', value: snapshot.name });
+      if (name && name !== snapshot.name) change(() => { snapshot.name = name; });
+      if (detail) await openSnapshot(snapshot);
+      break;
+    }
+    case 'delete-snapshot': {
+      const snapshot = state.snapshots.find(s => s.id === id);
+      if (!snapshot) break;
+      const detail = $('snapshotDialog').open;
+      if (detail) $('snapshotDialog').close();
+      if (await ask({ title: `Smazat sestavu „${snapshot.name}“?`, confirm: true, submit: 'Smazat sestavu', danger: true })) {
+        change(() => { state.snapshots = state.snapshots.filter(s => s.id !== id); }, 'Sestava smazána');
+      } else if (detail) await openSnapshot(snapshot);
+      break;
+    }
     case 'install':
       if (installPrompt) { const prompt = installPrompt; installPrompt = null; await prompt.prompt(); await prompt.userChoice; }
       else { $('installNote').textContent = location.protocol === 'https:' ? 'Otevři na telefonu stejnou webovou adresu. Projekt do něj přeneseš přes Zálohu JSON a Otevřít.' : 'Pro instalaci na telefon otevři aplikaci na webové adrese s HTTPS. Projekt přeneseš přes Zálohu JSON a Otevřít.'; $('installDialog').showModal(); }
@@ -928,7 +1303,15 @@ async function moveTraitFromControl(control) {
     organizerSelection[targetId] = null;
   }, `Trait přesunut do ${target.name} · Zpět vrátí přesun`);
 }
+$('layerCategory').addEventListener('change', event => {
+  if (!ready || busy) { event.target.value = active || ''; return; }
+  handleAction('select-category', event.target.value, event.target).catch(error => toast(error.message, true));
+});
+window.addEventListener('resize', () => closeLayerContext());
+window.addEventListener('scroll', event => { if (!(event.target instanceof Node) || !$('layerContext').contains(event.target)) closeLayerContext(); }, true);
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && layerContextTrigger) closeLayerContext(true); });
 document.addEventListener('change', event => {
+  if ($('layerContext').contains(event.target)) closeLayerContext(true);
   const moveTraitControl = event.target.closest('[data-action="move-trait-category"]');
   if (moveTraitControl) { moveTraitFromControl(moveTraitControl).catch(error => toast(error.message, true)); return; }
   const moveFolder = event.target.closest('[data-action="move-organizer-folder"]');
@@ -958,6 +1341,7 @@ document.addEventListener('change', event => {
 });
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
+  if (target?.dataset.action !== 'open-layer-menu' && (!$('layerContext').contains(event.target) || target?.tagName === 'BUTTON')) closeLayerContext();
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
 });
 $('traitFiles').addEventListener('change', event => uploadFiles(event.target.files));
@@ -1031,23 +1415,12 @@ $('landscapeInfo').addEventListener('click', () => {
 });
 window.addEventListener('resize', positionLandscapeMenu);
 window.visualViewport?.addEventListener('resize', positionLandscapeMenu);
-/* Physically relocate the quick trait strip out of the preview in landscape.
-   CSS alone cannot reliably win over old orientation-specific styles. */
-function syncLandscapeTraitPlacement(){
-  const strip = $('quickTraits');
-  const stage = document.querySelector('.stage');
-  const layers = $('catsPanel');
-  const traits = $('traitsPanel');
-  if (!strip || !stage || !layers || !traits) return;
+function syncLandscapeTraitPlacement() {
   const landscape = window.innerWidth > window.innerHeight;
   document.body.classList.toggle('landscape-editor-mode', landscape);
-  if (landscape) {
-    // The visible left-side panel owns the carousel; NEVER leave it in the preview.
-    const destination = mobilePanel === 'layers' ? layers : traits;
-    if (strip.parentElement !== destination) destination.appendChild(strip);
-  } else if (strip.parentElement !== stage) {
-    stage.appendChild(strip);
-  }
+  $('layerCategoryPicker').hidden = landscape || mobilePanel !== 'layers' || !state.cats.length;
+  renderQuickTraits();
+  mountThumbnails();
 }
 window.addEventListener('resize', syncLandscapeTraitPlacement);
 window.addEventListener('orientationchange', syncLandscapeTraitPlacement);

@@ -230,7 +230,7 @@
         await pause(150);
       }
       if (savedCount !== total) throw new Error('Kontrola dokončení selhala: nebyly potvrzeny všechny vrstvy.');
-      close(); showPanel('traits');
+      close(); layerOverview = false; showPanel('layers');
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {
@@ -256,5 +256,6 @@
     update();
   });
 })();
+
 
 

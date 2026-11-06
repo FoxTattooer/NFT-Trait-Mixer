@@ -6,9 +6,26 @@ const M=require('../project'),S=require('../storage');
 async function waitFor(fn){for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,10));}throw Error('UI timeout');}
 (async()=>{
 global.indexedDB=new IDBFactory();const p=M.empty(),c=createCanvas(2,2),ctx=c.getContext('2d');
-p.cats=[{id:'a',name:'A',visible:true,traits:Array.from({length:610},(_,i)=>{ctx.fillStyle=`rgb(${i%256},${i>>8},10)`;ctx.fillRect(0,0,2,2);return {id:'t'+i,name:'Layer '+i,data:c.toDataURL('image/png')};})}];p.selected.a='t1';const db=await S.open();await S.save(db,p);db.close();
+p.cats=[{id:'a',name:'A',visible:true,traits:Array.from({length:610},(_,i)=>{ctx.fillStyle=`rgb(${i%256},${i>>8},10)`;ctx.fillRect(0,0,2,2);return {id:'t'+i,name:'Layer '+i,data:c.toDataURL('image/png')};})}];p.selected.a='t1';
+const source = 'a'.repeat(64);
+for (const [i, order] of [1,3,4].entries()) p.cats[0].traits[i].psdSource = `${source}:psd-${order}`;
+p.organizer.a = { folders: [{id:'folder-a',name:'PSD Group',parentId:null,psdSource:`${source}:psd-2`}], assignments: {t1:'folder-a'} };
+p.snapshots.push({id:'preset',name:'První sestava',selected:{a:'t1'},visibility:{a:true},rulesEnabled:true});
+const db=await S.open();await S.save(db,p);db.close();
 let reads=0;const original=IDBObjectStore.prototype.get;IDBObjectStore.prototype.get=function(key){if(String(key).startsWith('image:'))reads++;return original.call(this,key);};
 const w=new Window({url:'https://nft.test',settings:{disableCSSFileLoading:true,disableJavaScriptFileLoading:true,disableJavaScriptEvaluation:true}});
+const observers = [];
+w.IntersectionObserver = class {
+  constructor(callback) { this.callback = callback; this.nodes = new Set(); observers.push(this); }
+  observe(node) { this.nodes.add(node); }
+  unobserve(node) { this.nodes.delete(node); }
+  disconnect() { this.nodes.clear(); }
+};
+const intersect = (node, isIntersecting) => {
+  const observer = observers.find(item => item.nodes.has(node));
+  assert(observer, 'preview is observed');
+  observer.callback([{target:node,isIntersecting}]);
+};
 w.document.write(fs.readFileSync(__dirname+'/../index.html','utf8'));w.indexedDB=global.indexedDB;w.Blob=Blob;
 w.FileReader=class{readAsDataURL(b){b.arrayBuffer().then(v=>{this.result='data:image/png;base64,'+Buffer.from(v).toString('base64');this.onload();});}};
 w.Option=function(text,value){const o=w.document.createElement('option');o.text=text;o.value=value;return o;};
@@ -69,5 +86,56 @@ for(const [width,height] of [[852,393],[393,852],[667,375],[375,667]]) {
 menus[0].open=true;w.document.getElementById('save').click();
 await waitFor(()=>w.__downloads.length>0);assert.equal(menus[0].open,false);
 assert.equal(M.normalize(JSON.parse(await w.__downloads[0].blob.text())).cats[0].traits.length,610);
-await w.happyDOM.abort();w.close();console.log('PASS compact workspace: unique controls, menus, keyboard dismissal, orientation changes, backup action');
+const get = id => w.document.getElementById(id);
+const find = selector => w.document.querySelector(selector);
+const click = selector => find(selector).click();
+const treeIds = () => Array.from(get('layerTree').querySelectorAll('.layer-tree-main')).map(button => button.dataset.id);
+assert.deepEqual(treeIds().slice(0,3),['t0','folder-a','t2'],'PSD root preserves mixed folder/layer order');
+assert.equal(treeIds().length,48,'large trees render in bounded batches');
+click('[data-action="toggle-tree-folder"][data-id="folder-a"]');
+assert.deepEqual(treeIds().slice(0,4),['t0','folder-a','t1','t2']);
+assert.equal(find('[data-action="choose-trait"][data-id="t1"]').closest('.layer-tree-row').style.getPropertyValue('--depth'),'1');
+const image = find('#layerTree [data-trait="t1"]');
+assert(!image.hasAttribute('src'),'a thumbnail outside the viewport has no full image');
+intersect(image,true); await waitFor(()=>image.hasAttribute('src'));
+const thumbnailUrl = image.getAttribute('src');
+const thumbnail = await loadImage(Buffer.from(await urls.get(thumbnailUrl).arrayBuffer()));
+assert.equal(thumbnail.width,96);
+intersect(image,false); assert(!image.hasAttribute('src'));assert(!urls.has(thumbnailUrl));
+click('#layerTree [data-action="open-layer-menu"][data-id="folder-a"]');
+assert(!get('layerContext').hidden);
+assert(find('#layerContext [data-action="add-organizer-subfolder"]'));
+click('#layersTab'); assert(!get('categoryOverview').hidden);
+click('#cats [data-action="select-category"]'); assert(!get('layerTree').hidden);
+w.happyDOM.setWindowSize({width:852,height:393});w.dispatchEvent(new w.Event('resize'));
+assert(get('quickTraits').hidden);assert(get('layerCategoryPicker').hidden);
+w.happyDOM.setWindowSize({width:393,height:852});w.dispatchEvent(new w.Event('resize'));
+assert(!get('quickTraits').hidden);assert(!get('layerCategoryPicker').hidden);
+click('#layerTree [data-action="choose-trait"][data-id="t2"]');
+click('.workspace-tabs [data-panel="snapshots"]');
+assert(get('snapshotLayerLibrary').querySelector('.library-category'));
+const tile = find('#snapshots [data-snapshot-thumb="preset"]');
+intersect(tile,true); await waitFor(()=>tile.dataset.painted==='true');
+assert.equal(tile.native.getContext('2d').getImageData(0,0,1,1).data[0],1);
+click('#snapshots [data-id="preset"]');
+await waitFor(()=>get('snapshotStatus').textContent.includes('viditelných vrstev'));
+assert(get('snapshotDialog').open);
+click('[data-action="export-snapshot"]');
+await waitFor(()=>w.__downloads.some(d=>d.name.endsWith('.png')));
+const exported = w.__downloads.find(d=>d.name.endsWith('.png'));
+const png = await loadImage(Buffer.from(await exported.blob.arrayBuffer()));
+const sample = createCanvas(1,1);sample.getContext('2d').drawImage(png,0,0,1,1);
+assert.equal(png.width,1024);assert.equal(sample.getContext('2d').getImageData(0,0,1,1).data[0],1);
+assert.equal(w.inspectState().selected.a,'t2','exporting a preset leaves the live selection alone');
+click('[data-action="rename-snapshot"]');
+assert(get('editDialog').open);get('dialogInput').value='Přejmenovaná sestava';
+get('dialogForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
+await waitFor(()=>get('snapshotDialog').open && get('snapshotTitle').textContent==='Přejmenovaná sestava');
+click('[data-action="edit-snapshot"]');
+assert.equal(get('appLayout').dataset.mobilePanel,'layers');assert.equal(w.inspectState().selected.a,'t1');
+click('.workspace-tabs [data-panel="snapshots"]');click('#snapshots [data-id="preset"]');
+click('[data-action="delete-snapshot"]');assert(get('editDialog').open);
+get('dialogForm').dispatchEvent(new w.Event('submit',{cancelable:true}));
+await waitFor(()=>w.inspectState().snapshots.length===0);
+await w.happyDOM.abort();w.close();console.log('PASS compact workspace: menus, orientation, backup, ordered layer tree, snapshot edit and PNG');
 })().catch(e=>{console.error(e);process.exitCode=1;});
