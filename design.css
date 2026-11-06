@@ -179,3 +179,7 @@ button:focus-visible,select:focus-visible{outline:2px solid #86ffda;outline-offs
   .category-list {gap:5px}
   .category-card {border-radius:9px}
 }
+
+/* Logo-only branding: keep the toolbar free of the application title. */
+.app-header .brand span{display:none!important}
+@media(max-width:900px) and (orientation:landscape){.app-header .brand{flex:0 0 auto}.app-header .brand img{width:34px;height:34px}}
