@@ -411,3 +411,30 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
 .history-menu-body{padding:7px 4px 3px;color:#bca9b9;font-size:11px}
 .history-menu-actions{display:flex;gap:5px;margin-top:7px}
 .header-menu-content .history-menu-actions button{flex:1;justify-content:center!important;gap:4px!important;font-size:11px!important;background:#251b27!important;border:1px solid #574056!important}
+
+/* Reference polish: slim centered toolbar, clean project header, unified preview footer. */
+.app-header.compact-header{background:#0c0b10!important;border-bottom:1px solid #b51a6b!important;box-shadow:0 2px 10px #ed218b25!important;gap:9px!important}
+.compact-header .compact-toolbar{gap:clamp(7px,2.4vw,15px)!important}
+.compact-header .compact-tool,.header-menu>summary{border:1px solid #514454!important;background:linear-gradient(155deg,#1d1922,#100f15)!important;border-radius:11px!important;box-shadow:0 2px 6px #0008!important}
+.compact-header .compact-tool:focus-visible,.compact-header .compact-tool:active,.header-menu[open]>summary{border-color:#fa2d94!important;box-shadow:0 0 0 1px #ed248a,0 0 12px #ef218a70!important;color:#fff!important}
+.header-menu-content{background:#17131d!important;border:1px solid #9b3b71!important;border-radius:14px!important;box-shadow:0 14px 30px #000b!important}
+.header-menu-content .history-placeholder{display:flex;align-items:center;gap:10px;min-height:39px;padding:8px 10px;color:#aaa0ad;font-size:12px;cursor:default;opacity:.72}
+.header-menu-content .history-placeholder .icon{width:17px;height:17px}
+.project-bar{padding-top:13px!important;padding-bottom:14px!important;gap:10px!important;align-items:center!important}
+.project-bar .history-actions{gap:8px!important}
+.project-bar .history-actions .icon-button{border-color:#6a5068!important;border-radius:11px!important;background:#17131c!important}
+.project-bar .history-actions .icon-button:not(:disabled){border-color:#a84c81!important}
+.stage{background:#100e15!important;border-color:#40323e!important;border-radius:17px!important}
+.stage .canvas-wrap{border-radius:17px!important;border:1px solid #ff3e9c!important;box-shadow:0 0 0 1px #ff3e9c,0 0 12px #ff16865c!important;overflow:hidden}
+.stage .preview-meta{border:1px solid #4a3447!important;border-radius:12px!important;background:linear-gradient(180deg,#1c1520,#110f16)!important;padding:5px 9px!important;margin-top:10px!important;min-height:41px!important}
+.stage .preview-meta #status{color:#ddd0dd!important}
+.stage .preview-inline-actions{gap:10px!important;justify-content:center!important}
+.stage .preview-inline-actions button{border-color:#d02a7a!important;background:#26121f!important;box-shadow:0 0 7px #f21b8340!important}
+.stage .preview-meta .canvas-size{color:#d1c4d1!important}
+@media(max-width:900px) and (orientation:portrait){
+ .app-header.compact-header{padding-left:12px!important;padding-right:12px!important}
+ .project-bar{padding-top:12px!important;padding-bottom:13px!important}
+ .stage .preview-meta{padding:5px 6px!important;gap:5px!important}
+ .stage .preview-meta #status{font-size:10px!important}
+ .stage .preview-inline-actions{gap:5px!important}
+}
