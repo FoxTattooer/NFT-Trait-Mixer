@@ -14,11 +14,11 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0747">
   <link rel="stylesheet" href="design.css?build=0756">
-  <link rel="stylesheet" href="compact.css?build=0760">
+  <link rel="stylesheet" href="compact.css?build=0761">
   <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0760" defer></script>
-  <script src="app.js?build=0760" defer></script>
+  <script src="diagnostics.js?build=0761" defer></script>
+  <script src="app.js?build=0761" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
@@ -39,7 +39,7 @@
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V4h7l3 3h8v13H3V7Z"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="m9 4-6 6 6 6M3 10h10a7 7 0 0 1 7 7v3"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 4 6 6-6 6m6-6H11a7 7 0 0 0-7 7v3"/></symbol>
-    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 2M4 16l2 2a7 7 0 0 0 12.4-3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 0 0-13.6-4.7L3 8.5m0-5v5h5m-4 5.5a8 8 0 0 0 13.6 4.7l3.4-3.2m-5 0h5v5"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l2-7L17 2l5 5L11 18l-7 2Z"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></symbol>
     <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6"/></symbol>
@@ -59,7 +59,7 @@
       <div class="header-menu-content">
         <div class="file-menu-project">
           <button id="projectName" type="button" data-action="rename-project" title="Přejmenovat projekt"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg><span id="projectNameText">Můj NFT projekt</span></button>
-          <span id="saveStatus" class="save-status" role="status">Načítání projektu…</span>
+          <span id="saveStatus" class="save-status">Načítání projektu…</span>
         </div>
         <button data-action="new-project"><svg class="icon"><use href="#i-plus"/></svg>Nový projekt</button>
         <button id="load" data-action="open-project"><svg class="icon"><use href="#i-folder"/></svg>Otevřít projekt</button>
@@ -79,7 +79,9 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" data-action="refresh-app" class="subtle header-refresh" aria-label="Aktualizovat aplikaci" title="Aktualizovat"><svg class="icon"><use href="#i-refresh"/></svg></button>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.61" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.61</span></span>
+      </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
           <button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="export" data-action="export" class="subtle" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
@@ -109,6 +111,7 @@
       <div class="canvas-wrap"><canvas id="canvas" width="1024" height="1024" aria-label="Výsledná PNG kompozice"></canvas><div id="canvasEmpty" class="canvas-empty"><span class="empty-art"><svg class="icon"><use href="#i-layers"/></svg></span><h2 id="emptyTitle">Každý nápad začíná vrstvou.</h2><p id="emptyDescription">Přidej kategorii, nahraj PNG a poskládej svoji první kombinaci.</p><button id="emptyAction" data-action="add-category" class="primary">První kategorie</button></div></div>
       <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><div class="preview-inline-actions"><button id="random" data-action="random" title="Náhodná kombinace" aria-label="Náhodná kombinace" disabled><svg class="icon"><use href="#i-shuffle"/></svg></button><button id="snapshot" data-action="add-snapshot" class="subtle" title="Uložit sestavu" aria-label="Uložit sestavu" disabled><svg class="icon"><use href="#i-bookmark"/></svg></button></div><span class="canvas-size">1024 × 1024</span></div>
       <div id="quickTraits" class="quick-traits" hidden><div class="quick-traits-head"><button type="button" data-action="quick-prev" aria-label="Předchozí trait">‹</button></div><div id="quickTraitsItems" class="quick-traits-items"></div><button type="button" data-action="quick-next" class="quick-traits-next" aria-label="Další trait">›</button></div>
+      <p id="saveStrip" class="save-strip" role="status" hidden></p>
       <div id="warnings" class="conflict-list" role="status"></div>
       
     </section>
@@ -151,6 +154,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.61-update-status" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.61 – Aktualizace a stav uložení</strong><small>Výrazné tlačítko s verzí a úzký proužek pro ukládání na výšku.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.60-trait-order" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.60 – Viditelnost a pořadí traitů</strong><small>Kategorie v hlavičce vrstev, přetahování traitů a více viditelných vrstev najednou.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.59-local-diagnostics" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.59 – Lokální diagnostika</strong><small>Záznam posledních operací a chyb pro dohledání potíží.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.58-layer-tree" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.58 – Strom vrstev a náhledy sestav</strong><small>Složky a traity v jednom stromu, kompaktní pás na výšku a detail uložené sestavy.</small></span><span class="version-tag">Uloženo</span></a>

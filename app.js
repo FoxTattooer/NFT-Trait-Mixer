@@ -26,9 +26,19 @@ function toast(message, error = false) {
   $('toast').hidden = false;
   toastTimer = setTimeout(() => { $('toast').hidden = true; }, error ? 7000 : 3500);
 }
-function storageStatus(text, error = false) {
+let saveStripTimer;
+function showSaveStrip(text, status) {
+  const strip = $('saveStrip');
+  clearTimeout(saveStripTimer);
+  strip.textContent = text;
+  strip.dataset.status = status;
+  strip.hidden = false;
+  if (status === 'done') saveStripTimer = setTimeout(() => { strip.hidden = true; }, 4200);
+}
+function storageStatus(text, error = false, done = false) {
   $('saveStatus').textContent = text;
   $('saveStatus').classList.toggle('is-error', error);
+  showSaveStrip(text, error ? 'error' : done ? 'done' : 'working');
 }
 let lastStorageError = null;
 function storageFailure(error = lastStorageError) {
@@ -54,12 +64,12 @@ function flushSave() {
   saveQueue = saveQueue.then(() => {
     TraitStorage.retain(db, [state, project, ...undoStack, ...redoStack]);
     return TraitStorage.save(db, project, (done,total) => {
-    if (revision === savingRevision) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
+    if (revision === savingRevision && (done === 1 || done === total || done % 16 === 0)) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
     });
   }).then(() => {
     TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
     persistedRevision = savingRevision;
-    if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
+    if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení', false, true); $('storageWarning').hidden = true; }
     return true;
   }).catch(error => { queuedRevision = persistedRevision; storageFailure(error); return false; });
   return saveQueue;
@@ -1015,55 +1025,108 @@ async function loadProject(file) {
   finally { finishLog?.(); busy = false; $('projectFile').value = ''; render(); }
 }
 
+let updateCheck = null;
+let reloadRequested = false;
+let updateTimer;
+const updateStates = {
+  idle: ['Aktualizace', 'Ověřit aktualizaci aplikace'],
+  checking: ['Ověřuji…', 'Ověřuji dostupnost aktualizace'],
+  current: ['Aktuální', 'Aplikace má aktuální verzi. Klepnutím zkontroluješ aktualizaci znovu'],
+  available: ['Aktualizovat', 'Je připravená nová verze. Aktualizovat aplikaci'],
+  applying: ['Načítám…', 'Načítám aktualizaci aplikace'],
+  failed: ['Zkus znovu', 'Aktualizaci se nepodařilo ověřit. Zkusit znovu']
+};
+function setUpdateState(status) {
+  const control = $('refreshApp'), [label, description] = updateStates[status];
+  control.dataset.updateState = status;
+  control.title = description;
+  control.setAttribute('aria-label', `${description} · ${$('appVersion').textContent}`);
+  $('refreshLabel').textContent = label;
+  $('updateNotice').hidden = status !== 'available';
+}
+function checkAppUpdate(registration) {
+  if (updateCheck) return updateCheck;
+  updateCheck = (async () => {
+    if (registration.waiting) return 'available';
+    if (navigator.onLine === false) throw new Error('Aplikace je offline.');
+    let candidate = registration.installing;
+    const capture = () => { candidate = registration.installing || candidate; };
+    registration.addEventListener('updatefound', capture);
+    try {
+      await registration.update();
+      capture();
+      if (candidate && ['parsed', 'installing'].includes(candidate.state)) {
+        const worker = candidate;
+        await new Promise(resolve => {
+          const finish = () => {
+            clearTimeout(timer);
+            worker.removeEventListener('statechange', settled);
+            resolve();
+          };
+          const settled = () => { if (!['parsed', 'installing'].includes(worker.state)) finish(); };
+          const timer = setTimeout(finish, 12000);
+          worker.addEventListener('statechange', settled);
+          settled();
+        });
+      }
+      if (registration.waiting) return 'available';
+      if (navigator.onLine === false || candidate?.state === 'redundant') throw new Error('Aktualizaci se nepodařilo nainstalovat.');
+      return candidate && ['parsed', 'installing'].includes(candidate.state) ? 'idle' : 'current';
+    } finally { registration.removeEventListener('updatefound', capture); }
+  })().finally(() => { updateCheck = null; });
+  return updateCheck;
+}
+async function readyForAppReload() {
+  if (busy) { toast('Aktualizuj až po dokončení probíhající operace.'); return false; }
+  if (revision === persistedRevision || (await flushSave() && revision === persistedRevision)) return true;
+  toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
+  return false;
+}
+async function finishAppUpdate() {
+  if (!reloadRequested) return;
+  clearTimeout(updateTimer);
+  // A user may have edited the project between asking to update and activation.
+  if (await readyForAppReload()) { location.reload(); return; }
+  reloadRequested = false;
+  $('refreshApp').disabled = false;
+  setUpdateState('idle');
+}
 async function refreshApp() {
   const control = $('refreshApp');
+  if (control.disabled || reloadRequested) return;
   control.disabled = true;
+  setUpdateState('checking');
   try {
-    if (!await flushSave() || revision !== persistedRevision) {
-      toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
-      return;
-    }
-    const registration = workerRegistration || (navigator.serviceWorker ? await navigator.serviceWorker.getRegistration() : null);
+    const registration = workerRegistration || await navigator.serviceWorker?.getRegistration();
     if (!registration) {
-      toast('Obnovuji aplikaci…');
-      location.reload();
+      if (await readyForAppReload()) { setUpdateState('applying'); location.reload(); }
+      else setUpdateState('idle');
       return;
     }
     workerRegistration = registration;
-    await registration.update();
-    if (registration.waiting) {
-      $('updateNotice').hidden = false;
-      toast('Načítám nejnovější verzi…');
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    const result = await checkAppUpdate(registration);
+    if (result === 'available') {
+      if (!await readyForAppReload()) { setUpdateState('available'); return; }
+      const worker = registration.waiting;
+      if (!worker) { setUpdateState('idle'); return; }
+      reloadRequested = true;
+      setUpdateState('applying');
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      if (reloadRequested) updateTimer = setTimeout(() => {
+        reloadRequested = false;
+        control.disabled = false;
+        setUpdateState(registration.waiting ? 'available' : 'idle');
+        toast('Aktualizace se ještě nedokončila. Zkus tlačítko znovu.', true);
+      }, 15000);
       return;
     }
-    const installing = registration.installing;
-    if (installing) {
-      await new Promise(resolve => {
-        const finish = () => {
-          if (['installed', 'activated', 'redundant'].includes(installing.state)) resolve();
-        };
-        installing.addEventListener('statechange', finish);
-        finish();
-        setTimeout(resolve, 12000);
-      });
-      if (registration.waiting) {
-        $('updateNotice').hidden = false;
-        toast('Načítám nejnovější verzi…');
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        return;
-      }
-      if (installing.state === 'installing') {
-        toast('Nová verze se ještě načítá. Zkus Aktualizovat za chvíli.');
-        return;
-      }
-    }
-    toast('Aplikace už má nejnovější verzi.');
+    setUpdateState(result);
+    toast(result === 'current' ? `Aplikace má aktuální verzi · ${$('appVersion').textContent}` : 'Nová verze se ještě načítá. Zkus aktualizaci za chvíli.');
   } catch {
-    toast('Aktualizaci se nepodařilo zkontrolovat. Zkontroluj připojení a zkus to znovu.', true);
-  } finally {
-    control.disabled = false;
-  }
+    reloadRequested = false;
+    setUpdateState('failed');
+    toast('Aktualizaci se nepodařilo ověřit. Zkontroluj připojení a zkus to znovu.', true);
+  } finally { control.disabled = reloadRequested; }
 }
 
 async function handleAction(action, id, element) {
@@ -1244,9 +1307,9 @@ async function handleAction(action, id, element) {
     case 'save-project': {
       if(busy)return;
       const finishLog = window.TraitDiagnostics?.start('json-backup');
-      const project=M.clone(state);busy=true;render();storageStatus('Připravuji zálohu po vrstvách…');
-      try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');storageStatus('Záloha dokončena'); }
-      catch (error) { window.TraitDiagnostics?.error('json-backup', error); throw error; }
+      const project=M.clone(state);busy=true;render();if ($('storageWarning').hidden) showSaveStrip('Připravuji zálohu po vrstvách…', 'working');
+      try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');if ($('storageWarning').hidden) showSaveStrip('Záloha dokončena', 'done'); }
+      catch (error) { window.TraitDiagnostics?.error('json-backup', error); if ($('storageWarning').hidden) showSaveStrip('Zálohu se nepodařilo vytvořit', 'error'); throw error; }
       finally { finishLog?.(); busy=false;render(true);}
       break;
     }
@@ -1333,8 +1396,7 @@ async function handleAction(action, id, element) {
       if (installPrompt) { const prompt = installPrompt; installPrompt = null; await prompt.prompt(); await prompt.userChoice; }
       else { $('installNote').textContent = location.protocol === 'https:' ? 'Otevři na telefonu stejnou webovou adresu. Projekt do něj přeneseš přes Zálohu JSON a Otevřít.' : 'Pro instalaci na telefon otevři aplikaci na webové adrese s HTTPS. Projekt přeneseš přes Zálohu JSON a Otevřít.'; $('installDialog').showModal(); }
       break;
-    case 'refresh-app': await refreshApp(); break;
-    case 'update-app': if (await flushSave() && revision === persistedRevision) workerRegistration?.waiting?.postMessage({ type: 'SKIP_WAITING' }); else toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true); break;
+    case 'refresh-app': case 'update-app': await refreshApp(); break;
   }
 }
 async function moveTraitFromControl(control) {
@@ -1481,21 +1543,27 @@ window.addEventListener('orientationchange', syncLandscapeTraitPlacement);
 async function setupOffline() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol === 'file:') return;
   try {
-    workerRegistration = await navigator.serviceWorker.register('./sw.js');
-    const announce = () => { if (workerRegistration.waiting && navigator.serviceWorker.controller) $('updateNotice').hidden = false; };
+    navigator.serviceWorker.addEventListener('controllerchange', finishAppUpdate);
+    const registration = workerRegistration = await navigator.serviceWorker.register('./sw.js');
+    const announce = () => {
+      if (registration.waiting && !$('refreshApp').disabled) setUpdateState('available');
+    };
     announce();
-    workerRegistration.addEventListener('updatefound', () => workerRegistration.installing?.addEventListener('statechange', announce));
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!$('updateNotice').hidden && !reloading) { reloading = true; location.reload(); } });
-  } catch { /* Online editing remains usable if the browser disallows offline storage. */ }
+    registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', announce));
+    const status = await checkAppUpdate(registration);
+    if (!$('refreshApp').disabled) setUpdateState(status);
+  } catch { /* Leave the version visible even if offline updates cannot be checked. */ }
 }
+window.addEventListener('offline', () => {
+  if ($('refreshApp').dataset.updateState === 'current') setUpdateState('idle');
+});
 async function init() {
   const finishLog = window.TraitDiagnostics?.start('startup');
   try {
     db = await openStorage();
     const saved = await storedProject();
     if (saved) state = M.normalize(saved, { allowStoredAssets: true });
-    storageStatus('Automatické ukládání je zapnuté');
+    storageStatus(saved ? 'Automaticky uloženo v zařízení' : 'Automatické ukládání je zapnuté', false, true);
     if (saved) toast('Projekt obnoven z tohoto zařízení');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }

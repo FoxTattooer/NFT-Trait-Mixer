@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.61 | checkpoint/v0.7.61-update-status | Tlačítko s verzí, stav kontroly aktualizace a proužek ukládání na výšku |
 | 0.7.60 | checkpoint/v0.7.60-trait-order | Přepínač kategorií ve stromu, oči na řádcích, více vrstev a přetahování traitů |
 | 0.7.59 | checkpoint/v0.7.59-local-diagnostics | Lokální diagnostický záznam chyb a průběhu dlouhých operací |
 | 0.7.58 | checkpoint/v0.7.58-layer-tree | Strom vrstev a složek, pás miniatur na výšku, náhledy a PNG sestav |
