@@ -15,11 +15,11 @@
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0768">
   <link rel="stylesheet" href="compact.css?build=0768">
-  <link rel="stylesheet" href="schemes.css?build=0768">
+  <link rel="stylesheet" href="schemes.css?build=0769">
   <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0768" defer></script>
-  <script src="app.js?build=0768" defer></script>
+  <script src="diagnostics.js?build=0769" defer></script>
+  <script src="app.js?build=0769" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
@@ -82,8 +82,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.68" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.68</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.69" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.69</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -193,6 +193,18 @@
           <button type="button" data-action="set-color-scheme" data-scheme="deep-water" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Deep Water Blue</span></button>
           <button type="button" data-action="set-color-scheme" data-scheme="mono" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Black &amp; White</span></button>
         </div>
+        <section class="scheme-editions" aria-labelledby="schemeEditionsTitle">
+          <h3 id="schemeEditionsTitle">Stylové edice</h3>
+          <div class="scheme-group">
+            <button type="button" data-action="set-color-scheme" data-scheme="drip" aria-pressed="false">
+              <span class="drip-artwork" aria-hidden="true">
+                <img src="art/dripd-artwork.jpg" alt="" loading="lazy" decoding="async" width="544" height="204">
+                <img src="art/drip-chrome-drop.jpg" alt="" loading="lazy" decoding="async" width="190" height="190">
+              </span>
+              <span>Drip</span>
+            </button>
+          </div>
+        </section>
       </div>
       <p id="schemeStatus" class="helper" role="status" hidden></p>
     </details>
@@ -200,6 +212,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.69-drip" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.69 – Drip</strong><small>Volitelné chromové schéma s originálním artworkem ve Stylových edicích.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.68-settings-and-layer-nav" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.68 – Nastavení a navigace vrstev</strong><small>Rozbalovací volba palet, odezva podle schématu a nižší lišta vrstev na výšku.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.67-palette-surfaces" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.67 – The Magic Eden New</strong><small>Nová paleta vedle obou původních variant Magic Eden a výraznější přechody v nových paletách.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.66-cool-schemes" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.66 – Led, hlubina a černobílá</strong><small>Nové režimy Icy, Deep Water Blue a Black &amp; White. Přehlednější výběr palet.</small></span><span class="version-tag">Uloženo</span></a>

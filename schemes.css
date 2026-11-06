@@ -72,6 +72,19 @@ body.compact-workspace,
   --scheme-hover:#ffe13d;
   --scheme-hover-glow:#ffe13d58;
 }
+:is(body[data-color-scheme=drip],.scheme-grid [data-scheme=drip]) {
+  --scheme-bg:#0f1015;--scheme-panel:#171920;--scheme-control:#222632;
+  --scheme-stroke:#606780;--scheme-accent:#d1bef5;--scheme-text:#e4e8f4;
+  --scheme-wash:#303448;--scheme-primary:#45415d;--scheme-primary-end:#273540;
+  --scheme-glow:#a79bd043;--scheme-sheen:#e8eeff3d;
+  --scheme-panel-surface:linear-gradient(155deg,#22242f,var(--scheme-panel) 53%,#14151c);
+  --scheme-active-surface:linear-gradient(155deg,var(--scheme-primary),#2b2b40 63%,var(--scheme-primary-end));
+  --scheme-frame-shadow:0 0 8px #aa8bd640,0 3px 12px #6fc7cf24;
+  --scheme-hover:#b7e4ec;
+  --scheme-hover-glow:#9cdeef40;
+  --drip-metal:linear-gradient(165deg,#353b49,#262a37 44%,#1b1e28 52%,#222534 80%,#2a293b);
+  --drip-metal-shadow:inset 0 1px #e9f0ff38,0 2px 5px #080910a0;
+}
 
 /* One shared silhouette and surface for all three layer toolbar controls. */
 body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount) {
@@ -118,6 +131,8 @@ body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount
 }
 .scheme-group {display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
 .scheme-group + .scheme-group {border-top:1px solid var(--scheme-card-stroke);padding-top:9px}
+.scheme-editions {border-top:1px solid var(--scheme-card-stroke);padding-top:9px}
+.scheme-editions h3 {margin:0 0 6px;font-size:11px;letter-spacing:.05em;color:var(--scheme-text)}
 .scheme-grid button {
   position:relative;display:grid;grid-template-rows:32px 1fr;align-items:start;gap:5px;
   justify-content:stretch;text-align:left;min-height:72px;min-width:0;padding:6px;
@@ -151,6 +166,12 @@ body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount
   content:"";position:absolute;right:10px;top:10px;width:8px;height:8px;
   border-radius:50%;background:var(--scheme-accent);box-shadow:0 0 0 2px var(--scheme-bg);
 }
+.scheme-editions button[data-scheme=drip] {grid-template-rows:auto 1fr}
+.drip-artwork {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(46px,25%);align-items:center;
+  gap:6px;padding:3px;border-radius:6px;background:#07070a;
+}
+.drip-artwork img {display:block;width:100%;height:66px;object-fit:contain}
 
 /* Preserve the original Magic Eden and Magic Eden Blue chrome. */
 body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) {
@@ -329,3 +350,31 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
     box-shadow:inset 0 0 16px #ffe13d40,0 0 13px #ffe13d62!important;
   }
 }
+
+/* Drip uses the graphite and chrome treatment only when selected. */
+body.compact-workspace[data-color-scheme=drip] :is(
+  .app-header .header-menu>summary,.app-header .history-actions>button,
+  .workspace-tabs button
+) {
+  border-radius:999px!important;
+}
+body.compact-workspace[data-color-scheme=drip] .app-header #refreshApp {border-radius:999px!important}
+body.compact-workspace[data-color-scheme=drip] :is(
+  .app-header .header-menu:not([open])>summary,.app-header .history-actions>button,
+  .workspace-tabs button:not(.is-active)
+) {
+  background:var(--drip-metal)!important;
+  box-shadow:var(--drip-metal-shadow)!important;
+}
+body.compact-workspace[data-color-scheme=drip] .app-header #refreshApp:not([data-update-state=available]) {
+  background:var(--drip-metal)!important;
+  box-shadow:var(--drip-metal-shadow)!important;
+}
+body.compact-workspace[data-color-scheme=drip] .workspace-tabs button.is-active {
+  border-color:#c8b6e5!important;
+  box-shadow:inset 0 1px #edf2ff55,0 0 9px #c09de34a!important;
+}
+body.compact-workspace[data-color-scheme=drip] .stage .canvas-wrap {
+  border-color:#c5cce2 #a991c7 #85bdc8 #899bb1!important;
+}
+body.compact-workspace[data-color-scheme=drip] :is(.app-header,.workspace-tabs) .icon {stroke-width:1.5}

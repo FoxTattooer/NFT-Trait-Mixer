@@ -105,8 +105,8 @@ click('#colorSchemes summary');
 assert.equal(get('colorSchemes').open,true,'the color scheme row opens the palette picker');
 assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-group')].map(group =>
   [...group.querySelectorAll('[data-scheme]')].map(button => button.textContent.trim())
-), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White']]);
-for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono']) {
+), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White'], ['Drip']]);
+for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'drip']) {
   const selector = `[data-scheme="${scheme}"]`;
   click(selector);
   assert.equal(w.document.body.dataset.colorScheme, scheme);
@@ -247,7 +247,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.68'));
+assert(get('toast').textContent.includes('v0.7.69'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';
