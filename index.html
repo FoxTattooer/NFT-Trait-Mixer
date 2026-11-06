@@ -75,9 +75,8 @@
     <section class="stage" aria-label="Náhled kompozice">
       
       <div class="canvas-wrap"><canvas id="canvas" width="1024" height="1024" aria-label="Výsledná PNG kompozice"></canvas><div id="canvasEmpty" class="canvas-empty"><span class="empty-art"><svg class="icon"><use href="#i-layers"/></svg></span><h2 id="emptyTitle">Každý nápad začíná vrstvou.</h2><p id="emptyDescription">Přidej kategorii, nahraj PNG a poskládej svoji první kombinaci.</p><button id="emptyAction" data-action="add-category" class="primary">První kategorie</button></div></div>
-      <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><span class="canvas-size">1024 × 1024</span></div>
+      <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><div class="preview-inline-actions"><button id="random" data-action="random" title="Náhodná kombinace" aria-label="Náhodná kombinace" disabled><svg class="icon"><use href="#i-shuffle"/></svg></button><button id="snapshot" data-action="add-snapshot" class="subtle" title="Uložit sestavu" aria-label="Uložit sestavu" disabled><svg class="icon"><use href="#i-bookmark"/></svg></button></div><span class="canvas-size">1024 × 1024</span></div>
       <div id="warnings" class="conflict-list" role="status"></div>
-      <div class="stage-actions"><button id="random" data-action="random" disabled><svg class="icon"><use href="#i-shuffle"/></svg><span class="sr-only">Náhodná kombinace</span></button><button id="snapshot" data-action="add-snapshot" class="subtle" disabled><svg class="icon"><use href="#i-bookmark"/></svg><span class="sr-only">Uložit sestavu</span></button></div>
       
     </section>
     <nav class="workspace-tabs" aria-label="Pracovní panely">
