@@ -258,21 +258,53 @@ function renderCategoryStepper(c) {
   return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${c.traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${c.traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!c.traits.length || (c.traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
 }
 let compactView = true;
-let quickOffset = 0;
+let quickCategoryId = null;
+let quickSelectedId = null;
 function renderQuickTraits() {
  const strip = $('quickTraits'), list = $('quickTraitsItems');
  if (!strip || !list) return;
  const c = M.category(state, active);
  strip.hidden = !c || !c.traits.length || safeMode;
- if (strip.hidden) { list.replaceChildren(); return; }
+ if (strip.hidden) { list.replaceChildren(); quickCategoryId = null; return; }
  $('quickTraitsTitle').textContent = c.name + ' (' + c.traits.length + ')';
- const selectedIndex = c.traits.findIndex(t => t.id === state.selected[c.id]);
- if (selectedIndex >= 0 && (selectedIndex < quickOffset || selectedIndex >= quickOffset + 4)) quickOffset = Math.max(0, selectedIndex - 1);
- quickOffset = Math.max(0, Math.min(quickOffset, Math.max(0, c.traits.length - 4)));
- list.innerHTML = c.traits.slice(quickOffset, quickOffset + 4).map(t => '<button class="quick-trait ' + (t.id === state.selected[c.id] ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '"><img ' + imageAttributes(t.data) + ' alt="" loading="lazy">' + (t.id === state.selected[c.id] ? '<span class="quick-check">✓</span>' : '') + '</button>').join('');
- strip.querySelector('[data-action="quick-prev"]').disabled = quickOffset === 0;
- strip.querySelector('[data-action="quick-next"]').disabled = quickOffset >= c.traits.length - 4;
- mountThumbnails();
+ const ids = c.traits.map(t => t.id).join('|');
+ const needsBuild = list.dataset.category !== c.id || list.dataset.ids !== ids;
+ if (needsBuild) {
+   list.dataset.category = c.id;
+   list.dataset.ids = ids;
+   list.innerHTML = c.traits.map(t => '<button class="quick-trait" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '"><img ' + imageAttributes(t.data) + ' alt="" loading="lazy"><span class="quick-check" hidden>✓</span></button>').join('');
+   mountThumbnails();
+ }
+ const selected = state.selected[c.id];
+ list.querySelectorAll('.quick-trait').forEach(el => {
+   const isSelected = el.dataset.id === selected;
+   el.classList.toggle('is-selected', isSelected);
+   el.querySelector('.quick-check').hidden = !isSelected;
+ });
+ // Only center a selection when category or selected trait changes; never reset swipe position on arrow presses.
+ if (needsBuild || quickCategoryId !== c.id || quickSelectedId !== selected) {
+   const selectedButton = [...list.children].find(el => el.dataset.id === selected);
+   if (selectedButton) list.scrollLeft = Math.max(0, selectedButton.offsetLeft - list.offsetLeft - list.clientWidth / 2 + selectedButton.offsetWidth / 2);
+ }
+ quickCategoryId = c.id;
+ quickSelectedId = selected;
+ updateQuickArrows();
+}
+function updateQuickArrows() {
+ const list = $('quickTraitsItems');
+ if (!list) return;
+ const prev = $('quickTraits')?.querySelector('[data-action="quick-prev"]');
+ const next = $('quickTraits')?.querySelector('[data-action="quick-next"]');
+ if (prev) prev.disabled = list.scrollLeft < 2;
+ if (next) next.disabled = list.scrollLeft >= list.scrollWidth - list.clientWidth - 2;
+}
+$('quickTraitsItems')?.addEventListener('scroll', updateQuickArrows, { passive: true });
+function scrollQuickTraits(direction) {
+ const list = $('quickTraitsItems');
+ if (!list) return;
+ const item = list.querySelector('.quick-trait');
+ const step = item ? item.getBoundingClientRect().width + 6 : 76;
+ list.scrollBy({left: direction * step, behavior:'smooth'});
 }
 function renderCategories(hidden) {
   document.body.classList.toggle('compact-categories', compactView);
@@ -834,8 +866,8 @@ async function handleAction(action, id, element) {
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
     case 'toggle-compact': compactView = !compactView; render(); break;
-    case 'quick-prev': quickOffset = Math.max(0, quickOffset - 1); renderQuickTraits(); break;
-    case 'quick-next': quickOffset += 1; renderQuickTraits(); break;
+    case 'quick-prev': scrollQuickTraits(-1); break;
+    case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
     case 'close-category-sort': $('categorySortDialog').close(); break;
     case 'open-history': $('historyDialog').showModal(); renderHistoryPanel(); document.querySelector('#historyList .is-current')?.scrollIntoView({ block: 'nearest' }); break;
