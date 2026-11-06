@@ -241,3 +241,20 @@ button:focus-visible,select:focus-visible{outline:2px solid #ff7cbd;outline-offs
 .empty-art{background:#302337;border-color:#76526d;color:#efb9d6}
 .save-status{color:#e9afd0}
 @media(hover:hover) and (pointer:fine){.organizer-folder-row:hover{border-color:#95688d}.drag-handle:hover{color:#ff9ccb;background:#42283c!important}}
+
+/* Darker graphite surface pass: preserve pink interaction accents. */
+:root{--bg:#08090d;--panel:#101116;--line:#34313d}
+body{background:radial-gradient(ellipse at 50% -40%,#1a1920 0%,#0e0e13 48%,#07080b 88%) fixed}
+.layers-panel,.inspector{background:linear-gradient(155deg,#16151c,#0b0c11);border-color:#36323e}
+.stage{background:linear-gradient(150deg,#17151d,#0b0c11);border-color:#3e3441}
+.category-card,.trait-entry,.saved-card,.library-category{background:linear-gradient(180deg,#1b1921,#101116);border-color:#3b3743}
+.category-card.is-active,.trait-card.is-selected,.library-trait.is-selected,.organizer-folder-row.is-selected{background:linear-gradient(110deg,#29111f,#141017);border-color:#ff3897}
+.workspace-tabs button{background:linear-gradient(180deg,#1a1921,#101116);border-color:#46414f}
+button{background:linear-gradient(180deg,#1d1a23,#111116);border-color:#47404e}
+button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
+.layer-stepper{background:linear-gradient(120deg,#201a27,#121117);border-color:#504357}
+.layer-stepper button{background:#2a2130;border-color:#64516d}
+.organizer-tree{background:#101116;border-color:#393541}
+.organizer-folder-row.is-selected,.organizer-all.is-selected{background:#261a2a}
+.dropzone{background:#1d131b}
+@media(max-width:900px){.workspace-tabs{background:#0c0c11fa}}
