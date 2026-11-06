@@ -714,3 +714,18 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  #traitsPanel .panel-heading{padding-top:3px!important}
  #traitsPanel #uploadStatus:empty{display:none!important}
 }
+
+/* Make the four-square compact toggle visibly switch between two distinct layouts. */
+@media(max-width:900px){
+ body.compact-categories #cats{gap:4px!important;margin-top:8px!important}
+ body.compact-categories #cats .category-card{margin:0!important;padding:0!important;border-radius:10px!important}
+ body.compact-categories #cats .category-top{min-height:42px!important;padding:2px 5px!important;gap:4px!important}
+ body.compact-categories #cats .category-pick{min-height:38px!important;padding:3px 4px!important}
+ body.compact-categories #cats .category-name{font-size:13px!important}
+ body.compact-categories #cats .category-meta{display:none!important}
+ body.compact-categories #cats .layer-stepper,body.compact-categories #cats .category-tools,body.compact-categories #cats .layer-folder-tree{display:none!important}
+ body:not(.compact-categories) #cats .category-meta{display:block!important}
+ body:not(.compact-categories) #cats .layer-stepper{display:flex!important}
+ body.compact-categories #compactToggle{border-color:#ff3b9b!important;background:#551633!important;color:#fff!important;box-shadow:0 0 10px #ff29915c!important}
+ body:not(.compact-categories) #compactToggle{border-color:#584253!important;background:#1c1821!important;color:#d6c5d1!important;box-shadow:none!important}
+}
