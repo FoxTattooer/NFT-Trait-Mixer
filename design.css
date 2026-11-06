@@ -382,3 +382,21 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
 .layer-stepper,.layer-stepper button{color:#f6d7e9!important}
 .project-bar>.project-heading{order:0!important;flex:1 1 auto!important}
 .project-bar>.history-actions{order:1!important;margin-left:auto!important;display:flex!important}
+
+/* v0.7.21: centered, balanced toolbar; actions grouped by purpose. */
+.app-header.compact-header{display:grid!important;grid-template-columns:38px minmax(0,1fr) 38px!important;align-items:center!important;column-gap:8px!important}
+.compact-header .brand{grid-column:1;justify-self:start}
+.compact-header .compact-toolbar{grid-column:2;display:flex!important;justify-content:center!important;align-items:center!important;gap:clamp(5px,2.2vw,14px)!important;overflow:visible!important;width:100%!important}
+.compact-header .compact-header-end{grid-column:3;justify-self:end}
+.compact-header .compact-tool{flex:0 0 38px!important}
+.header-menu-content button:disabled{opacity:.4;cursor:not-allowed}
+.header-menu-content button{display:flex!important;align-items:center!important;gap:10px!important}
+.project-bar{align-items:center!important}
+.project-bar .project-heading{min-width:0!important}
+.project-bar .history-actions{align-self:center!important;margin-left:auto!important}
+@media(max-width:900px){
+ .app-header.compact-header{grid-template-columns:34px minmax(0,1fr) 35px!important;gap:5px!important}
+ .compact-header .compact-tool{flex:0 0 35px!important}
+ .compact-header .compact-toolbar{gap:clamp(4px,2vw,11px)!important}
+}
+@media(max-width:360px){.compact-header .compact-tool{width:32px!important;min-width:32px!important;flex-basis:32px!important;height:34px!important;min-height:34px!important}.compact-header .compact-toolbar{gap:3px!important}}
