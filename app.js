@@ -865,7 +865,7 @@ async function handleAction(action, id, element) {
     }
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
-    case 'toggle-compact': compactView = !compactView; render(); break;
+    case 'toggle-compact': compactView = !compactView; render(); toast(compactView ? 'Kompaktní zobrazení kategorií' : 'Rozbalené zobrazení kategorií'); break;
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
