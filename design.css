@@ -859,3 +859,21 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  .stage>.preview-meta,.stage>.stage-actions,.stage>.stage-heading,
  .stage>#quickTraits,.stage>#warnings,.stage>.stage-tip{display:none!important}
 }
+
+/* Structural landscape mode: preview contains only the canvas. */
+@media (orientation:landscape) and (max-height:650px) and (max-width:1200px){
+ body.landscape-editor-mode .stage{display:grid!important;place-items:center!important;min-height:0!important;min-width:0!important;padding:3px!important;overflow:hidden!important}
+ body.landscape-editor-mode .stage>*:not(.canvas-wrap){display:none!important}
+ body.landscape-editor-mode .stage>.canvas-wrap{
+  display:block!important;position:relative!important;
+  width:min(100%,calc(100dvh - 90px))!important;
+  height:auto!important;aspect-ratio:1!important;
+  max-height:100%!important;max-width:100%!important;
+  margin:auto!important;flex:none!important;
+ }
+ body.landscape-editor-mode #traitsPanel>#quickTraits{
+  display:flex!important;position:relative!important;width:100%!important;
+  margin:8px 0!important;max-width:100%!important;min-height:60px!important;
+ }
+ body.landscape-editor-mode #traitsPanel>#quickTraits[hidden]{display:none!important}
+}
