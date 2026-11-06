@@ -26,19 +26,14 @@ function toast(message, error = false) {
   $('toast').hidden = false;
   toastTimer = setTimeout(() => { $('toast').hidden = true; }, error ? 7000 : 3500);
 }
-let saveStripTimer;
-function showSaveStrip(text, status) {
-  const strip = $('saveStrip');
-  clearTimeout(saveStripTimer);
-  strip.textContent = text;
-  strip.dataset.status = status;
-  strip.hidden = false;
-  if (status === 'done') saveStripTimer = setTimeout(() => { strip.hidden = true; }, 4200);
-}
-function storageStatus(text, error = false, done = false) {
+function storageStatus(text, error = false) {
   $('saveStatus').textContent = text;
   $('saveStatus').classList.toggle('is-error', error);
-  showSaveStrip(text, error ? 'error' : done ? 'done' : 'working');
+}
+function showProjectSource(text) {
+  const source = $('projectSource');
+  source.textContent = text;
+  source.hidden = false;
 }
 let lastStorageError = null;
 function storageFailure(error = lastStorageError) {
@@ -69,7 +64,7 @@ function flushSave() {
   }).then(() => {
     TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
     persistedRevision = savingRevision;
-    if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení', false, true); $('storageWarning').hidden = true; }
+    if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
     return true;
   }).catch(error => { queuedRevision = persistedRevision; storageFailure(error); return false; });
   return saveQueue;
@@ -1026,6 +1021,7 @@ async function loadProject(file) {
     for (const c of next.cats) for (const t of c.traits) await decodeImage(t.data);
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
+    showProjectSource('Otevřeno ze zálohy JSON');
     layerOverview = false; showPanel('layers');
   } catch (error) { window.TraitDiagnostics?.error('json-open', error); toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
   finally { finishLog?.(); busy = false; $('projectFile').value = ''; render(); }
@@ -1303,7 +1299,7 @@ async function handleAction(action, id, element) {
       break;
     case 'rename-project': { const name = await ask({ title: 'Název projektu', value: state.name }); if (name && name !== state.name) change(() => { state.name = name; }); break; }
     case 'new-project':
-      if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) { change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven'); showPanel('layers'); }
+      if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) { change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven'); showProjectSource('Vytvořen nový projekt'); showPanel('layers'); }
       break;
     case 'open-project': $('projectFile').click(); break;
     case 'retry-save':
@@ -1313,9 +1309,9 @@ async function handleAction(action, id, element) {
     case 'save-project': {
       if(busy)return;
       const finishLog = window.TraitDiagnostics?.start('json-backup');
-      const project=M.clone(state);busy=true;render();if ($('storageWarning').hidden) showSaveStrip('Připravuji zálohu po vrstvách…', 'working');
-      try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');if ($('storageWarning').hidden) showSaveStrip('Záloha dokončena', 'done'); }
-      catch (error) { window.TraitDiagnostics?.error('json-backup', error); if ($('storageWarning').hidden) showSaveStrip('Zálohu se nepodařilo vytvořit', 'error'); throw error; }
+      const project=M.clone(state);busy=true;render();
+      try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení'); }
+      catch (error) { window.TraitDiagnostics?.error('json-backup', error); throw error; }
       finally { finishLog?.(); busy=false;render(true);}
       break;
     }
@@ -1571,8 +1567,8 @@ async function init() {
     db = await openStorage();
     const saved = await storedProject();
     if (saved) state = M.normalize(saved, { allowStoredAssets: true });
-    storageStatus(saved ? 'Automaticky uloženo v zařízení' : 'Automatické ukládání je zapnuté', false, true);
-    if (saved) toast('Projekt obnoven z tohoto zařízení');
+    storageStatus(saved ? 'Automaticky uloženo v zařízení' : 'Automatické ukládání je zapnuté');
+    showProjectSource(saved ? 'Obnoveno z tohoto zařízení' : 'Vytvořen nový projekt');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;

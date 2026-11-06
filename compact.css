@@ -268,14 +268,6 @@ body.compact-workspace .app-header #refreshApp:disabled {opacity:.8}
   body.compact-workspace .app-header #refreshApp[data-update-state=available] {position:relative}
   #refreshApp[data-update-state=available]::after {content:"";position:absolute;right:6px;top:5px;width:6px;height:6px;border-radius:50%;background:#ffe2f2}
 }
-.save-strip {display:none}
-@media (orientation:portrait) and (max-width:900px) {
-  .stage .save-strip:not([hidden]) {
-    display:flex;align-items:center;align-self:stretch;gap:6px;min-height:20px;margin:4px 0 0;
-    padding:3px 7px;border-radius:6px;background:#251b2b;color:#e2bfd6;font-size:11px;line-height:1.3;
-  }
-  .stage .save-strip::before {content:"";width:5px;height:5px;flex:none;border-radius:50%;background:#e68cbc}
-  .stage .save-strip[data-status=done]::before {background:#b4dbbe}
-  .stage .save-strip[data-status=error] {background:#3a1c2a;color:#ffc6d4}
-  .stage .save-strip[data-status=error]::before {background:#ff8da9}
+body.compact-workspace .file-menu-project .project-source:not([hidden]) {
+  display:block;padding:0 10px 4px;color:#ac9caf;font-size:11px;line-height:1.4;
 }

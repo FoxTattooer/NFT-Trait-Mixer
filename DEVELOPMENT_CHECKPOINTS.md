@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.63 | checkpoint/v0.7.63-project-status | Stav ukládání a informace o posledním načtení v nabídce projektu |
 | 0.7.62 | checkpoint/v0.7.62-layer-toolbar | Kompaktní hlavička se složkou pro řazení, přepínačem, mřížkou a tlačítkem plus |
 | 0.7.61 | checkpoint/v0.7.61-update-status | Tlačítko s verzí, stav kontroly aktualizace a proužek ukládání na výšku |
 | 0.7.60 | checkpoint/v0.7.60-trait-order | Přepínač kategorií ve stromu, oči na řádcích, více vrstev a přetahování traitů |
