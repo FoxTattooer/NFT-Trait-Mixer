@@ -10,6 +10,8 @@ let state = M.empty(), active = null, mobilePanel = 'layers', inspectorPanel = '
 let safeMode = new URLSearchParams(location.search).has('safe');
 let traitPage = 0;
 const libraryOpen = new Set(), libraryPages = {};
+let libraryHeaderMarkup = '';
+const libraryBodyMarkup = new WeakMap();
 const PAGE_SIZE = 24;
 let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, dialogResolve;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
@@ -261,8 +263,8 @@ let layerOverview = false;
 let layerLimit = 48;
 let layerContextTrigger;
 
-function layerThumbnail(category, trait) {
-  return `<img data-layer-thumbnail data-category="${esc(category.id)}" data-trait="${esc(trait.id)}" draggable="false" alt="" decoding="async" loading="lazy">`;
+function layerThumbnail(category, trait, className = '') {
+  return `<img${className ? ` class="${className}"` : ''} data-layer-thumbnail data-category="${esc(category.id)}" data-trait="${esc(trait.id)}" draggable="false" alt="" decoding="async" loading="lazy">`;
 }
 function mixedLayerRows(category) {
   const { folders, assignments } = organizerFolders(category.id);
@@ -481,7 +483,7 @@ function renderCategories(hidden) {
   document.body.classList.toggle('expanded-categories', !compactView);
   $('catCountLabel').textContent = state.cats.length;
   $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
-  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top drop-row" data-drop-kind="category" data-drop-id="${esc(c.id)}" data-category="${esc(c.id)}"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><svg class="icon"><use href="#i-folder"/></svg><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${c.id === active && organizerFolders(c.id).folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, organizerFolders(c.id).folders, organizerFolders(c.id).assignments)}</div>` : ''}${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
+  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top drop-row" data-drop-kind="category" data-drop-id="${esc(c.id)}" data-category="${esc(c.id)}"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><svg class="icon"><use href="#i-folder"/></svg><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${esc(c.name)}" aria-pressed="${c.visible !== false}"`)}</div>${c.id === active && organizerFolders(c.id).folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, organizerFolders(c.id).folders, organizerFolders(c.id).assignments)}</div>` : ''}${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
 }
 function organizerFolders(categoryId) {
   return state.organizer?.[categoryId] || { folders: [], assignments: {} };
@@ -527,6 +529,11 @@ function renderTraits() {
   const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
   $('traitCount').textContent = c?.traits.length || 0;
+  const rename = $('manageRenameCategory');
+  rename.hidden = !c;
+  rename.disabled = !c || busy;
+  rename.dataset.id = c?.id || '';
+  rename.setAttribute('aria-label', c ? `Přejmenovat kategorii ${c.name}` : 'Přejmenovat kategorii');
   const categoryIndex = state.cats.findIndex(cat => cat.id === active);
   $('categoryPosition').textContent = c ? `Vrstva ${categoryIndex + 1} / ${state.cats.length}` : 'Žádné vrstvy';
   $('categoryPrev').disabled = state.cats.length < 2 || busy;
@@ -674,21 +681,51 @@ $('snapshotDialog').addEventListener('close', () => {
   const canvas = $('snapshotCanvas');
   canvas.width = canvas.height = 1;
 });
+function renderSnapshotCategoryTraits(c) {
+  if (!c.traits.length) return '<p class="empty-list">V této kategorii zatím nejsou traity.</p>';
+  const page = Math.min(libraryPages[c.id] || 0, Math.ceil(c.traits.length / PAGE_SIZE) - 1);
+  libraryPages[c.id] = page;
+  const items = c.traits.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (M.isSelected(state, c.id, t.id) ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + M.isSelected(state, c.id, t.id) + '" title="' + esc(t.name) + '">' + layerThumbnail(c, t) + '</button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span>' + traitCategorySelect(t, c.id) + '</div>').join('');
+  if (c.traits.length <= PAGE_SIZE) return items;
+  return items + '<div class="library-pager">' +
+    button('library-prev', '‹', c.id, '', page === 0 ? 'disabled' : '') +
+    '<span>Strana ' + (page + 1) + '</span>' +
+    button('library-next', '›', c.id, '', (page + 1) * PAGE_SIZE >= c.traits.length ? 'disabled' : '') +
+    '</div>';
+}
 function renderSnapshotLayerLibrary() {
   const container = $('snapshotLayerLibrary');
-  const openCategories = libraryOpen;
-  container.innerHTML = state.cats.length ? state.cats.map((c, i) => {
-    const selected = c.traits.find(t => t.id === state.selected[c.id]);
-    const items = !safeMode && inspectorPanel === 'snapshots' && openCategories.has(c.id) && c.traits.length ? c.traits.slice((libraryPages[c.id] || 0) * PAGE_SIZE, ((libraryPages[c.id] || 0) + 1) * PAGE_SIZE).map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (M.isSelected(state, c.id, t.id) ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + M.isSelected(state, c.id, t.id) + '" title="' + esc(t.name) + '"><img ' + imageAttributes(t.data) + ' alt="" loading="lazy"></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span>' + traitCategorySelect(t, c.id) + '</div>').join('') : '<p class="empty-list">Rozbal kategorii pro načtení náhledů.</p>';
-    return '<details class="library-category" data-category="' + esc(c.id) + '"><summary><span class="layer-index">' + String(i + 1).padStart(2, '0') + '</span><span class="library-category-name">' + esc(c.name) + '</span>' + (!safeMode && openCategories.has(c.id) && selected ? '<img class="library-current" ' + imageAttributes(selected.data) + ' alt="" loading="lazy">' : '<span class="library-current-empty">∅</span>') + '<span class="library-count">' + c.traits.length + ' traitů</span></summary><button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="' + esc(c.id) + '" title="Přidat PNG do ' + esc(c.name) + '" aria-label="Přidat PNG do ' + esc(c.name) + '">' + icon('plus') + '</button><div class="library-traits">' + items + (openCategories.has(c.id) && !safeMode ? '<div style="grid-column:1/-1;display:flex;gap:8px">'+button('library-prev','‹',c.id,'',!(libraryPages[c.id]||0)?'disabled':'')+'<span>Strana '+((libraryPages[c.id]||0)+1)+'</span>'+button('library-next','›',c.id,'',((libraryPages[c.id]||0)+1)*PAGE_SIZE>=c.traits.length?'disabled':'')+'</div>' : '') + '</div></details>';
+  const canShow = !safeMode && mobilePanel === 'snapshots';
+  const markup = state.cats.length ? state.cats.map((c, i) => {
+    const cover = canShow && (c.traits.find(t => t.id === state.selected[c.id]) || c.traits[0]);
+    return `<details class="library-category" data-category="${esc(c.id)}">
+      <summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${cover ? layerThumbnail(c, cover, 'library-current') : ''}<span class="library-count">${c.traits.length} traitů</span></summary>
+      <button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="${esc(c.id)}" aria-label="Přidat PNG do ${esc(c.name)}">${icon('plus')}</button>
+      <div class="library-traits"></div>
+    </details>`;
   }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
+  if (libraryHeaderMarkup !== markup) {
+    libraryHeaderMarkup = markup;
+    container.innerHTML = markup;
+    for (const details of container.querySelectorAll('.library-category')) {
+      const id = details.dataset.category;
+      details.addEventListener('toggle', () => {
+        if (!details.isConnected || details.open === libraryOpen.has(id)) return;
+        if (details.open) { libraryOpen.clear(); libraryOpen.add(id); } else libraryOpen.delete(id);
+        renderSnapshotLayerLibrary();
+      });
+      const cover = details.querySelector('.library-current');
+      cover?.addEventListener('error', () => clearLayerThumbnail(cover));
+    }
+  }
   for (const details of container.querySelectorAll('.library-category')) {
-    details.open = openCategories.has(details.dataset.category);
-    details.addEventListener('toggle', () => {
-      if (!details.isConnected || details.open === libraryOpen.has(details.dataset.category)) return;
-      if (details.open) { libraryOpen.clear(); libraryOpen.add(details.dataset.category); } else libraryOpen.delete(details.dataset.category);
-      renderSnapshotLayerLibrary();
-    });
+    const id = details.dataset.category;
+    details.open = libraryOpen.has(id);
+    const grid = details.querySelector('.library-traits');
+    const contents = canShow && details.open ? renderSnapshotCategoryTraits(M.category(state, id)) : '';
+    if (libraryBodyMarkup.get(grid) === contents) continue;
+    grid.innerHTML = contents;
+    libraryBodyMarkup.set(grid, contents);
   }
   mountThumbnails();
 }

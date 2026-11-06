@@ -14,12 +14,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0768">
-  <link rel="stylesheet" href="compact.css?build=0771">
-  <link rel="stylesheet" href="schemes.css?build=0770">
+  <link rel="stylesheet" href="compact.css?build=0772">
+  <link rel="stylesheet" href="schemes.css?build=0772">
   <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0771" defer></script>
-  <script src="app.js?build=0770" defer></script>
+  <script src="diagnostics.js?build=0772" defer></script>
+  <script src="app.js?build=0772" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
@@ -82,8 +82,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.71" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.71</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.72" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.72</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -144,7 +144,7 @@
       <nav class="inspector-tabs" aria-label="Editor"><button data-action="show-panel" data-panel="traits" class="is-active" aria-pressed="true">Správa</button><button data-action="show-panel" data-panel="snapshots" aria-pressed="false">Sestavy</button></nav>
       <section id="traitsPanel" class="tab-panel is-active">
         <button type="button" id="manageSort" data-action="open-category-sort" class="outline"><svg class="icon"><use href="#i-layers"/></svg>Seřadit kategorie</button>
-        <div class="panel-heading"><div><h2 id="catTitle">Vyber kategorii</h2></div><span id="traitCount" class="count">0</span><button type="button" id="quickUploadPng" data-action="add-traits" class="icon-button subtle quick-upload-png" aria-label="Nahrát PNG do vybrané kategorie" title="Nahrát PNG"><svg class="icon"><use href="#i-upload"/></svg></button></div>
+        <div class="panel-heading"><div><h2 id="catTitle">Vyber kategorii</h2></div><span id="traitCount" class="count">0</span><button type="button" id="manageRenameCategory" data-action="rename-category" class="icon-button subtle" aria-label="Přejmenovat kategorii" title="Přejmenovat kategorii" hidden><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button><button type="button" id="quickUploadPng" data-action="add-traits" class="icon-button subtle quick-upload-png" aria-label="Nahrát PNG do vybrané kategorie" title="Nahrát PNG"><svg class="icon"><use href="#i-upload"/></svg></button></div>
         <nav class="category-stepper" aria-label="Přepínání vrstev"><button id="categoryPrev" data-action="cycle-category" data-direction="-1" aria-label="Předchozí vrstva">‹ Předchozí</button><span id="categoryPosition" aria-live="polite"></span><button id="categoryNext" data-action="cycle-category" data-direction="1" aria-label="Další vrstva">Další ›</button></nav>
         <div id="dropzone" class="dropzone"><svg class="icon"><use href="#i-upload"/></svg><button id="addTrait" data-action="add-traits" class="primary" disabled>Nahrát PNG</button></div>
         <input id="traitFiles" type="file" accept="image/png,.png" multiple hidden><p id="uploadStatus" class="helper" role="status"></p><div id="traitOrganizer" class="trait-organizer" hidden><aside id="organizerTree" class="organizer-tree"></aside><div class="organizer-browser"><div id="organizerHeading" class="organizer-heading"></div><div id="traits" class="traits"></div></div></div><div id="traitInfo" class="trait-info" hidden></div>
@@ -205,6 +205,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.72-palette-and-categories" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.72 – Palety a kategorie</strong><small>Sjednocené barvy ovládání, miniatury ve sbalených kategoriích a přejmenování tužkou.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.71-showroom-beta" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.71 – Showroom (beta)</strong><small>Neaktivní položka Showroom v horní nabídce.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.70-graphite-grey" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.70 – Graphite Grey</strong><small>Grafitové schéma mezi ostatními paletami.</small></span><span class="version-tag">Uloženo</span></a>
       <div class="version-history-entry"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.69 – Grafitové schéma</strong><small>Starší vydání vzhledu.</small></span><span class="version-tag">Nahrazeno</span></div>

@@ -309,3 +309,9 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 }
 body.compact-workspace .header-menu-content .showroom-placeholder:disabled {opacity:1}
 .showroom-placeholder small {font-size:.82em;opacity:.67;margin-inline-start:.2em}
+
+#manageRenameCategory {width:42px;min-width:42px;height:42px;min-height:42px;padding:9px}
+#manageRenameCategory[hidden] {display:none!important}
+#cats .category-top>.icon-button[data-action=rename-category] {padding:8px}
+.library-current:not([src]) {visibility:hidden}
+.library-pager {grid-column:1/-1;display:flex;align-items:center;gap:8px}
