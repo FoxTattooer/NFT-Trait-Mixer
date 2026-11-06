@@ -94,10 +94,7 @@ function renderCategorySort() {
     const count = document.createElement('span');
     count.className = 'category-sort-traits';
     count.textContent = cat.traits.length + ' traitů';
-    const order = document.createElement('span');
-    order.className = 'category-sort-index';
-    order.textContent = String(index + 1).padStart(2, '0');
-    row.append(handle, label, count, order);
+    row.append(handle, label, count);
     fragment.append(row);
   });
   list.append(fragment);
