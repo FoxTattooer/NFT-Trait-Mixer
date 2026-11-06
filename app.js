@@ -979,39 +979,52 @@ window.addEventListener('beforeinstallprompt', event => { event.preventDefault()
 window.addEventListener('appinstalled', () => { installPrompt = null; $('install').hidden = true; toast('Aplikace je přidaná na plochu'); });
 
 
-// Landscape controls are separate from the portrait footer; portrait DOM stays untouched.
+// Preview menu reuses the existing actions in both orientations.
 function syncLandscapeControls() {
-  const landscape = window.innerWidth > window.innerHeight;
-  const meta = document.querySelector('.preview-meta');
-  const bar = document.querySelector('.project-bar');
-  const stage = document.querySelector('.stage');
-  const actions = $('landscapePreviewActions');
-  if (!meta || !bar || !stage || !actions) return;
-  // The original preview footer stays intact for portrait. Landscape uses 3 actions.
-  if (meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
-  actions.hidden = !landscape;
-  if (landscape) actions.style.setProperty('display','flex','important');
-  else actions.style.removeProperty('display');
   $('landscapeShuffle').disabled = $('random').disabled;
   $('landscapeSnapshot').disabled = $('snapshot').disabled;
   $('landscapeLayerCount').textContent = $('status').textContent;
-  if (!landscape) $('landscapeInfoBubble').hidden = true;
 }
 function positionLandscapeMenu() {
-  const menu = document.querySelector('.header-menu');
-  const panel = menu?.querySelector('.header-menu-content');
-  if (!menu || !panel || !menu.open) return;
-  const rect = menu.getBoundingClientRect();
-  panel.style.position = 'fixed';
-  panel.style.top = Math.min(rect.bottom + 8, window.innerHeight - 150) + 'px';
-  panel.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
-  panel.style.left = 'auto';
+  document.querySelectorAll('.app-header .header-menu[open]').forEach(menu => {
+    const panel = menu.querySelector('.header-menu-content');
+    const rect = menu.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const width = viewport?.width || window.innerWidth;
+    const height = viewport?.height || window.innerHeight;
+    panel.style.position = 'fixed';
+    panel.style.top = `${rect.bottom + 6}px`;
+    panel.style.left = `${Math.max(8, Math.min(rect.left, width - Math.min(240, width - 16) - 8))}px`;
+    panel.style.right = 'auto';
+    panel.style.maxHeight = `${Math.max(60, height - rect.bottom - 14)}px`;
+  });
 }
-document.querySelector('.header-menu')?.addEventListener('toggle', positionLandscapeMenu);
-
-$('landscapeInfo')?.addEventListener('click', () => { const bubble = $('landscapeInfoBubble'); const wasHidden = bubble.hidden; syncLandscapeControls(); bubble.hidden = !wasHidden; });
+const toolbarMenus = [...document.querySelectorAll('.app-header .header-menu')];
+for (const menu of toolbarMenus) {
+  menu.addEventListener('toggle', () => {
+    if (menu.open) {
+      toolbarMenus.forEach(other => { if (other !== menu) other.open = false; });
+      positionLandscapeMenu();
+    }
+  });
+}
+document.addEventListener('click', event => {
+  toolbarMenus.forEach(menu => {
+    if (!menu.contains(event.target) || (event.target.closest('button') && !event.target.closest('#landscapeInfo'))) menu.open = false;
+  });
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  toolbarMenus.forEach(menu => { if (menu.open) { menu.open = false; menu.querySelector('summary').focus(); } });
+});
+$('landscapeInfo').addEventListener('click', () => {
+  const bubble = $('landscapeInfoBubble');
+  syncLandscapeControls();
+  bubble.hidden = !bubble.hidden;
+  $('landscapeInfo').setAttribute('aria-expanded', String(!bubble.hidden));
+});
 window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
-window.addEventListener('orientationchange', syncLandscapeControls);
+window.visualViewport?.addEventListener('resize', positionLandscapeMenu);
 /* Physically relocate the quick trait strip out of the preview in landscape.
    CSS alone cannot reliably win over old orientation-specific styles. */
 function syncLandscapeTraitPlacement(){
@@ -1056,6 +1069,7 @@ async function init() {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
+
 
 
 
