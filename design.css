@@ -918,3 +918,12 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 .app-header>.toolbar{display:flex!important;flex:0 1 auto!important;min-width:0!important;justify-content:center!important;gap:4px!important}
 .app-header>.header-end{display:flex!important;flex:0 0 auto!important}
 }
+
+/* Header controls are part of HTML, not moved by runtime JS. */
+.landscape-header-tools{display:none}
+@media (orientation:landscape){
+ .app-header>.landscape-header-tools{display:flex!important;align-items:center;justify-content:center;gap:4px;flex:0 0 auto}
+ .app-header>.landscape-header-tools>button{display:inline-flex!important;align-items:center;justify-content:center;min-width:34px!important;width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important;border:1px solid #a73c76;border-radius:9px;background:#24131f;color:#ffc1dd}
+ .app-header>.landscape-header-tools .icon{width:18px;height:18px}
+ .app-header>.landscape-preview-actions,.app-header>.history-actions{display:none!important}
+}
