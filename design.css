@@ -572,3 +572,27 @@ dialog.history-dialog{
  dialog.history-dialog{top:17dvh!important;width:88vw!important;max-height:58dvh!important;padding:14px!important}
  .history-dialog .history-list{max-height:37dvh!important}
 }
+
+/* Landscape: preview controls occupy unused space between title and undo/redo. */
+@media(max-width:900px) and (orientation:landscape){
+ .project-bar{display:flex!important;align-items:center!important;gap:8px!important;padding:3px 10px 6px!important;min-height:53px!important;margin-bottom:2px!important}
+ .project-bar .project-heading{flex:0 1 auto!important;max-width:32%!important;min-width:135px!important}
+ .project-bar .project-name{font-size:17px!important;max-width:100%!important}
+ .project-bar .save-status{font-size:10px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ .project-bar>.preview-meta{display:flex!important;align-items:center!important;flex:1 1 auto!important;min-width:0!important;min-height:38px!important;max-width:none!important;margin:0!important;padding:3px 9px!important;border:1px solid #5a344d!important;border-radius:11px!important;background:#1a131d!important;gap:8px!important}
+ .project-bar>.preview-meta #status{font-size:10px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;flex:1 1 auto!important}
+ .project-bar>.preview-meta .preview-inline-actions{display:flex!important;flex:0 0 auto!important;gap:5px!important}
+ .project-bar>.preview-meta .preview-inline-actions button{display:inline-flex!important;width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important;padding:6px!important}
+ .project-bar>.preview-meta .canvas-size{font-size:10px!important;white-space:nowrap!important;flex:0 0 auto!important}
+ .project-bar>.history-actions{flex:0 0 auto!important;margin-left:0!important;gap:6px!important}
+ .stage .preview-meta{display:none!important}
+ .app-layout{height:calc(100dvh - 105px - env(safe-area-inset-bottom))!important;min-height:0!important}
+ .stage{padding:5px!important;justify-content:center!important}
+ .stage .canvas-wrap{height:min(100%,calc(100dvh - 117px - env(safe-area-inset-bottom)))!important;max-height:100%!important;width:auto!important;max-width:100%!important;aspect-ratio:1!important;margin:auto!important}
+}
+@media(max-width:650px) and (orientation:landscape){
+ .project-bar{gap:4px!important;padding-inline:5px!important}
+ .project-bar .project-heading{min-width:95px!important;max-width:26%!important}
+ .project-bar>.preview-meta .canvas-size{display:none!important}
+ .project-bar>.preview-meta{gap:4px!important;padding-inline:5px!important}
+}
