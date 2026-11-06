@@ -15,6 +15,9 @@ let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, 
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
 let installPrompt = null, workerRegistration = null;
 const undoStack = [], redoStack = [], imageCache = new Map();
+const undoLabels = [], redoLabels = [];
+const HISTORY_LIMIT = 50;
+let currentStepLabel = 'Aktuální stav';
 
 function toast(message, error = false) {
   clearTimeout(toastTimer);
@@ -71,21 +74,67 @@ function pruneCache() {
   const ids = new Set(state.cats.flatMap(c => c.traits.map(t => t.id)));
   for (const key of imageCache.keys()) if (!ids.has(key)) imageCache.delete(key);
 }
+function historyEntries() {
+  const past = undoLabels.map((label, i) => ({ label, position: i, kind: 'past' }));
+  const future = redoLabels.slice().reverse().map((label, i) => ({ label, position: undoStack.length + 1 + i, kind: 'future' }));
+  return [...past, { label: currentStepLabel, position: undoStack.length, kind: 'current' }, ...future];
+}
+function renderHistoryPanel() {
+  const list = $('historyList');
+  if (!list) return;
+  const entries = historyEntries();
+  list.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry, index) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'history-step' + (entry.kind === 'current' ? ' is-current' : '');
+    row.dataset.action = 'jump-history';
+    row.dataset.id = String(entry.position);
+    row.disabled = busy || entry.kind === 'current';
+    row.setAttribute('aria-current', entry.kind === 'current' ? 'step' : 'false');
+    const number = document.createElement('span'); number.className = 'history-step-number'; number.textContent = String(index + 1).padStart(2, '0');
+    const name = document.createElement('span'); name.className = 'history-step-name'; name.textContent = entry.label;
+    const stateTag = document.createElement('span'); stateTag.className = 'history-step-status';
+    stateTag.textContent = entry.kind === 'current' ? 'Teď' : entry.kind === 'future' ? 'Vpřed' : 'Zpět';
+    row.append(number, name, stateTag); fragment.append(row);
+  });
+  list.append(fragment);
+  $('historyCount').textContent = String(entries.length);
+}
 function change(mutator, message = '') {
   const previous = M.clone(state);
   try { mutator(); } catch (error) { state = previous; throw error; }
   undoStack.push(previous);
-  if (undoStack.length > 30) undoStack.shift();
-  redoStack.length = 0;
+  undoLabels.push(currentStepLabel);
+  if (undoStack.length > HISTORY_LIMIT) { undoStack.shift(); undoLabels.shift(); }
+  redoStack.length = 0; redoLabels.length = 0;
+  currentStepLabel = message || 'Úprava projektu';
   pruneCache(); render(); scheduleSave();
   if (message) toast(message);
 }
-function restoreHistory(redo = false) {
+function moveHistory(redo = false) {
   const from = redo ? redoStack : undoStack, to = redo ? undoStack : redoStack;
-  if (!from.length) return;
-  to.push(M.clone(state)); state = from.pop();
+  const fromLabels = redo ? redoLabels : undoLabels, toLabels = redo ? undoLabels : redoLabels;
+  if (!from.length) return false;
+  to.push(M.clone(state)); toLabels.push(currentStepLabel);
+  state = from.pop(); currentStepLabel = fromLabels.pop() || 'Úprava projektu';
+  return true;
+}
+function restoreHistory(redo = false) {
+  if (busy || !moveHistory(redo)) return;
   pruneCache(); render(); scheduleSave();
   toast(redo ? 'Změna zopakována' : 'Změna vrácena zpět');
+}
+function jumpHistory(position) {
+  if (busy || !Number.isInteger(position)) return;
+  const target = Math.max(0, Math.min(position, undoStack.length + redoStack.length));
+  let changed = false;
+  while (undoStack.length > target) changed = moveHistory(false) || changed;
+  while (undoStack.length < target) changed = moveHistory(true) || changed;
+  if (!changed) return;
+  pruneCache(); render(); scheduleSave();
+  toast('Historie: obnoven vybraný krok');
 }
 function ask({ title, description = '', value = '', confirm = false, submit = 'Uložit', danger = false }) {
   $('dialogTitle').textContent = title;
@@ -349,6 +398,7 @@ function render(keepPreview = false) {
   $('importPsd').disabled = busy;
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
+  renderHistoryPanel();
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
@@ -685,6 +735,9 @@ async function handleAction(action, id, element) {
     }
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
+    case 'open-history': $('historyDialog').showModal(); renderHistoryPanel(); document.querySelector('#historyList .is-current')?.scrollIntoView({ block: 'nearest' }); break;
+    case 'close-history': $('historyDialog').close(); break;
+    case 'jump-history': jumpHistory(Number(id)); break;
     case 'undo': restoreHistory(); break;
     case 'redo': restoreHistory(true); break;
     case 'delete-rule': change(() => { state.rules = state.rules.filter(r => r.id !== id); }, 'Pravidlo odstraněno'); break;
