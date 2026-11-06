@@ -212,3 +212,14 @@ body.compact-workspace #quickTraitsItems .quick-trait img {width:100%;height:100
 .snapshot-actions button {min-height:44px;font-size:12px}
 button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-size:12px}
 #diagnosticsReport {max-height:48dvh;overflow:auto;padding:10px;border:1px solid #593b51;border-radius:10px;background:#110e16;color:#e4cee1;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.layer-panel-heading {display:flex;align-items:center;gap:6px;margin-bottom:7px;min-width:0}
+.layer-panel-heading[hidden] {display:none!important}
+body.compact-workspace .layer-panel-heading #layerCategoryPicker {flex:1;align-self:center;min-width:0;padding-inline:0}
+body.compact-workspace .layer-panel-heading #layerCategory {width:100%;max-width:none;min-width:0;font-size:16px}
+.layer-panel-heading #catCount {min-width:44px!important;min-height:44px!important;flex:none}
+.layer-tree-trait {grid-template-columns:minmax(0,1fr) 44px 44px;gap:1px}
+.layer-tree-row .layer-tree-eye {min-height:44px;min-width:0;padding:4px;border:0;border-radius:9px;background:transparent;box-shadow:none;color:#ad9aac}
+.layer-tree-eye[aria-pressed=true] {color:#ff81bd}
+.layer-tree-eye .icon {width:19px;height:19px}
+.layer-tree-main .layer-thumb[data-drag-kind=trait] {touch-action:none;user-select:none;-webkit-touch-callout:none;cursor:grab}
+.layer-tree-main .layer-thumb img {pointer-events:none;-webkit-user-drag:none}

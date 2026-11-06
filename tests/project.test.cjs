@@ -87,3 +87,22 @@ test('unsupported versions and malformed input leave validation with an error', 
   assert.throws(() => M.normalize({ version: 99, cats: [], selected: {}, rules: [] }), /verze/);
   for (const raw of [null, [], { cats: [], selected: [], rules: [] }, { cats: [{}], selected: {}, rules: [] }]) assert.throws(() => M.normalize(raw));
 });
+
+
+test('extra visible traits obey rules and survive loading and undo copies', () => {
+  const p = project();
+  p.cats[0].traits.push({id:'green',name:'Zelená',data:png});
+  p.rules.push({id:'hide',source:'green',action:'hide',targetCat:'b',targetTrait:null});
+  M.toggleTrait(p, 'a', 'green');
+  assert.deepEqual(M.selectedIds(p, 'a'), ['red','green']);
+  assert(M.conflicts(p).hidden.has('b'));
+  const loaded = M.normalize(JSON.parse(JSON.stringify(p)));
+  assert.deepEqual(M.selectedIds(loaded,'a'), ['red','green']);
+  const undo = M.clone(loaded);
+  M.toggleTrait(loaded, 'a', 'red');
+  assert.deepEqual(M.selectedIds(loaded,'a'), ['green']);
+  assert.deepEqual(M.selectedIds(undo,'a'), ['red','green']);
+  M.removeTrait(loaded, 'a', 'green');
+  assert.deepEqual(M.selectedIds(loaded,'a'), []);
+  assert(!M.conflicts(loaded).hidden.has('b'));
+});

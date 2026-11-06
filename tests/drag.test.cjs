@@ -50,4 +50,19 @@ pointer('pointerdown',10,10);pointer('pointermove',20,395);tick(100);assert(scro
 pointer('pointercancel',20,395);
 panel.scrollTop=200;scrolls=[];pointer('pointerdown',10,10);pointer('pointermove',20,395);tick(120);assert(panel.scrollTop>200);assert.equal(scrolls.length,0,'inner scroller gets priority');
 pointer('pointerup',20,395);assert.equal(scheduled,null,'drop stops loop');
+// Trait drag stays in one folder and changes the real saved order.
+const cat=M.category(w.state,'a');
+cat.traits.push({id:'t2',name:'T2',data:png},{id:'other',name:'Other',data:png});
+w.state.organizer.a.assignments.t2='child';
+w.document.body.insertAdjacentHTML('beforeend', `<div id="traitSource" class="drop-row" data-drop-kind="trait" data-drop-id="t" data-category="a" data-parent="child"><span class="layer-thumb" data-drag-kind="trait" data-drag-id="t" data-category="a"></span><span class="layer-tree-label">T</span></div><div id="traitTarget" class="drop-row" data-drop-kind="trait" data-drop-id="t2" data-category="a" data-parent="child">T2</div><div id="otherTarget" class="drop-row" data-drop-kind="trait" data-drop-id="other" data-category="a" data-parent="">Other</div>`);
+const thumb=w.document.querySelector('.layer-thumb');
+const targetTrait=w.document.getElementById('traitTarget'), otherTarget=w.document.getElementById('otherTarget');
+for(const row of [targetTrait,otherTarget]) row.getBoundingClientRect=()=>({top:100,bottom:150,height:50});
+const touch=(type,y)=>thumb.dispatchEvent(new w.PointerEvent(type,{bubbles:true,cancelable:true,pointerId:2,pointerType:'touch',button:0,clientX:16,clientY:y}));
+w.document.elementFromPoint=()=>otherTarget;
+touch('pointerdown',10);touch('pointermove',140);assert(!otherTarget.classList.contains('drop-after'));touch('pointerup',140);
+assert.deepEqual(cat.traits.map(t=>t.id),['t','t2','other']);
+w.document.elementFromPoint=()=>targetTrait;
+touch('pointerdown',10);touch('pointermove',140);assert(targetTrait.classList.contains('drop-after'));touch('pointerup',140);
+assert.deepEqual(cat.traits.map(t=>t.id),['t2','t','other']);
 w.happyDOM.abort();w.close();console.log('PASS drag: ordering, nesting, cycle rejection, cross-category subtree/traits, clone/undo, pointer drop, Escape and busy guard');

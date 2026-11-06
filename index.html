@@ -14,12 +14,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0747">
   <link rel="stylesheet" href="design.css?build=0756">
-  <link rel="stylesheet" href="compact.css?build=0759">
-  <script src="project.js" defer></script>
+  <link rel="stylesheet" href="compact.css?build=0760">
+  <script src="project.js?build=0760" defer></script>
   <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0759" defer></script>
-  <script src="app.js?build=0759" defer></script>
-  <script src="drag.js" defer></script>
+  <script src="diagnostics.js?build=0760" defer></script>
+  <script src="app.js?build=0760" defer></script>
+  <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
   <script src="psd-ui.js" defer></script>
@@ -96,9 +96,10 @@
   <main id="appLayout" class="app-layout" data-mobile-panel="layers" aria-busy="true">
     <aside id="catsPanel" class="panel layers-panel" aria-labelledby="layersHeading">
       <h2 id="layersHeading" class="sr-only">Vrstvy a složky</h2>
+      <div id="layerPanelHeading" class="layer-panel-heading" hidden><label id="layerCategoryPicker"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><select id="layerCategory" aria-label="Přepnout kategorii"></select></label><button type="button" id="catCount" class="count category-count-button" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie">0</button></div>
       <div id="layerTree" class="layer-tree" aria-label="Strom vrstev"></div>
       <div id="categoryOverview" hidden>
-      <div class="panel-heading"><div><h2>Kategorie <button type="button" id="catCount" class="count category-count-button" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie">0</button></h2></div><button id="compactToggle" data-action="toggle-compact" class="icon-button subtle compact-toggle" aria-label="Přepnout kompaktní zobrazení" title="Kompaktní zobrazení"><svg class="icon"><use href="#i-grid"/></svg></button><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+      <div class="panel-heading"><div><h2 class="sr-only">Kategorie</h2></div><button id="compactToggle" data-action="toggle-compact" class="icon-button subtle compact-toggle" aria-label="Přepnout kompaktní zobrazení" title="Kompaktní zobrazení"><svg class="icon"><use href="#i-grid"/></svg></button><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
       <div id="cats" class="category-list"></div>
       <button data-action="add-category" class="outline full-width"><svg class="icon"><use href="#i-plus"/></svg>Přidat kategorii</button>
       </div>
@@ -108,7 +109,6 @@
       <div class="canvas-wrap"><canvas id="canvas" width="1024" height="1024" aria-label="Výsledná PNG kompozice"></canvas><div id="canvasEmpty" class="canvas-empty"><span class="empty-art"><svg class="icon"><use href="#i-layers"/></svg></span><h2 id="emptyTitle">Každý nápad začíná vrstvou.</h2><p id="emptyDescription">Přidej kategorii, nahraj PNG a poskládej svoji první kombinaci.</p><button id="emptyAction" data-action="add-category" class="primary">První kategorie</button></div></div>
       <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><div class="preview-inline-actions"><button id="random" data-action="random" title="Náhodná kombinace" aria-label="Náhodná kombinace" disabled><svg class="icon"><use href="#i-shuffle"/></svg></button><button id="snapshot" data-action="add-snapshot" class="subtle" title="Uložit sestavu" aria-label="Uložit sestavu" disabled><svg class="icon"><use href="#i-bookmark"/></svg></button></div><span class="canvas-size">1024 × 1024</span></div>
       <div id="quickTraits" class="quick-traits" hidden><div class="quick-traits-head"><button type="button" data-action="quick-prev" aria-label="Předchozí trait">‹</button></div><div id="quickTraitsItems" class="quick-traits-items"></div><button type="button" data-action="quick-next" class="quick-traits-next" aria-label="Další trait">›</button></div>
-      <label id="layerCategoryPicker" hidden><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><select id="layerCategory" aria-label="Přepnout kategorii"></select></label>
       <div id="warnings" class="conflict-list" role="status"></div>
       
     </section>
@@ -151,6 +151,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.60-trait-order" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.60 – Viditelnost a pořadí traitů</strong><small>Kategorie v hlavičce vrstev, přetahování traitů a více viditelných vrstev najednou.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.59-local-diagnostics" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.59 – Lokální diagnostika</strong><small>Záznam posledních operací a chyb pro dohledání potíží.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.58-layer-tree" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.58 – Strom vrstev a náhledy sestav</strong><small>Složky a traity v jednom stromu, kompaktní pás na výšku a detail uložené sestavy.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.57-portrait-preview" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.57 – Čistší náhled na výšku</strong><small>Lišta pod okrajem iOSu, název ve složce a údaje o náhledu v nabídce.</small></span><span class="version-tag">Uloženo</span></a>

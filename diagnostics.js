@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const key = 'trait-mixer:diagnostics:v1';
-  const version = '0.7.59';
+  const version = '0.7.60';
   const maxEntries = 48;
   const phases = new Set([
     'startup', 'runtime', 'storage', 'preview', 'psd-open', 'psd-import',

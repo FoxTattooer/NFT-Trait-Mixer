@@ -8,6 +8,7 @@
   function cleanup() {
     if (!drag) return;
     const previous = drag; drag = null;
+    clearTimeout(previous.pressTimer);
     cancelAnimationFrame(frame); frame = 0;
     previous.ghost?.remove(); previous.row?.classList.remove('is-lifted'); clearTarget();
     try { previous.handle.releasePointerCapture(previous.pointerId); } catch {}
@@ -18,6 +19,8 @@
     if (!row || !drag) return null;
     const kind = row.dataset.dropKind, categoryId = row.dataset.category, id = row.dataset.dropId || null;
     if (drag.kind === 'category' && (kind !== 'category' || id === drag.id)) return null;
+    if (drag.kind === 'trait' && (kind !== 'trait' || id === drag.id || categoryId !== drag.categoryId || row.dataset.parent !== drag.row.dataset.parent)) return null;
+    if (drag.kind === 'folder' && kind === 'trait') return null;
     if (drag.kind === 'folder' && kind === 'folder' && categoryId === drag.categoryId && organizerDescendants(organizerFolders(categoryId).folders,drag.id).has(id)) return null;
     const rect = row.getBoundingClientRect(), ratio = (y - rect.top) / rect.height;
     let placement = ratio < .5 ? 'before' : 'after';
@@ -69,11 +72,30 @@
     if(moved)paintTarget();
     frame=requestAnimationFrame(scrollFrame);
   }
+  function lift() {
+    if (!drag || drag.started || busy || !drag.handle.isConnected) return;
+    clearTimeout(drag.pressTimer);
+    drag.started = true;
+    drag.row.classList.add('is-lifted');
+    document.body.classList.add('is-dragging-layer');
+    drag.ghost = document.createElement('div');
+    drag.ghost.className = 'drag-ghost';
+    drag.ghost.textContent = '⠿  ' + (drag.row.querySelector('.category-name,.folder-label,.layer-tree-label')?.textContent || 'Složka');
+    document.body.append(drag.ghost);
+    positionGhost();
+    frame = requestAnimationFrame(scrollFrame);
+  }
+  function positionGhost() {
+    drag.ghost.style.left = Math.min(drag.x + 12, innerWidth - 180) + 'px';
+    drag.ghost.style.top = drag.y + 12 + 'px';
+    paintTarget();
+  }
   document.addEventListener('pointerdown', event => {
-    const handle = event.target.closest('.drag-handle');
+    const handle = event.target.closest('.drag-handle,.layer-thumb[data-drag-kind=trait]');
     if (!handle || !ready || busy || event.button !== 0 || drag) return;
-    event.preventDefault();
+    if (handle.dataset.dragKind !== 'trait') event.preventDefault();
     drag = { handle, kind:handle.dataset.dragKind,id:handle.dataset.dragId,categoryId:handle.dataset.category,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,row:handle.closest('.drop-row'),started:false,target:null };
+    if (drag.kind === 'trait' && event.pointerType === 'touch') drag.pressTimer = setTimeout(lift, 260);
     try { handle.setPointerCapture(event.pointerId); } catch {}
   });
   document.addEventListener('pointermove', event => {
@@ -82,13 +104,8 @@
     drag.x=event.clientX;drag.y=event.clientY;
     if (!drag.started && Math.hypot(drag.x-drag.startX,drag.y-drag.startY)<6) return;
     event.preventDefault();
-    if (!drag.started) {
-      drag.started=true; drag.row.classList.add('is-lifted');document.body.classList.add('is-dragging-layer');
-      drag.ghost=document.createElement('div');drag.ghost.className='drag-ghost';
-      drag.ghost.textContent='⠿  '+(drag.row.querySelector('.category-name,.folder-label')?.textContent || 'Složka');
-      document.body.append(drag.ghost);frame=requestAnimationFrame(scrollFrame);
-    }
-    drag.ghost.style.left=Math.min(drag.x+12,innerWidth-180)+'px';drag.ghost.style.top=drag.y+12+'px';paintTarget();
+    if (!drag.started) lift();
+    if (drag.started) positionGhost();
   },{passive:false});
   document.addEventListener('pointerup', event => {
     if (!drag || drag.pointerId !== event.pointerId) return;
@@ -99,7 +116,9 @@
     // Validate on a lightweight model clone before adding a single undo entry.
     const apply = project => current.kind === 'category'
       ? M.moveCategory(project,current.id,target.categoryTarget,target.placement==='after')
-      : M.moveFolder(project,current.categoryId,current.id,target.categoryId,target.id,target.placement);
+      : current.kind === 'trait'
+        ? M.reorderTrait(project, current.categoryId, current.id, target.id, target.placement === 'after')
+        : M.moveFolder(project,current.categoryId,current.id,target.categoryId,target.id,target.placement);
     if (!apply(M.clone(state))) { hint('Pořadí zůstalo stejné'); return; }
     change(() => {
       apply(state);
@@ -116,5 +135,7 @@
   document.addEventListener('lostpointercapture',event=>{if(drag?.pointerId===event.pointerId)cleanup();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape' && drag){cleanup();hint('Přesun zrušen');}});
   window.addEventListener('blur',cleanup);
+  document.addEventListener('contextmenu', event => { if (event.target.closest('.layer-thumb[data-drag-kind=trait]')) event.preventDefault(); });
   document.addEventListener('click',event=>{if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},true);
 })();
+
