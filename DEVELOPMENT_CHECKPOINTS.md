@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.57 | checkpoint/v0.7.57-portrait-preview | Bezpečný odstup lišty na iPhonu, název ve složce a čistší náhled na výšku |
 | 0.7.56 | checkpoint/v0.7.56-compact-workspace | Ikonové nabídky, levý ovládací panel a maximální náhled na šířku |
 | 0.7.55 | checkpoint/v0.7.55-category-handles | Úchyty kategorií jen v Rychlém řazení |
 | 0.7.54 | checkpoint/v0.7.54-version-history | Historie vývojových verzí v menu |

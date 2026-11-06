@@ -506,8 +506,14 @@ function paint(canvas, images) {
   context.clearRect(0, 0, 1024, 1024);
   for (const image of images) context.drawImage(image, 0, 0, 1024, 1024);
 }
+function updatePreviewStatus(message, failed = false) {
+  const status = $('status');
+  status.textContent = message;
+  status.closest('.preview-meta').classList.toggle('has-error', failed);
+  $('landscapeLayerCount').textContent = message;
+}
 async function draw() {
-  if (safeMode) { $('status').textContent = 'Obnovovací režim · náhledy vypnuté'; return; }
+  if (safeMode) { updatePreviewStatus('Obnovovací režim · náhledy vypnuté'); return; }
   const ticket = ++drawTicket, layers = visibleLayers(state);
   try {
     const frame=document.createElement('canvas');frame.width=frame.height=1024;
@@ -517,25 +523,27 @@ async function draw() {
       const ctx=$('canvas').getContext('2d');ctx.clearRect(0,0,1024,1024);ctx.drawImage(frame,0,0);
     } finally {frame.width=frame.height=1;}
     if (ticket !== drawTicket) return;
-    $('status').textContent = layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření';
+    updatePreviewStatus(layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření');
   } catch (error) {
     if (ticket !== drawTicket) return;
-    $('status').textContent = error.message; $('export').disabled = true;
+    updatePreviewStatus(error.message, true);
+    $('export').disabled = true;
   }
 }
 function render(keepPreview = false) {
   if (!M.category(state, active)) active = state.cats[0]?.id || null;
   const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state);
-  $('projectName').textContent = state.name;
+  $('projectNameText').textContent = state.name;
+  $('projectName').setAttribute('aria-label', `Přejmenovat projekt ${state.name}`);
   $('importPsd').disabled = busy;
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
   renderQuickTraits();
   syncLandscapeTraitPlacement();
-  syncLandscapeControls();
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
+  syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
   $('exportPackage').disabled = !layers.length || !!warnings.length || busy;
   $('warnings').innerHTML = warnings.map(w => `<p class="conflict-warning">${esc(w.message)}. Uprav výběr před exportem.</p>`).join('');
@@ -983,7 +991,6 @@ window.addEventListener('appinstalled', () => { installPrompt = null; $('install
 function syncLandscapeControls() {
   $('landscapeShuffle').disabled = $('random').disabled;
   $('landscapeSnapshot').disabled = $('snapshot').disabled;
-  $('landscapeLayerCount').textContent = $('status').textContent;
 }
 function positionLandscapeMenu() {
   document.querySelectorAll('.app-header .header-menu[open]').forEach(menu => {
@@ -1019,11 +1026,10 @@ document.addEventListener('keydown', event => {
 });
 $('landscapeInfo').addEventListener('click', () => {
   const bubble = $('landscapeInfoBubble');
-  syncLandscapeControls();
   bubble.hidden = !bubble.hidden;
   $('landscapeInfo').setAttribute('aria-expanded', String(!bubble.hidden));
 });
-window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
+window.addEventListener('resize', positionLandscapeMenu);
 window.visualViewport?.addEventListener('resize', positionLandscapeMenu);
 /* Physically relocate the quick trait strip out of the preview in landscape.
    CSS alone cannot reliably win over old orientation-specific styles. */
@@ -1061,11 +1067,12 @@ async function init() {
     db = await openStorage();
     const saved = await storedProject();
     if (saved) state = M.normalize(saved, { allowStoredAssets: true });
-    storageStatus(saved ? 'Projekt obnoven z tohoto zařízení' : 'Automatické ukládání je zapnuté');
+    storageStatus('Automatické ukládání je zapnuté');
+    if (saved) toast('Projekt obnoven z tohoto zařízení');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;
-  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); syncLandscapeControls(); syncLandscapeTraitPlacement(); setupOffline();
+  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();

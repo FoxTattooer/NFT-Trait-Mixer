@@ -22,11 +22,59 @@ body.compact-workspace .app-header .header-menu-content button {
   width:100%!important;min-width:0!important;height:auto!important;min-height:44px!important;
   justify-content:flex-start!important;padding:9px 10px!important;
 }
+body.compact-workspace .file-menu-project {
+  min-width:0;
+  border-bottom:1px solid #4a3447;
+  padding-bottom:6px;
+  margin-bottom:3px;
+}
+body.compact-workspace #projectNameText {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body.compact-workspace .file-menu-project .save-status {
+  display:block;
+  padding:0 10px 4px;
+  font-size:11px;
+  line-height:1.4;
+}
 body.compact-workspace .preview-info {padding:10px;color:#c4b7c9;font-size:12px;line-height:1.5}
 body.compact-workspace .preview-info span {display:block}
 body.compact-workspace .preview-inline-actions {display:none!important}
 body.compact-workspace .header-menu:not([open])>.header-menu-content {display:none!important}
 body.compact-workspace .app-header .icon {width:21px!important;height:21px!important}
+@media (orientation:portrait) and (max-width:900px) {
+  body.compact-workspace .app-header {
+    --tool-size:clamp(40px,12vw,46px);
+    --tool-gap:clamp(4px,1.4vw,8px);
+    justify-content:center!important;
+    gap:var(--tool-gap)!important;
+    padding-top:calc(max(10px,env(safe-area-inset-top)) + 8px)!important;
+    margin-bottom:8px;
+  }
+  body.compact-workspace .app-header>.history-actions,
+  body.compact-workspace .app-header>.header-end {gap:var(--tool-gap)!important}
+  body.compact-workspace .app-header summary,
+  body.compact-workspace .app-header .history-actions>button,
+  body.compact-workspace .app-header #refreshApp {
+    flex:0 0 var(--tool-size)!important;
+    width:var(--tool-size)!important;
+    min-width:var(--tool-size)!important;
+    height:var(--tool-size)!important;
+    min-height:var(--tool-size)!important;
+  }
+  body.compact-workspace .app-header summary .icon,
+  body.compact-workspace .history-actions>button .icon,
+  body.compact-workspace #refreshApp .icon {width:23px!important;height:23px!important}
+  body.compact-workspace .stage>.preview-meta:not(.has-error),
+  body.compact-workspace .stage>.preview-meta .canvas-size {display:none!important}
+  body.compact-workspace .stage>.preview-meta.has-error #status {
+    color:#ffc0ce!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere;
+  }
+}
 @media (orientation:landscape) and (max-height:650px) and (max-width:1200px) {
   body.compact-workspace {
     --workspace-top:max(8px,env(safe-area-inset-top));
@@ -48,7 +96,6 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
   body.compact-workspace .app-header summary,
   body.compact-workspace .app-header .history-actions>button,
   body.compact-workspace .app-header #refreshApp {width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important}
-  body.compact-workspace .project-bar {display:none!important}
   body.compact-workspace .app-layout {
     position:fixed!important;inset:var(--workspace-top) var(--workspace-right) var(--workspace-bottom) var(--workspace-left)!important;
     display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
