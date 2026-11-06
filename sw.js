@@ -1,8 +1,8 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.61';
-const SHELL = ['./', './index.html', './styles.css?build=0747', './design.css?build=0756', './compact.css?build=0761', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0761', './app.js?build=0761', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = PREFIX + 'v0.7.62';
+const SHELL = ['./', './index.html', './styles.css?build=0747', './design.css?build=0756', './compact.css?build=0762', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0762', './app.js?build=0762', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL.map(path => new Request(path, { cache: 'reload' })))));
 });

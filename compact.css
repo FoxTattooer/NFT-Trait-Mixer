@@ -182,11 +182,6 @@ body.compact-workspace .app-header .header-menu-content button .icon {
   border:1px solid #65415a;border-radius:8px;background:#302131;color:#f4b5d7;
   box-shadow:0 2px 4px #0a070c8a;
 }
-body.compact-workspace #layerCategoryPicker {
-  display:flex;align-self:flex-start;align-items:center;gap:6px;padding-inline:7px;color:#efb7d7;
-  max-width:100%;
-}
-body.compact-workspace #layerCategory {min-height:44px;max-width:min(245px,75vw);font-size:16px}
 body.compact-workspace .stage #quickTraits:not([hidden]) {
   min-height:0!important;padding:4px!important;gap:4px!important;margin:5px 0 0!important;
 }
@@ -214,9 +209,25 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
 #diagnosticsReport {max-height:48dvh;overflow:auto;padding:10px;border:1px solid #593b51;border-radius:10px;background:#110e16;color:#e4cee1;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
 .layer-panel-heading {display:flex;align-items:center;gap:6px;margin-bottom:7px;min-width:0}
 .layer-panel-heading[hidden] {display:none!important}
-body.compact-workspace .layer-panel-heading #layerCategoryPicker {flex:1;align-self:center;min-width:0;padding-inline:0}
-body.compact-workspace .layer-panel-heading #layerCategory {width:100%;max-width:none;min-width:0;font-size:16px}
-.layer-panel-heading #catCount {min-width:44px!important;min-height:44px!important;flex:none}
+.layer-panel-heading #layerCategoryPicker {
+  flex:0 1 clamp(82px,calc(37px + var(--category-label-length,5) * .7ch),175px);
+  min-width:0;margin:0;
+}
+.layer-panel-heading #layerCategory {
+  width:100%;min-width:0;min-height:44px;font-size:16px;text-overflow:ellipsis;
+}
+.layer-panel-heading .layer-sort-folder {
+  position:relative;display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;
+  padding:0;border:0;background:transparent;box-shadow:none;color:#edb3d6;
+}
+.layer-sort-folder .icon {width:35px;height:35px;stroke-width:1.45}
+.layer-sort-folder #catCountLabel {
+  position:absolute;inset-inline:0;top:55%;transform:translateY(-50%);
+  text-align:center;font-size:10px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums;
+}
+.layer-panel-heading .layer-sort-folder:hover,.layer-panel-heading .layer-sort-folder:active {color:#ff8fc8}
+.layer-panel-actions {display:flex;gap:6px;margin-inline-start:auto;flex:none}
+.layer-panel-actions .icon-button {width:44px;min-width:44px;height:44px;min-height:44px}
 .layer-tree-trait {grid-template-columns:minmax(0,1fr) 44px 44px;gap:1px}
 .layer-tree-row .layer-tree-eye {min-height:44px;min-width:0;padding:4px;border:0;border-radius:9px;background:transparent;box-shadow:none;color:#ad9aac}
 .layer-tree-eye[aria-pressed=true] {color:#ff81bd}

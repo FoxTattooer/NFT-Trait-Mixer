@@ -321,6 +321,11 @@ function renderLayerTree() {
   const overview = !c || layerOverview;
   $('layerPanelHeading').hidden = !c;
   $('categoryOverview').hidden = !overview;
+  const grid = $('compactToggle');
+  const gridLabel = !overview ? 'Zobrazit kategorie' : compactView ? 'Zobrazit podrobné karty' : 'Zobrazit kompaktní seznam';
+  grid.title = gridLabel;
+  grid.setAttribute('aria-label', gridLabel);
+  grid.setAttribute('aria-pressed', String(overview && compactView));
   tree.hidden = overview;
   const back = mobilePanel === 'layers' && !overview;
   $('layersTabIcon').setAttribute('href', back ? '#i-back' : '#i-layers');
@@ -476,9 +481,8 @@ function renderCategories(hidden) {
   document.body.classList.toggle('compact-categories', compactView);
   $('cats').dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
-  $('compactToggle')?.setAttribute('aria-pressed', String(compactView));
-  $('compactToggle')?.setAttribute('title', compactView ? 'Zobrazit podrobné karty' : 'Zobrazit kompaktní seznam');
-  $('catCount').textContent = state.cats.length;
+  $('catCountLabel').textContent = state.cats.length;
+  $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
   $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top drop-row" data-drop-kind="category" data-drop-id="${esc(c.id)}" data-category="${esc(c.id)}"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><svg class="icon"><use href="#i-folder"/></svg><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('toggle-category', `${c.visible === false ? 'Zobrazit' : 'Skrýt'} kategorii ${c.name}`, c.id, c.visible === false ? 'eye-off' : 'eye')}</div>${c.id === active && organizerFolders(c.id).folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, organizerFolders(c.id).folders, organizerFolders(c.id).assignments)}</div>` : ''}${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
 }
 function organizerFolders(categoryId) {
@@ -904,6 +908,8 @@ function render(keepPreview = false) {
   if (busy) return;
   fillSelect($('layerCategory'), state.cats.map(c => [c.id, c.name]), 'Vyber kategorii');
   if (active) $('layerCategory').value = active;
+  const nameLength = M.category(state, active)?.name.length || 0;
+  $('layerCategoryPicker').style.setProperty('--category-label-length', String(Math.min(22, nameLength)));
   renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
 function download(blob, name) {
@@ -1315,7 +1321,9 @@ async function handleAction(action, id, element) {
     }
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
-    case 'toggle-compact': compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); toast(compactView ? 'Kompaktní zobrazení kategorií' : 'Rozbalené zobrazení kategorií'); break;
+    case 'toggle-compact':
+      if (!layerOverview && active) { layerOverview = true; renderLayerTree(); break; }
+      compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); toast(compactView ? 'Kompaktní zobrazení kategorií' : 'Rozbalené zobrazení kategorií'); break;
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
