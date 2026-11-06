@@ -78,7 +78,7 @@
   <p id="dragStatus" class="sr-only" role="status" aria-live="polite"></p>
   <main id="appLayout" class="app-layout" data-mobile-panel="layers" aria-busy="true">
     <aside id="catsPanel" class="panel layers-panel" aria-labelledby="layersHeading">
-      <div class="panel-heading"><div><h2 id="layersHeading">Kategorie <button type="button" id="catCount" class="count category-count-button" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie">0</button></h2></div><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+      <div class="panel-heading"><div><h2 id="layersHeading">Kategorie <button type="button" id="catCount" class="count category-count-button" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie">0</button></h2></div><button id="compactToggle" data-action="toggle-compact" class="icon-button subtle compact-toggle" aria-label="Přepnout kompaktní zobrazení" title="Kompaktní zobrazení"><svg class="icon"><use href="#i-grid"/></svg></button><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
       <div id="cats" class="category-list"></div>
       <button data-action="add-category" class="outline full-width"><svg class="icon"><use href="#i-plus"/></svg>Přidat kategorii</button>
       
@@ -87,7 +87,7 @@
       
       <div class="canvas-wrap"><canvas id="canvas" width="1024" height="1024" aria-label="Výsledná PNG kompozice"></canvas><div id="canvasEmpty" class="canvas-empty"><span class="empty-art"><svg class="icon"><use href="#i-layers"/></svg></span><h2 id="emptyTitle">Každý nápad začíná vrstvou.</h2><p id="emptyDescription">Přidej kategorii, nahraj PNG a poskládej svoji první kombinaci.</p><button id="emptyAction" data-action="add-category" class="primary">První kategorie</button></div></div>
       <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><div class="preview-inline-actions"><button id="random" data-action="random" title="Náhodná kombinace" aria-label="Náhodná kombinace" disabled><svg class="icon"><use href="#i-shuffle"/></svg></button><button id="snapshot" data-action="add-snapshot" class="subtle" title="Uložit sestavu" aria-label="Uložit sestavu" disabled><svg class="icon"><use href="#i-bookmark"/></svg></button></div><span class="canvas-size">1024 × 1024</span></div>
-      <div id="warnings" class="conflict-list" role="status"></div>
+      <div id="quickTraits" class="quick-traits" hidden><div class="quick-traits-head"><span id="quickTraitsTitle">Traity</span><button type="button" data-action="quick-prev" aria-label="Předchozí trait">‹</button></div><div id="quickTraitsItems" class="quick-traits-items"></div><button type="button" data-action="quick-next" class="quick-traits-next" aria-label="Další trait">›</button></div><div id="warnings" class="conflict-list" role="status"></div>
       
     </section>
     <nav class="workspace-tabs" aria-label="Pracovní panely">
