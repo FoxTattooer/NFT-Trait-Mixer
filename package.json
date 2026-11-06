@@ -4,7 +4,7 @@
   "version": "0.4.1",
   "scripts": {
     "build:psd": "esbuild vendor-entry.js --bundle --format=iife --global-name=agPsd --minify --legal-comments=eof --outfile=vendor/ag-psd.js",
-    "test": "node --test tests/project.test.cjs && node tests/psd-import.test.cjs && node tests/psd-ui.test.cjs && node tests/psd-resume.test.cjs && node tests/drag.test.cjs && node tests/storage.test.cjs && node tests/lazy-storage.test.cjs && node tests/lazy-ui.test.cjs && node tests/compact-workspace.test.cjs"
+    "test": "node --test tests/project.test.cjs tests/showroom.test.cjs && node tests/psd-import.test.cjs && node tests/psd-ui.test.cjs && node tests/psd-resume.test.cjs && node tests/drag.test.cjs && node tests/storage.test.cjs && node tests/lazy-storage.test.cjs && node tests/lazy-ui.test.cjs && node tests/compact-workspace.test.cjs"
   },
   "devDependencies": {
     "ag-psd": "34.1.0",

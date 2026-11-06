@@ -1211,6 +1211,7 @@ function chooseColorScheme(scheme) {
 }
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
+let openShowroom;
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
@@ -1218,6 +1219,17 @@ async function handleAction(action, id, element) {
   if (busy && !['show-panel', 'select-category', 'install'].includes(action)) { toast('Počkej prosím na dokončení načítání.'); return; }
   const c = M.category(state, id || active), located = M.locate(state, id);
   switch (action) {
+    case 'open-showroom': {
+      if (exporting) break;
+      const menu = element.closest('.header-menu');
+      if (menu) menu.open = false;
+      openShowroom ||= window.TraitShowroom.mount($('showroomDialog'), {
+        model: M, paintLayers, visibleLayers, download,
+        onError: (area, error) => window.TraitDiagnostics?.error(area, error),
+      });
+      openShowroom(state, safeMode, menu?.querySelector('summary'));
+      break;
+    }
     case 'show-panel': {
       closeLayerContext();
       const panel = element.dataset.panel;

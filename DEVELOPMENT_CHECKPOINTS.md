@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.73 | checkpoint/v0.7.73-showroom-beta | Samostatný Showroom 0.0.1 s tvorbou postavy po krocích a exportem PNG |
 | 0.7.72 | checkpoint/v0.7.72-palette-and-categories | Sladěné palety, miniatury sbalených kategorií a přejmenování ve Správě a Vrstvách |
 | 0.7.71 | checkpoint/v0.7.71-showroom-beta | Neaktivní položka Showroom (beta) v horní nabídce |
 | 0.7.70 | checkpoint/v0.7.70-graphite-grey | Graphite Grey se standardním vzorkem, odstranění obrázků |

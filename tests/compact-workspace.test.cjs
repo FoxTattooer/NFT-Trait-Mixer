@@ -35,7 +35,7 @@ w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get
 w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
-w.eval(['project.js','storage.js','diagnostics.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -95,9 +95,18 @@ assert.equal(M.normalize(JSON.parse(await w.__downloads[0].blob.text())).cats[0]
 const get = id => w.document.getElementById(id);
 const find = selector => w.document.querySelector(selector);
 const click = selector => find(selector).click();
-const showroom = find('.header-end .header-menu-content .showroom-placeholder');
+const showroom = find('.header-end .header-menu-content .showroom-menu-item');
 assert.equal(showroom.textContent.replace(/\s+/g,' ').trim(),'Showroom (beta)');
-assert(showroom.disabled && !showroom.hasAttribute('data-action'),'Showroom remains a placeholder');
+const beforeShowroom = JSON.stringify(w.inspectState());
+showroom.click();
+assert(get('showroomDialog').open);
+assert.equal(get('showroomChoice').textContent, 'Bez doplňku');
+get('showroomNext').click();
+assert.equal(get('showroomChoice').textContent, 'Layer 0');
+get('showroomExit').click();
+assert(!get('showroomDialog').open);
+assert.equal(JSON.stringify(w.inspectState()), beforeShowroom);
+await new Promise(resolve => setTimeout(resolve, 20));
 const treeIds = () => Array.from(get('layerTree').querySelectorAll('.layer-tree-main')).map(button => button.dataset.id);
 const header = get('layerPanelHeading');
 assert([...header.querySelectorAll('.layer-panel-actions button')].every(b=>b.classList.contains('icon-button')));
@@ -282,7 +291,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.72'));
+assert(get('toast').textContent.includes('v0.7.73'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

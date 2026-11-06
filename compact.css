@@ -307,8 +307,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
     to {opacity:1;transform:translateX(0)}
   }
 }
-body.compact-workspace .header-menu-content .showroom-placeholder:disabled {opacity:1}
-.showroom-placeholder small {font-size:.82em;opacity:.67;margin-inline-start:.2em}
+.showroom-menu-item small {font-size:.82em;opacity:.67;margin-inline-start:.2em}
 
 #manageRenameCategory {width:42px;min-width:42px;height:42px;min-height:42px;padding:9px}
 #manageRenameCategory[hidden] {display:none!important}
