@@ -61,7 +61,7 @@
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
           <button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="export" data-action="export" class="subtle" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
-          <div class="history-placeholder" aria-disabled="true" title="Historie bude dostupná později"><svg class="icon"><use href="#i-undo"/></svg><span>Historie</span></div>
+          <button type="button" data-action="open-history" class="subtle"><svg class="icon"><use href="#i-undo"/></svg><span>Historie</span></button>
         </div>
       </details>
     </div>
@@ -117,6 +117,7 @@
   </main>
   <footer class="app-footer"><span>Vytvoř. Kombinuj. Dolaď.</span><span>Projekty zůstávají v tomto zařízení. Pro přenos použij zálohu JSON.</span></footer>
   <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="historyDialog" class="history-dialog" aria-labelledby="historyTitle"><div class="history-dialog-head"><div><span class="eyebrow">PROJEKT</span><h2 id="historyTitle">Historie kroků <span id="historyCount">1</span></h2></div><button type="button" data-action="close-history" class="icon-button subtle" aria-label="Zavřít historii">✕</button></div><p class="helper">Klepni na krok a vrať se k němu. Zpět a Vpřed zůstávají dostupné vedle názvu projektu. Historie platí pro aktuální otevření aplikace.</p><div id="historyList" class="history-list" aria-label="Historie úprav projektu"></div></dialog>
   <dialog id="editDialog" aria-labelledby="dialogTitle" aria-describedby="dialogDescription"><form id="dialogForm"><span class="eyebrow">TRAIT WORKSHOP</span><h2 id="dialogTitle"></h2><p id="dialogDescription" class="helper"></p><label id="dialogLabel" for="dialogInput">Název</label><input id="dialogInput" type="text" maxlength="120" autocomplete="off" required><div class="dialog-actions"><button type="button" data-action="cancel-dialog" class="subtle">Zrušit</button><button id="dialogSubmit" type="submit" class="primary">Uložit</button></div></form></dialog>
   <dialog id="installDialog" aria-labelledby="installTitle"><img src="icons/icon.svg" width="64" height="64" alt=""><h2 id="installTitle">Tvůj ateliér. I v telefonu.</h2><p class="helper">Aplikaci můžeš mít na ploše a po prvním načtení ji používat i bez internetu.</p><ol class="install-steps"><li><strong>iPhone / iPad</strong><br>Otevři odkaz v Safari → Sdílet → Přidat na plochu.</li><li><strong>Android</strong><br>V nabídce prohlížeče vyber Nainstalovat aplikaci nebo Přidat na plochu.</li></ol><p id="installNote" class="helper"></p><button data-action="close-install" class="primary full-width">Rozumím</button></dialog>
   <dialog id="psdDialog" aria-labelledby="psdTitle" aria-describedby="psdStatus">
