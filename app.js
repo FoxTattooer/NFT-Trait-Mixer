@@ -844,14 +844,15 @@ function syncLandscapeControls() {
   const meta = document.querySelector('.preview-meta');
   const bar = document.querySelector('.project-bar');
   const stage = document.querySelector('.stage');
-  if (!meta || !bar || !stage) return;
-  if (landscape && meta.parentElement !== bar) {
-    bar.insertBefore(meta, bar.querySelector('.history-actions'));
-  } else if (!landscape && meta.parentElement !== stage) {
-    stage.insertBefore(meta, stage.querySelector('#warnings'));
-  }
-  const duplicate = $('landscapePreviewActions');
-  if (duplicate) duplicate.hidden = true;
+  const actions = $('landscapePreviewActions');
+  if (!meta || !bar || !stage || !actions) return;
+  // The original preview footer stays intact for portrait. Landscape uses 3 actions.
+  if (meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
+  actions.hidden = !landscape;
+  $('landscapeShuffle').disabled = $('random').disabled;
+  $('landscapeSnapshot').disabled = $('snapshot').disabled;
+  $('landscapeLayerCount').textContent = $('status').textContent;
+  if (!landscape) $('landscapeInfoBubble').hidden = true;
 }
 function positionLandscapeMenu() {
   const menu = document.querySelector('.header-menu');
@@ -865,6 +866,7 @@ function positionLandscapeMenu() {
 }
 document.querySelector('.header-menu')?.addEventListener('toggle', positionLandscapeMenu);
 
+$('landscapeInfo')?.addEventListener('click', () => { const bubble = $('landscapeInfoBubble'); const wasHidden = bubble.hidden; syncLandscapeControls(); bubble.hidden = !wasHidden; });
 window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
 window.addEventListener('orientationchange', syncLandscapeControls);
 async function setupOffline() {
