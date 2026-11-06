@@ -1006,6 +1006,25 @@ document.querySelector('.header-menu')?.addEventListener('toggle', positionLands
 $('landscapeInfo')?.addEventListener('click', () => { const bubble = $('landscapeInfoBubble'); const wasHidden = bubble.hidden; syncLandscapeControls(); bubble.hidden = !wasHidden; });
 window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
 window.addEventListener('orientationchange', syncLandscapeControls);
+/* Physically relocate the quick trait strip out of the preview in landscape.
+   CSS alone cannot reliably win over old orientation-specific styles. */
+function syncLandscapeTraitPlacement(){
+  const strip = $('quickTraits');
+  const stage = document.querySelector('.stage');
+  const inspector = $('traitsPanel');
+  if (!strip || !stage || !inspector) return;
+  const landscape = matchMedia('(orientation: landscape) and (max-height: 650px) and (max-width: 1200px)').matches;
+  if (landscape) {
+    if (strip.parentElement !== inspector) inspector.appendChild(strip);
+  } else if (strip.parentElement !== stage) {
+    stage.appendChild(strip);
+    const warnings = $('warnings');
+    if (warnings) stage.appendChild(warnings);
+  }
+  document.body.classList.toggle('landscape-editor-mode', landscape);
+}
+window.addEventListener('resize', syncLandscapeTraitPlacement);
+window.addEventListener('orientationchange', syncLandscapeTraitPlacement);
 async function setupOffline() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol === 'file:') return;
   try {
@@ -1026,7 +1045,7 @@ async function init() {
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;
-  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); syncLandscapeControls(); setupOffline();
+  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); syncLandscapeControls(); syncLandscapeTraitPlacement(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
