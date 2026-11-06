@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.65 | checkpoint/v0.7.65-color-schemes | Nastavení barevného schématu a sjednocená tlačítka vrstev |
 | 0.7.64 | checkpoint/v0.7.64-quick-traits | Širší přepínač kategorií, řazení vpravo a vypnutí traitu z pásu miniatur |
 | 0.7.63 | checkpoint/v0.7.63-project-status | Stav ukládání a informace o posledním načtení v nabídce projektu |
 | 0.7.62 | checkpoint/v0.7.62-layer-toolbar | Kompaktní hlavička se složkou pro řazení, přepínačem, mřížkou a tlačítkem plus |

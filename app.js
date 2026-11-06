@@ -1141,6 +1141,32 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
   }
 }
 
+const colorSchemeKey = 'nft-color-scheme';
+const colorSchemes = new Set(['pink', 'violet', 'blue', 'amber']);
+function applyColorScheme(value) {
+  const scheme = colorSchemes.has(value) ? value : 'pink';
+  document.body.dataset.colorScheme = scheme;
+  for (const choice of $('settingsDialog').querySelectorAll('[data-scheme]')) {
+    choice.setAttribute('aria-pressed', String(choice.dataset.scheme === scheme));
+  }
+}
+function restoreColorScheme() {
+  try { applyColorScheme(localStorage.getItem(colorSchemeKey)); }
+  catch { applyColorScheme('pink'); }
+}
+function chooseColorScheme(scheme) {
+  if (!colorSchemes.has(scheme)) return;
+  applyColorScheme(scheme);
+  const status = $('schemeStatus');
+  status.hidden = true;
+  try { localStorage.setItem(colorSchemeKey, scheme); }
+  catch {
+    status.textContent = 'Schéma se použilo, ale nepodařilo se ho uložit pro příští návštěvu.';
+    status.hidden = false;
+  }
+}
+$('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
+
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
@@ -1335,6 +1361,9 @@ async function handleAction(action, id, element) {
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
     case 'close-category-sort': $('categorySortDialog').close(); break;
+    case 'open-settings': $('settingsDialog').showModal(); break;
+    case 'close-settings': $('settingsDialog').close(); break;
+    case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-diagnostics':
@@ -1573,6 +1602,7 @@ window.addEventListener('offline', () => {
   if ($('refreshApp').dataset.updateState === 'current') setUpdateState('idle');
 });
 async function init() {
+  restoreColorScheme();
   const finishLog = window.TraitDiagnostics?.start('startup');
   try {
     db = await openStorage();
