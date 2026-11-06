@@ -193,9 +193,13 @@
     }
     back.addEventListener('click', () => navigate(-1));
     advance.addEventListener('click', () => navigate(1));
+    get('showroomIntro').addEventListener('animationend', event => {
+      if (event.animationName === 'showroom-intro') delete dialog.dataset.intro;
+    });
     get('showroomExit').addEventListener('click', () => dialog.close());
     dialog.addEventListener('close', () => {
       if (dialog.open) return;
+      delete dialog.dataset.intro;
       session = null;
       revision++;
       canvas.width = canvas.height = 1;
@@ -241,6 +245,7 @@
       empty.hidden = false;
       status.textContent = '';
       update();
+      if (!safe) dialog.dataset.intro = "";
       dialog.showModal();
       requestPreview();
     };

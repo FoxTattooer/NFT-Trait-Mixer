@@ -199,3 +199,76 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   #showroomDialog .showroom-stage { width: min(100%, calc(100vh - 96px)); }
   #showroomSwatches { max-height: 67px; }
 }
+
+#showroomTitle span {
+  display: inline-block;
+  color: var(--showroom-muted);
+  font-size: .47em;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+#showroomIntro { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  #showroomDialog[open][data-intro] {
+    --showroom-intro-time: 1900ms;
+    background: transparent !important;
+  }
+  #showroomDialog[open][data-intro]::backdrop {
+    animation: showroom-blackout var(--showroom-intro-time, 1900ms) ease-in-out both;
+  }
+  #showroomDialog[open][data-intro] .showroom-shell {
+    animation: showroom-reveal var(--showroom-intro-time) ease-in-out both;
+    pointer-events: none;
+  }
+  #showroomDialog[open][data-intro] #showroomIntro {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #030303;
+    pointer-events: none;
+    animation: showroom-intro var(--showroom-intro-time) ease-in-out both;
+  }
+  .showroom-intro-frame {
+    position: relative;
+    width: min(100%, 141.43vh);
+    animation: showroom-art var(--showroom-intro-time) ease-out both;
+  }
+  .showroom-intro-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .showroom-intro-title {
+    position: absolute;
+    inset: 12% 14px auto;
+    color: #f2f2f2;
+    text-align: center;
+    font-weight: 650;
+    font-size: clamp(18px, 3.2vmin, 34px);
+    letter-spacing: .1em;
+    text-shadow: 0 2px 16px #000;
+  }
+  .showroom-intro-title span { font-weight: 750; white-space: nowrap; }
+
+  @keyframes showroom-blackout {
+    from { background-color: transparent; }
+    17%, to { background-color: #090909; }
+  }
+  @keyframes showroom-intro {
+    0%, 14% { opacity: 0; }
+    37%, 64% { opacity: 1; }
+    84%, 100% { opacity: 0; }
+  }
+  @keyframes showroom-art {
+    from { transform: scale(.985); }
+    to { transform: scale(1); }
+  }
+  @keyframes showroom-reveal {
+    0%, 75% { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
