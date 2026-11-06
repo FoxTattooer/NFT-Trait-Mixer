@@ -438,3 +438,25 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
  .stage .preview-meta #status{font-size:10px!important}
  .stage .preview-inline-actions{gap:5px!important}
 }
+
+/* Keep logo, primary action icons and overflow on one single horizontal line. */
+.app-header.compact-header{
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ align-items:center!important;justify-content:space-between!important;
+ width:100%!important;min-width:0!important;box-sizing:border-box!important;
+}
+.compact-header .brand{display:flex!important;flex:0 0 36px!important;width:36px!important;min-width:36px!important;align-items:center!important}
+.compact-header .compact-toolbar{
+ display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+ align-items:center!important;justify-content:center!important;
+ flex:1 1 auto!important;width:auto!important;min-width:0!important;
+ margin:0!important;padding:0!important;overflow:visible!important;
+}
+.compact-header .compact-header-end{display:flex!important;flex:0 0 36px!important;align-items:center!important;justify-content:flex-end!important}
+@media(max-width:900px){
+ .app-header.compact-header{gap:5px!important;padding-left:10px!important;padding-right:10px!important}
+ .compact-header .brand{flex-basis:34px!important;width:34px!important;min-width:34px!important}
+ .compact-header .compact-toolbar{gap:clamp(3px,1.7vw,9px)!important}
+ .compact-header .compact-header-end{flex-basis:35px!important}
+ .compact-header .compact-tool{width:35px!important;min-width:35px!important;flex:0 0 35px!important}
+}
