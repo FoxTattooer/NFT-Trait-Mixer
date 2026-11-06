@@ -13,10 +13,10 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-v073.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0747">
-  <link rel="stylesheet" href="design.css?build=0750">
+  <link rel="stylesheet" href="design.css?build=0751">
   <script src="project.js" defer></script>
   <script src="storage.js" defer></script>
-  <script src="app.js?build=0750" defer></script>
+  <script src="app.js?build=0751" defer></script>
   <script src="drag.js" defer></script>
   <script src="psd-core.js" defer></script>
   <script src="psd-file.js" defer></script>
@@ -55,6 +55,13 @@
       <button id="importPsd" type="button" class="subtle compact-tool psd-tool" aria-label="Import PSD" title="Import PSD">PSD</button>
       <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
       <input id="projectFile" type="file" accept="application/json,.json" hidden>
+    </div>
+    <div class="landscape-header-tools" aria-label="Ovládání náhledu">
+      <button type="button" data-action="random" title="Náhodná kombinace" aria-label="Náhodná kombinace"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+      <button type="button" data-action="add-snapshot" title="Uložit sestavu" aria-label="Uložit sestavu"><svg class="icon"><use href="#i-bookmark"/></svg></button>
+      <button type="button" data-action="open-history" title="Historie změn" aria-label="Historie změn"><svg class="icon"><use href="#i-undo"/></svg></button>
+      <button type="button" data-action="undo" title="Zpět" aria-label="Zpět"><svg class="icon"><use href="#i-undo"/></svg></button>
+      <button type="button" data-action="redo" title="Znovu" aria-label="Znovu"><svg class="icon"><use href="#i-redo"/></svg></button>
     </div>
     <div class="header-end compact-header-end">
       <button id="refreshApp" data-action="refresh-app" class="subtle header-refresh" aria-label="Aktualizovat aplikaci" title="Aktualizovat"><svg class="icon"><use href="#i-refresh"/></svg></button>
