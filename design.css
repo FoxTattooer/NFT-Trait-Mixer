@@ -574,7 +574,7 @@ dialog.history-dialog{
 }
 
 /* Landscape: preview controls occupy unused space between title and undo/redo. */
-@media(max-width:900px) and (orientation:landscape){
+@media(max-width:1200px) and (max-height:650px) and (orientation:landscape){
  .project-bar{display:flex!important;align-items:center!important;gap:8px!important;padding:3px 10px 6px!important;min-height:53px!important;margin-bottom:2px!important}
  .project-bar .project-heading{flex:0 1 auto!important;max-width:32%!important;min-width:135px!important}
  .project-bar .project-name{font-size:17px!important;max-width:100%!important}
@@ -590,9 +590,19 @@ dialog.history-dialog{
  .stage{padding:5px!important;justify-content:center!important}
  .stage .canvas-wrap{height:min(100%,calc(100dvh - 117px - env(safe-area-inset-bottom)))!important;max-height:100%!important;width:auto!important;max-width:100%!important;aspect-ratio:1!important;margin:auto!important}
 }
-@media(max-width:650px) and (orientation:landscape){
+@media(max-width:650px) and (max-height:650px) and (orientation:landscape){
  .project-bar{gap:4px!important;padding-inline:5px!important}
  .project-bar .project-heading{min-width:95px!important;max-width:26%!important}
  .project-bar>.preview-meta .canvas-size{display:none!important}
  .project-bar>.preview-meta{gap:4px!important;padding-inline:5px!important}
+}
+
+/* Enforce landscape two-column editor on wider iPhone viewports (>900 CSS px). */
+@media (min-width:901px) and (max-width:1200px) and (max-height:650px) and (orientation:landscape){
+ body{padding-bottom:0!important}
+ .app-layout{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:45px minmax(0,1fr)!important;grid-template-areas:"tabs stage" "settings stage"!important;gap:6px!important;margin:2px 8px 0!important;max-width:none!important;overflow:hidden!important}
+ .workspace-tabs{grid-area:tabs!important}
+ .layers-panel,.inspector{grid-area:settings!important;min-height:0!important;overflow:auto!important}
+ .stage{grid-area:stage!important;position:static!important;align-self:stretch!important;max-height:100%!important;overflow:hidden!important}
+ .stage .canvas-wrap{max-height:100%!important;max-width:100%!important}
 }
