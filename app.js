@@ -844,7 +844,7 @@ function positionPreviewMeta() {
   const bar = document.querySelector('.project-bar');
   const stage = document.querySelector('.stage');
   if (!meta || !bar || !stage) return;
-  const landscape = window.matchMedia('(max-width:900px) and (orientation:landscape)').matches;
+  const landscape = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)').matches;
   if (landscape && meta.parentElement !== bar) bar.insertBefore(meta, bar.querySelector('.history-actions'));
   else if (!landscape && meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
 }
