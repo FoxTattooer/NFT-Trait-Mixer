@@ -653,3 +653,22 @@ dialog.history-dialog{
  .stage .preview-meta{display:none!important}
  .project-bar>.history-actions{margin-left:0!important}
 }
+
+/* Compact touch-first category sorting dialog. */
+.category-count-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;font:inherit!important;min-height:30px!important;min-width:32px!important;padding:3px 8px!important;vertical-align:middle!important}
+.category-count-button:active{border-color:#ff3b9d!important;box-shadow:0 0 8px #f92c8b77!important}
+dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:auto!important;width:min(90vw,440px)!important;max-height:min(76dvh,650px)!important;padding:18px!important;border:1px solid #a73c76!important;border-radius:18px!important;background:#17121c!important;color:#f6edf5!important;box-shadow:0 24px 70px #000c,0 0 15px #fa2b8930!important;overflow:hidden!important}
+.category-sort-dialog::backdrop{background:#050308b9}
+.category-sort-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.category-sort-head h2{margin:4px 0;font-size:20px}
+.category-sort-head h2 span{font-size:12px;color:#ffa6d0}
+.category-sort-hint{font-size:12px;color:#bdaabc;margin:8px 0 14px}
+.category-sort-list{display:flex;flex-direction:column;gap:6px;max-height:49dvh;overflow-y:auto;overscroll-behavior:contain;padding:4px 2px;touch-action:pan-y}
+.category-sort-row{display:flex;align-items:center;gap:10px;min-height:47px;padding:5px 10px;background:#241b29;border:1px solid #49364a;border-radius:10px}
+.category-sort-row.is-sorting{background:#52213e;border-color:#ff3b9d;box-shadow:0 0 12px #ff3b9d4a;z-index:2}
+.category-sort-handle{display:flex;align-items:center;justify-content:center;flex:0 0 33px;height:36px;font-size:26px;color:#d4a5c5;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.category-sort-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+.category-sort-traits,.category-sort-index{font-size:11px;color:#a997aa;white-space:nowrap}
+.category-sort-index{min-width:23px;text-align:right}
+.category-sort-foot{display:flex;justify-content:flex-end;margin-top:12px}
+.category-sort-foot button{min-height:39px;padding:8px 20px}
