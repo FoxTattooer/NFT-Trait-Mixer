@@ -836,6 +836,22 @@ window.addEventListener('beforeunload', event => { if (revision > persistedRevis
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; });
 window.addEventListener('appinstalled', () => { installPrompt = null; $('install').hidden = true; toast('Aplikace je přidaná na plochu'); });
 
+
+// Keep preview controls in the project title row only on iPhone landscape.
+// Moving the same DOM node preserves event delegation and current state.
+function positionPreviewMeta() {
+  const meta = document.querySelector('.stage .preview-meta, .project-bar > .preview-meta');
+  const bar = document.querySelector('.project-bar');
+  const stage = document.querySelector('.stage');
+  if (!meta || !bar || !stage) return;
+  const landscape = window.matchMedia('(max-width:900px) and (orientation:landscape)').matches;
+  if (landscape && meta.parentElement !== bar) bar.insertBefore(meta, bar.querySelector('.history-actions'));
+  else if (!landscape && meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
+}
+window.addEventListener('resize', positionPreviewMeta);
+window.addEventListener('orientationchange', positionPreviewMeta);
+positionPreviewMeta();
+
 async function setupOffline() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol === 'file:') return;
   try {
