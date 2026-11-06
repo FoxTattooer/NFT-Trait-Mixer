@@ -187,7 +187,7 @@ function renderHistoryPanel() {
   list.append(fragment);
   $('historyCount').textContent = String(entries.length);
 }
-function change(mutator, message = '') {
+function change(mutator, message = '', keepPreview = false) {
   const previous = M.clone(state);
   try { mutator(); } catch (error) { state = previous; throw error; }
   undoStack.push(previous);
@@ -195,7 +195,7 @@ function change(mutator, message = '') {
   if (undoStack.length > HISTORY_LIMIT) { undoStack.shift(); undoLabels.shift(); }
   redoStack.length = 0; redoLabels.length = 0;
   currentStepLabel = message || 'Úprava projektu';
-  pruneCache(); render(); scheduleSave();
+  pruneCache(); render(keepPreview); scheduleSave();
   if (message) toast(message);
 }
 function moveHistory(redo = false) {
@@ -525,6 +525,15 @@ function traitVisibilityButton(category,trait) {
   const ruled=shown && M.conflicts(state).hidden.has(category.id);
   return '<button class="trait-visibility" data-action="toggle-trait-visibility" data-id="'+esc(trait.id)+'" aria-pressed="'+(shown&&!ruled)+'" aria-label="'+esc((shown?'Skrýt ':'Zobrazit ')+trait.name)+'">'+icon(shown&&!ruled?'eye':'eye-off')+'<span>'+(ruled?'Skryto pravidlem':shown?'Skrýt v náhledu':'Zobrazit v náhledu')+'</span></button>';
 }
+function traitNoteEditor(trait) {
+  return `<details class="trait-note" id="trait-note-${esc(trait.id)}">
+    <summary>${icon('edit')}<span>${trait.note ? 'Poznámka' : 'Napsat poznámku'}</span>${icon('chevron')}</summary>
+    <form class="trait-note-form" data-trait-id="${esc(trait.id)}">
+      <textarea name="note" rows="2" maxlength="${M.TRAIT_NOTE_LIMIT}" aria-label="Poznámka k traitu ${esc(trait.name)}">${esc(trait.note || '')}</textarea>
+      <button type="submit">Uložit poznámku</button>
+    </form>
+  </details>`;
+}
 function renderTraits() {
   const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
@@ -554,7 +563,7 @@ function renderTraits() {
       <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
     $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
     traitPage = Math.min(traitPage, Math.max(0, Math.ceil(visibleTraits.length / PAGE_SIZE) - 1));
-    $('traits').innerHTML = !safeMode && visibleTraits.length ? visibleTraits.slice(traitPage * PAGE_SIZE, (traitPage + 1) * PAGE_SIZE).map(t => `<div class="trait-entry"><button class="trait-card ${M.isSelected(state, c.id, t.id) ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${M.isSelected(state, c.id, t.id)}" title="${esc(t.name)}"><img ${imageAttributes(t.data)} alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button>${traitVisibilityButton(c,t)}<select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
+    $('traits').innerHTML = !safeMode && visibleTraits.length ? visibleTraits.slice(traitPage * PAGE_SIZE, (traitPage + 1) * PAGE_SIZE).map(t => `<div class="trait-entry${t.note ? ' has-note' : ''}"><button class="trait-card ${M.isSelected(state, c.id, t.id) ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${M.isSelected(state, c.id, t.id)}" title="${esc(t.name)}"><img ${imageAttributes(t.data)} alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button>${traitVisibilityButton(c,t)}<select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}${traitNoteEditor(t)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
   }
   if (!safeMode && c) {
     const count = $('traits').querySelectorAll('.trait-card').length;
@@ -1558,6 +1567,25 @@ document.addEventListener('change', event => {
     if (folderId) nextOrg.assignments[traitId] = folderId;
     else delete nextOrg.assignments[traitId];
   }, folderId ? 'Trait zařazen do organizační složky' : 'Trait odebrán z organizační složky');
+});
+$('traits').addEventListener('submit', event => {
+  const form = event.target.closest('.trait-note-form');
+  if (!form) return;
+  event.preventDefault();
+  if (!ready || busy) return;
+  const id = form.dataset.traitId;
+  const trait = M.locate(state, id)?.trait;
+  if (!trait) return;
+  const note = M.normalizeTraitNote(form.elements.namedItem('note').value);
+  if (note !== (trait.note || '')) {
+    change(() => {
+      if (note) trait.note = note;
+      else delete trait.note;
+    }, note ? 'Poznámka uložena' : 'Poznámka smazána', true);
+  } else {
+    form.closest('details').open = false;
+  }
+  $('trait-note-' + id)?.querySelector('summary')?.focus({ preventScroll: true });
 });
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');

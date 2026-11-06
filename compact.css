@@ -314,3 +314,46 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 #cats .category-top>.icon-button[data-action=rename-category] {padding:8px}
 .library-current:not([src]) {visibility:hidden}
 .library-pager {grid-column:1/-1;display:flex;align-items:center;gap:8px}
+
+/* Short repair notes stay folded inside the trait card. */
+#traits .trait-entry.has-note {
+  border-color: #b7a16a;
+  box-shadow: 0 0 9px #e5c46923;
+}
+.trait-note {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border-top: 1px solid var(--scheme-stroke, var(--line));
+}
+.trait-note summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 5px 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  color: var(--scheme-muted, var(--muted, #b8b4c2));
+}
+.trait-note summary::-webkit-details-marker { display: none; }
+.trait-note summary .icon { width: 14px; height: 14px; }
+.trait-note summary .icon:last-child { margin-left: auto; }
+.trait-note[open] summary .icon:last-child { transform: rotate(90deg); }
+.has-note .trait-note summary { color: #efd89d; }
+.trait-note-form { display: grid; gap: 6px; padding: 0 4px 4px; }
+.trait-note:not([open]) .trait-note-form { display: none; }
+.trait-note-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+  resize: vertical;
+  border: 1px solid var(--scheme-stroke, var(--line));
+  border-radius: 9px;
+  padding: 8px;
+  background: var(--scheme-bg, #14151b);
+  color: var(--scheme-text, var(--text));
+  font: inherit;
+  font-size: 16px;
+}
+.trait-note-form button { justify-self: end; min-height: 44px; }

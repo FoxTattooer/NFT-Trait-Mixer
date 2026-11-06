@@ -77,6 +77,8 @@
     c.traits = c.traits.map(t => group.has(t.id) ? siblings[next++] : t);
     return true;
   }
+  const TRAIT_NOTE_LIMIT = 240;
+  const normalizeTraitNote = value => typeof value === 'string' ? value.trim().slice(0, TRAIT_NOTE_LIMIT).trimEnd() : '';
   const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?psd-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
@@ -90,7 +92,8 @@
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t) };
+        const note = normalizeTraitNote(t.note);
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}) };
       }) };
     });
     p.psdImports = {};
@@ -231,7 +234,7 @@
     }
     return sourceCatId !== targetCatId || before !== JSON.stringify([source.folders, next.folders]);
   }
-  const api = { moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  const api = { TRAIT_NOTE_LIMIT, normalizeTraitNote, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);
