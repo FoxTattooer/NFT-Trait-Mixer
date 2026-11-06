@@ -841,13 +841,17 @@ window.addEventListener('appinstalled', () => { installPrompt = null; $('install
 // Landscape controls are separate from the portrait footer; portrait DOM stays untouched.
 function syncLandscapeControls() {
   const landscape = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)').matches;
-  const actions = $('landscapePreviewActions');
-  if (!actions) return;
-  actions.hidden = !landscape;
-  $('landscapeShuffle').disabled = $('random').disabled;
-  $('landscapeSnapshot').disabled = $('snapshot').disabled;
-  $('landscapeLayerCount').textContent = $('status').textContent;
-  if (!landscape) $('landscapeInfoBubble').hidden = true;
+  const meta = document.querySelector('.preview-meta');
+  const bar = document.querySelector('.project-bar');
+  const stage = document.querySelector('.stage');
+  if (!meta || !bar || !stage) return;
+  if (landscape && meta.parentElement !== bar) {
+    bar.insertBefore(meta, bar.querySelector('.history-actions'));
+  } else if (!landscape && meta.parentElement !== stage) {
+    stage.insertBefore(meta, stage.querySelector('#warnings'));
+  }
+  const duplicate = $('landscapePreviewActions');
+  if (duplicate) duplicate.hidden = true;
 }
 function positionLandscapeMenu() {
   const menu = document.querySelector('.header-menu');
@@ -860,7 +864,7 @@ function positionLandscapeMenu() {
   panel.style.left = 'auto';
 }
 document.querySelector('.header-menu')?.addEventListener('toggle', positionLandscapeMenu);
-$('landscapeInfo')?.addEventListener('click', () => { syncLandscapeControls(); $('landscapeInfoBubble').hidden = !$('landscapeInfoBubble').hidden; });
+
 window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
 window.addEventListener('orientationchange', syncLandscapeControls);
 async function setupOffline() {
