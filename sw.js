@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.16';
+const CACHE = PREFIX + 'v0.7.17';
 const SHELL = ['./', './index.html', './styles.css', './design.css', './drag.js', './project.js', './app.js', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL.map(path => new Request(path, { cache: 'reload' })))));
@@ -22,6 +22,14 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const key = event.request.mode === 'navigate' ? new URL('./index.html', self.registration.scope).href : event.request;
+    // Prefer deployed files when online; retain cached shell for offline usage.
+    try {
+      const response = await fetch(event.request, { cache: 'no-store' });
+      if (response.ok) {
+        await cache.put(key, response.clone());
+        return response;
+      }
+    } catch (_) { /* offline: use cached shell */ }
     return await cache.match(key) || fetch(event.request);
   })());
 });
