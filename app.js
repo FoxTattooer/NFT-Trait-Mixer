@@ -308,6 +308,7 @@ function scrollQuickTraits(direction) {
 }
 function renderCategories(hidden) {
   document.body.classList.toggle('compact-categories', compactView);
+  $('cats').dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
   $('compactToggle')?.setAttribute('aria-pressed', String(compactView));
   $('compactToggle')?.setAttribute('title', compactView ? 'Zobrazit podrobné karty' : 'Zobrazit kompaktní seznam');
