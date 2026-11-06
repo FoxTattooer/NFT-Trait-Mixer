@@ -301,3 +301,34 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
 .preview-inline-actions button .icon{width:16px;height:16px}
 .preview-meta .canvas-size{font-size:10px;white-space:nowrap;flex:0 0 auto;margin:0}
 @media(max-width:380px){.preview-meta{gap:4px}.preview-inline-actions{gap:3px}.preview-inline-actions button{width:28px;height:28px}}
+
+/* v0.7.16 compact premium header and touch-safe overflow. */
+.app-header.compact-header{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:7px!important;padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left))!important;min-height:58px!important;height:auto!important;position:relative;z-index:30;background:#0d0d12;border-color:#302934}
+.compact-header .brand{flex:0 0 auto!important;min-width:0!important}
+.compact-header .brand img{display:block;width:38px;height:38px;object-fit:cover;border-radius:10px}
+.compact-header .compact-toolbar{display:flex!important;align-items:center!important;justify-content:flex-start!important;flex:1 1 auto!important;min-width:0!important;overflow-x:auto!important;gap:5px!important;margin:0!important;padding:0!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.compact-header .compact-toolbar::-webkit-scrollbar{display:none}
+.compact-header .compact-tool{width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:8px!important;flex:0 0 38px!important;border-radius:11px!important;border:1px solid #49404d!important;background:linear-gradient(#201b25,#141319)!important;color:#f2e9f1!important;box-shadow:0 2px 6px #0005!important}
+.compact-header .compact-tool.primary{background:linear-gradient(#e51b80,#a30c58)!important;border-color:#ff4d9e!important;color:white!important}
+.compact-header .compact-tool.psd-tool{font-size:10px!important;font-weight:700!important}
+.compact-header .compact-tool .icon{width:18px;height:18px}
+.compact-header .compact-header-end{display:flex!important;flex:0 0 auto!important;gap:0!important}
+.header-menu{position:relative}
+.header-menu>summary{display:flex;align-items:center;justify-content:center;list-style:none;width:38px;height:38px;border-radius:11px;border:1px solid #6a4560;background:#261925;color:#ffacd4;cursor:pointer}
+.header-menu>summary::-webkit-details-marker{display:none}
+.header-menu[open]>summary{border-color:#ff459b;background:#431b34;box-shadow:0 0 0 1px #ff459b55}
+.header-menu-content{position:absolute;right:0;top:calc(100% + 9px);z-index:200;width:190px;padding:7px;background:#18151e;border:1px solid #6b405a;border-radius:14px;box-shadow:0 12px 30px #000b;display:flex;flex-direction:column;gap:3px}
+.header-menu-content button{width:100%;min-height:39px;justify-content:flex-start;text-align:left;font-size:12px!important;padding:8px 10px!important;color:#f1e6ee!important;background:transparent!important;border:0!important;border-radius:8px!important;box-shadow:none!important}
+.header-menu-content button:hover{background:#382031!important}
+.header-menu-content .icon{width:17px;height:17px}
+@media(max-width:900px){
+ .app-header.compact-header{padding-top:max(8px,env(safe-area-inset-top))!important}
+ .compact-header .brand img{width:34px;height:34px}
+ .compact-header .compact-tool{width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;flex-basis:35px!important}
+ .header-menu>summary{width:35px;height:35px}
+}
+@media(max-width:900px) and (orientation:landscape){
+ .app-header.compact-header{height:46px!important;min-height:46px!important;padding-top:3px!important;padding-bottom:3px!important}
+ .compact-header .brand img{width:32px;height:32px}
+ .app-layout{height:calc(100dvh - 50px - env(safe-area-inset-bottom))}
+}
