@@ -692,3 +692,9 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 .quick-trait.is-selected{border:2px solid #ff2f98;box-shadow:0 0 10px #f92b8977}
 .quick-check{position:absolute;right:1px;bottom:1px;background:#f51b8b;border-radius:50%;padding:2px 5px;font-size:12px;color:white}
 @media(max-width:900px) and (orientation:portrait){.quick-traits{min-height:70px;padding:5px;gap:4px}.quick-traits-head{min-width:66px;max-width:76px;font-size:10px}.quick-trait{max-width:70px}}
+
+/* Native horizontal touch scrolling for the entire trait strip. */
+.quick-traits-items{display:flex!important;justify-content:flex-start!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x proximity!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-x!important;overscroll-behavior-x:contain!important;scrollbar-width:none!important;position:relative!important}
+.quick-traits-items::-webkit-scrollbar{display:none!important}
+.quick-traits-items .quick-trait{flex:0 0 clamp(58px,16vw,84px)!important;scroll-snap-align:start!important}
+.quick-traits-items .quick-check[hidden]{display:none!important}
