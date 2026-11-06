@@ -200,7 +200,8 @@
       revision++;
       canvas.width = canvas.height = 1;
       status.textContent = '';
-      returnFocus?.focus();
+      returnFocus?.focus({ preventScroll: true });
+      returnFocus = null;
     });
     save.addEventListener('click', async () => {
       if (exporting || rendering) return;
