@@ -1143,7 +1143,7 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 }
 
 const colorSchemeKey = 'nft-color-scheme';
-const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'drip']);
+const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']);
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
@@ -1154,8 +1154,12 @@ function applyColorScheme(value) {
   }
 }
 function restoreColorScheme() {
-  try { applyColorScheme(localStorage.getItem(colorSchemeKey)); }
-  catch { applyColorScheme('pink'); }
+  let saved;
+  try { saved = localStorage.getItem(colorSchemeKey); } catch { /* use the default */ }
+  applyColorScheme(saved === 'drip' ? 'graphite-grey' : saved);
+  if (saved === 'drip') {
+    try { localStorage.setItem(colorSchemeKey, 'graphite-grey'); } catch { /* preference is read-only */ }
+  }
 }
 function chooseColorScheme(scheme) {
   if (!colorSchemes.has(scheme)) return;

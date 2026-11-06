@@ -1,10 +1,20 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.69';
-const SHELL = ['./', './index.html', './styles.css?build=0768', './design.css?build=0768', './compact.css?build=0768', './schemes.css?build=0769', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0769', './app.js?build=0769', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './art/dripd-artwork.jpg', './art/drip-chrome-drop.jpg', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = PREFIX + 'v0.7.70';
+const SHELL = ['./', './index.html', './styles.css?build=0768', './design.css?build=0768', './compact.css?build=0768', './schemes.css?build=0770', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0770', './app.js?build=0770', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL.map(path => new Request(path, { cache: 'reload' })))));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(SHELL.map(path => new Request(path, { cache: 'reload' })));
+    // Remove the retired artwork even while the new worker is waiting.
+    const previousCache = PREFIX + 'v0.7.69';
+    if (await caches.has(previousCache)) {
+      const previous = await caches.open(previousCache);
+      await Promise.all(['./art/dripd-artwork.jpg', './art/drip-chrome-drop.jpg']
+        .map(path => previous.delete(new URL(path, self.registration.scope).href)));
+    }
+  })());
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {

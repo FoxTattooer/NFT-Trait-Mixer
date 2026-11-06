@@ -105,8 +105,8 @@ click('#colorSchemes summary');
 assert.equal(get('colorSchemes').open,true,'the color scheme row opens the palette picker');
 assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-group')].map(group =>
   [...group.querySelectorAll('[data-scheme]')].map(button => button.textContent.trim())
-), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White'], ['Drip']]);
-for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'drip']) {
+), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon', 'Graphite Grey'], ['Icy', 'Deep Water Blue', 'Black & White']]);
+for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']) {
   const selector = `[data-scheme="${scheme}"]`;
   click(selector);
   assert.equal(w.document.body.dataset.colorScheme, scheme);
@@ -117,6 +117,11 @@ for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water'
   w.reloadColorScheme();
   assert.equal(w.document.body.dataset.colorScheme, scheme, 'a saved scheme is restored');
 }
+w.localStorage.setItem('nft-color-scheme','drip');
+w.reloadColorScheme();
+assert.equal(w.document.body.dataset.colorScheme,'graphite-grey');
+assert.equal(w.localStorage.getItem('nft-color-scheme'),'graphite-grey');
+assert(!find('.scheme-grid img'),'palette samples are rendered without artwork');
 click('[data-scheme="pink"]');assert.equal(w.document.body.dataset.colorScheme,'pink');
 assert.equal(JSON.stringify(w.inspectState()),schemeProject);
 click('[data-action="close-settings"]');assert(!get('settingsDialog').open);
@@ -247,7 +252,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.69'));
+assert(get('toast').textContent.includes('v0.7.70'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

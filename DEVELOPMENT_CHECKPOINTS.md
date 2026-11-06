@@ -4,7 +4,8 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
-| 0.7.69 | checkpoint/v0.7.69-drip | Volitelné schéma Drip ve Stylových edicích |
+| 0.7.70 | checkpoint/v0.7.70-graphite-grey | Graphite Grey se standardním vzorkem, odstranění obrázků |
+| 0.7.69 | Nahrazeno verzí 0.7.70 | Starší vydání grafitového schématu |
 | 0.7.68 | checkpoint/v0.7.68-settings-and-layer-nav | Rozbalovací volba palet, sladěné stavy ovládání a kompaktní lišta vrstev na výšku |
 | 0.7.67 | checkpoint/v0.7.67-palette-surfaces | The Magic Eden New, původní varianty Magic Eden a výraznější přechody nových palet |
 | 0.7.66 | checkpoint/v0.7.66-cool-schemes | Icy, Deep Water Blue a Black & White se žlutou odezvou, seskupení palet |
