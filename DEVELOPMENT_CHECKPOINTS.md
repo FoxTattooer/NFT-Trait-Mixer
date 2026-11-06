@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.79 | checkpoint/v0.7.79-manage-tree | Rozbalovací strom ve Správě, přejmenování názvem a PNG export jednotlivých traitů |
 | 0.7.78 | checkpoint/v0.7.78-trait-notes | Rozbalovací poznámky k traitům ve Správě |
 | 0.7.77 | checkpoint/v0.7.77-showroom-portrait | Kompaktní Showroom na výšku a reset výběru postavy |
 | 0.7.76 | checkpoint/v0.7.76-dripd-offline-intro | Logo se při vstupu do Showroomu načte z offline mezipaměti |

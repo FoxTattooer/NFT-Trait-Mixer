@@ -703,12 +703,7 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 #traitsPanel .dropzone{display:none!important}
 #traitsPanel .category-stepper{display:none!important}
 #traitsPanel .panel-heading{display:flex!important;align-items:center!important;gap:9px!important;margin-bottom:9px!important}
-#traitsPanel .panel-heading>div{flex:1 1 auto!important;min-width:0!important}
 #traitsPanel .panel-heading #catTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#quickUploadPng{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 42px!important;width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;padding:9px!important;border:1px solid #ad477c!important;border-radius:12px!important;background:#291824!important;color:#ff88c0!important}
-#quickUploadPng .icon{width:21px!important;height:21px!important}
-#quickUploadPng:active{border-color:var(--ui-feedback,#ff3c9c)!important;box-shadow:0 0 12px var(--ui-feedback-glow,#f9268b66)!important}
-#traitsPanel .trait-organizer{margin-top:4px!important}
 @media(max-width:900px) and (orientation:portrait){
  #traitsPanel{padding-top:0!important}
  #traitsPanel .panel-heading{padding-top:3px!important}

@@ -309,14 +309,12 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 }
 .showroom-menu-item small {font-size:.82em;opacity:.67;margin-inline-start:.2em}
 
-#manageRenameCategory {width:42px;min-width:42px;height:42px;min-height:42px;padding:9px}
-#manageRenameCategory[hidden] {display:none!important}
 #cats .category-top>.icon-button[data-action=rename-category] {padding:8px}
 .library-current:not([src]) {visibility:hidden}
 .library-pager {grid-column:1/-1;display:flex;align-items:center;gap:8px}
 
 /* Short repair notes stay folded inside the trait card. */
-#traits .trait-entry.has-note {
+#traits .layer-tree-row.has-note {
   border-color: #b7a16a;
   box-shadow: 0 0 9px #e5c46923;
 }
@@ -357,3 +355,24 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   font-size: 16px;
 }
 .trait-note-form button { justify-self: end; min-height: 44px; }
+
+.manage-category-title { flex: 1; min-width: 0; }
+.manage-category-title h2 { margin: 0; }
+#manageRenameCategory {
+  justify-content: flex-start;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 4px 0 0;
+  gap: 5px;
+  text-align: start;
+  font-size: inherit;
+  color: inherit;
+}
+#manageRenameCategory .icon { width: 14px; height: 14px; opacity: .52; }
+.manage-trait-count { display: block; font-size: 11px; color: var(--scheme-muted, var(--muted)); }
+.manage-panel-actions { display: flex; gap: 5px; flex: none; }
+.manage-panel-actions .icon-button { width: 44px; min-width: 44px; min-height: 44px; }
+#traits .layer-tree-folder { grid-template-columns: 33px minmax(0, 1fr) 44px; }
+#traits .layer-tree-folder .drag-handle { width: 33px; }
+#traits .trait-note { margin-inline: 5px; }
+#traits .trait-note summary { min-height: 32px; }

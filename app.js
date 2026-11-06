@@ -8,7 +8,6 @@ const button = (action, label, id = '', glyph = '', extra = '') => `<button data
 const tool = (action, label, id, glyph, disabled = false, danger = false) => button(action, '', id, glyph, `class="icon-button subtle ${danger ? 'danger-icon' : ''}" title="${esc(label)}" aria-label="${esc(label)}" ${disabled ? 'disabled' : ''}`);
 let state = M.empty(), active = null, mobilePanel = 'layers', inspectorPanel = 'traits', organizerSelection = {}, organizerExpanded = {};
 let safeMode = new URLSearchParams(location.search).has('safe');
-let traitPage = 0;
 const libraryOpen = new Set(), libraryPages = {};
 let libraryHeaderMarkup = '';
 const libraryBodyMarkup = new WeakMap();
@@ -314,7 +313,10 @@ function mixedLayerRows(category) {
   return visible;
 }
 function renderLayerTree() {
-  const c = M.category(state, active), tree = $('layerTree');
+  const c = M.category(state, active), manage = mobilePanel === 'traits';
+  const tree = $(manage ? 'traits' : 'layerTree');
+  const inactive = $(manage ? 'layerTree' : 'traits');
+  if (inactive.firstChild) { inactive.replaceChildren(); treeMarkup.delete(inactive); }
   const overview = !c || layerOverview;
   $('layerPanelHeading').hidden = !c;
   $('categoryOverview').hidden = !overview;
@@ -323,12 +325,14 @@ function renderLayerTree() {
   grid.title = gridLabel;
   grid.setAttribute('aria-label', gridLabel);
   grid.setAttribute('aria-pressed', String(overview && compactView));
-  tree.hidden = overview;
+  $('layerTree').hidden = overview || manage;
   const back = mobilePanel === 'layers' && !overview;
   $('layersTab').toggleAttribute('data-back', back);
   $('layersTabIcon').setAttribute('href', back ? '#i-back' : '#i-layers');
   $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět na kategorie' : 'Vrstvy');
-  if (overview || mobilePanel !== 'layers') { tree.replaceChildren(); treeMarkup = ''; mountThumbnails(); return; }
+  if (!c || (!manage && (overview || mobilePanel !== 'layers'))) {
+    tree.replaceChildren(); treeMarkup.delete(tree); mountThumbnails(); return;
+  }
   if (busy) return;
   const rows = mixedLayerRows(c);
   tree.setAttribute('aria-label', `Vrstvy · ${c.name}`);
@@ -338,21 +342,23 @@ function renderLayerTree() {
     const expanded = folder && !!organizerExpanded[c.id]?.has(item.id);
     const indent = Math.min(7, depth);
     const image = folder || safeMode ? '' : layerThumbnail(c, item);
-    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
+    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
+      ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       <button type="button" class="layer-tree-main" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb" data-drag-kind="trait" data-drag-id="${id}" data-category="${esc(c.id)}" title="Podrž miniaturu a přetáhni">${image}</span>`}
         <span class="layer-tree-label">${esc(item.name)}</span>${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
+      ${manage && !folder ? traitNoteEditor(item) : ''}
     </div>`;
   }).join('');
   const more = rows.length > layerLimit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', 'class="outline full-width"') : '';
   const empty = rows.length ? '' : '<p class="empty-list">Tato kategorie je zatím prázdná.</p>';
   const tools = `<div class="layer-tree-tools">${button('add-traits', 'Přidat PNG', '', 'upload')}${button('add-organizer-folder', 'Přidat složku', '', 'folder')}</div>`;
-  const markup = entries + more + empty + tools;
+  const markup = entries + more + empty + (manage ? '' : tools);
   // Keep existing thumbnail elements and the focused row on selection changes.
-  if (treeMarkup !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup = markup; }
+  if (treeMarkup.get(tree) !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup.set(tree, markup); }
   const selected = new Set(M.selectedIds(state, c.id));
   const visible = !M.conflicts(state).hidden.has(c.id);
   for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
@@ -369,7 +375,7 @@ function renderLayerTree() {
   }
   mountThumbnails();
 }
-let treeMarkup = '';
+const treeMarkup = new WeakMap();
 function closeLayerContext(focus = false) {
   const menu = $('layerContext');
   menu.hidden = true;
@@ -520,11 +526,6 @@ function traitCategorySelect(trait, categoryId) {
   const targets = state.cats.filter(c => c.id !== categoryId);
   return targets.length ? `<select class="trait-category-select" data-action="move-trait-category" data-trait-id="${esc(trait.id)}" aria-label="Přesunout ${esc(trait.name)} do jiné kategorie"><option value="">Přesunout do…</option>${targets.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : '';
 }
-function traitVisibilityButton(category,trait) {
-  const shown=M.isSelected(state, category.id, trait.id) && category.visible!==false;
-  const ruled=shown && M.conflicts(state).hidden.has(category.id);
-  return '<button class="trait-visibility" data-action="toggle-trait-visibility" data-id="'+esc(trait.id)+'" aria-pressed="'+(shown&&!ruled)+'" aria-label="'+esc((shown?'Skrýt ':'Zobrazit ')+trait.name)+'">'+icon(shown&&!ruled?'eye':'eye-off')+'<span>'+(ruled?'Skryto pravidlem':shown?'Skrýt v náhledu':'Zobrazit v náhledu')+'</span></button>';
-}
 function traitNoteEditor(trait) {
   return `<details class="trait-note" id="trait-note-${esc(trait.id)}">
     <summary>${icon('edit')}<span>${trait.note ? 'Poznámka' : 'Napsat poznámku'}</span>${icon('chevron')}</summary>
@@ -537,9 +538,8 @@ function traitNoteEditor(trait) {
 function renderTraits() {
   const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
-  $('traitCount').textContent = c?.traits.length || 0;
+  $('traitCount').textContent = c ? `${c.traits.length} ${c.traits.length === 1 ? 'trait' : c.traits.length >= 2 && c.traits.length <= 4 ? 'traity' : 'traitů'}` : '';
   const rename = $('manageRenameCategory');
-  rename.hidden = !c;
   rename.disabled = !c || busy;
   rename.dataset.id = c?.id || '';
   rename.setAttribute('aria-label', c ? `Přejmenovat kategorii ${c.name}` : 'Přejmenovat kategorii');
@@ -548,30 +548,14 @@ function renderTraits() {
   $('categoryPrev').disabled = state.cats.length < 2 || busy;
   $('categoryNext').disabled = !state.cats.length || (state.cats.length === 1 && !!c) || busy;
   $('addTrait').disabled = !c || busy;
-  $('manageSort').disabled = state.cats.length < 2 || busy;
-  $('traitOrganizer').hidden = !c;
-  if (!c) {
-    $('traits').innerHTML = '<p class="helper">Nejdřív si vytvoř kategorii v panelu Vrstvy.</p>';
-  } else {
-    const org = organizerFolders(c.id), folders = org.folders, assignments = org.assignments;
-    const folderId = organizerSelection[c.id] || null;
-    if (folderId && !folders.some(f => f.id === folderId)) organizerSelection[c.id] = null;
-    const currentFolder = organizerSelection[c.id] || null;
-    const visibleTraits = currentFolder ? c.traits.filter(t => assignments[t.id] === currentFolder) : c.traits;
-    $('organizerTree').innerHTML = `<button data-drop-kind="folder-root" data-category="${esc(c.id)}" class="organizer-all drop-row ${!currentFolder ? 'is-selected' : ''}" data-action="organizer-select-folder" data-category="${esc(c.id)}" data-id="" aria-pressed="${!currentFolder}"><span>Všechny traity</span><span class="folder-count">${c.traits.length}</span></button>
-      <div class="organizer-folder-list">${renderOrganizerFolderRows(c, folders, assignments)}</div>
-      <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
-    $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
-    traitPage = Math.min(traitPage, Math.max(0, Math.ceil(visibleTraits.length / PAGE_SIZE) - 1));
-    $('traits').innerHTML = !safeMode && visibleTraits.length ? visibleTraits.slice(traitPage * PAGE_SIZE, (traitPage + 1) * PAGE_SIZE).map(t => `<div class="trait-entry${t.note ? ' has-note' : ''}"><button class="trait-card ${M.isSelected(state, c.id, t.id) ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${M.isSelected(state, c.id, t.id)}" title="${esc(t.name)}"><img ${imageAttributes(t.data)} alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button>${traitVisibilityButton(c,t)}<select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}${traitNoteEditor(t)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
-  }
-  if (!safeMode && c) {
-    const count = $('traits').querySelectorAll('.trait-card').length;
-    $('traits').insertAdjacentHTML('beforeend', '<div style="grid-column:1/-1;display:flex;gap:8px"><button data-action="trait-prev" '+(!traitPage?'disabled':'')+'>‹ Předchozí</button><span>Strana '+(traitPage+1)+'</span><button data-action="trait-next" '+(count<PAGE_SIZE?'disabled':'')+'>Další ›</button></div>');
-  }
-  mountThumbnails();
-  $('traitInfo').hidden = !selected;
-  $('traitInfo').innerHTML = selected ? `<span class="eyebrow">VYBRANÝ TRAIT</span><strong class="selected-name">${esc(selected.name)}</strong><div class="trait-info-actions">${button('rename-trait', 'Přejmenovat', selected.id, 'edit')}${button('delete-trait', 'Smazat', selected.id, 'trash', 'class="danger"')}</div>` : '';
+  $('manageEmpty').hidden = !!c;
+  const addFolder = $('manageAddFolder');
+  addFolder.disabled = !c || busy;
+  addFolder.dataset.category = c?.id || '';
+  $('quickUploadPng').disabled = !c || busy;
+  const exportTrait = $('manageExportPng');
+  exportTrait.disabled = !selected || busy;
+  exportTrait.dataset.id = selected?.id || '';
 }
 function fillSelect(element, values, placeholder) {
   const previous = element.value;
@@ -1262,7 +1246,7 @@ async function handleAction(action, id, element) {
       const expanded = organizerExpanded[active] ||= new Set();
       if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
       renderLayerTree();
-      Array.from($('layerTree').querySelectorAll('[data-action="toggle-tree-folder"]')).find(b => b.dataset.id === id)?.focus();
+      Array.from($(mobilePanel === 'traits' ? 'traits' : 'layerTree').querySelectorAll('[data-action="toggle-tree-folder"]')).find(b => b.dataset.id === id)?.focus();
       break;
     }
     case 'cycle-trait': {
@@ -1279,22 +1263,19 @@ async function handleAction(action, id, element) {
       const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
       const next = current < 0 ? (direction < 0 ? state.cats.length - 1 : 0) : (current + direction + state.cats.length) % state.cats.length;
       active = state.cats[next].id;
-      traitPage = 0;
       organizerSelection[active] = null;
       organizerExpanded[active] = new Set(organizerFolders(active).folders.map(folder => folder.id));
       render();
       showPanel('traits');
       break;
     }
-    case 'trait-prev': traitPage = Math.max(0, traitPage - 1); renderTraits(); break;
-    case 'trait-next': traitPage++; renderTraits(); break;
     case 'library-prev': libraryPages[id] = Math.max(0, (libraryPages[id] || 0) - 1); renderSnapshotLayerLibrary(); break;
     case 'library-next': libraryPages[id] = (libraryPages[id] || 0) + 1; renderSnapshotLayerLibrary(); break;
     case 'enable-previews': safeMode = false; $('recoveryNotice').hidden = true; render(); break;
     case 'open-traits': layerOverview = false; showPanel('layers'); break;
     case 'select-category': {
       if (!c) break;
-      traitPage = 0; layerLimit = 48; layerOverview = false; active = id;
+      layerLimit = 48; layerOverview = false; active = id;
       organizerSelection[id] = null;
       render(true);
       break;
@@ -1308,7 +1289,7 @@ async function handleAction(action, id, element) {
     }
     case 'organizer-select-folder': {
       const categoryId = element?.dataset.category || active, cat = M.category(state, categoryId);
-      if (cat && (!id || organizerFolders(categoryId).folders.some(f => f.id === id))) { active = categoryId; organizerSelection[categoryId] = id || null; traitPage = 0; render(); }
+      if (cat && (!id || organizerFolders(categoryId).folders.some(f => f.id === id))) { active = categoryId; organizerSelection[categoryId] = id || null; render(); }
       break;
     }
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
@@ -1417,6 +1398,12 @@ async function handleAction(action, id, element) {
       finally { finishLog?.(); busy=false;render(true);}
       break;
     }
+    case 'export-trait':
+      if (located) {
+        download(await TraitStorage.imageBlob(db, located.trait.data), `${filename(located.trait.name)}.png`);
+        toast('PNG traitu připraveno ke stažení');
+      }
+      break;
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
     case 'toggle-compact':

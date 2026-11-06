@@ -81,7 +81,7 @@ body.compact-workspace,
 }
 
 /* One shared silhouette and surface for all three layer toolbar controls. */
-body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount) {
+body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button) {
   display:inline-flex;align-items:center;justify-content:center;
   flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;
   padding:0!important;margin:0!important;border-radius:12px!important;
@@ -89,7 +89,7 @@ body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount
   background:linear-gradient(145deg,var(--scheme-control),var(--scheme-panel))!important;
   box-shadow:inset 0 1px #ffffff09!important;
 }
-body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount):is(:active,:focus-visible,[aria-pressed=true]) {
+body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button):is(:active,:focus-visible,[aria-pressed=true]) {
   border-color:var(--scheme-accent)!important;background:var(--scheme-wash)!important;
   box-shadow:0 0 9px var(--scheme-glow)!important;
 }
@@ -233,7 +233,6 @@ body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) 
 }
 
 /* Tie the older controls and drag indicators to the same palette. */
-body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(#quickUploadPng,#manageRenameCategory),
 body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(
   .app-header .header-menu>summary,.app-header .history-actions>button,
   .workspace-tabs button:not(.is-active),.layer-stepper,.quick-traits-head>button,
@@ -309,7 +308,7 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
   outline:2px solid var(--scheme-hover)!important;
 }
 @media (hover:hover) and (pointer:fine) {
-  body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount):hover {
+  body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button):hover:not(:disabled) {
     border-color:var(--scheme-accent)!important;background:var(--scheme-wash)!important;
     box-shadow:0 0 9px var(--scheme-glow)!important;
   }

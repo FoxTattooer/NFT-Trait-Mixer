@@ -153,6 +153,24 @@ await waitFor(() => w.document.activeElement === showroomMenu.querySelector('sum
 assert.equal(JSON.stringify(w.inspectState()), beforeShowroom, 'export and exit preserve the editor project');
 assert(!get('showroomDialog').hasAttribute('data-intro'), 'exiting during the transition clears it');
 click('.workspace-tabs [data-panel="traits"]');
+assert.equal(get('traitCount').textContent, '610 traitů');
+const manageFolder = '#traits [data-action="toggle-tree-folder"][data-id="folder-a"]';
+assert(find('#traits [data-drag-kind="folder"][data-drag-id="folder-a"]'));
+assert(!get('trait-note-t1'), 'folder contents start collapsed');
+click(manageFolder);
+assert(get('trait-note-t1'), 'expanding a folder reveals its trait and note');
+click('#traits [data-action="open-layer-menu"][data-id="folder-a"]');
+assert(find('#layerContext [data-action="add-organizer-subfolder"]'));
+assert(find('#layerContext [data-action="rename-organizer-folder"]'));
+assert(find('#layerContext [data-action="delete-organizer-folder"]'));
+click(manageFolder);
+assert(!get('trait-note-t1'));
+const pngCount = w.__downloads.length;
+get('manageExportPng').click();
+await waitFor(() => w.__downloads.length > pngCount);
+const traitPng = w.__downloads.pop();
+assert.equal(traitPng.name, 'Layer-1.png');
+assert.deepEqual(Buffer.from(await traitPng.blob.arrayBuffer()), Buffer.from(p.cats[0].traits[1].data.split(',')[1], 'base64'));
 const firstNote = () => get('trait-note-t0');
 const saveNote = value => {
   firstNote().open = true;
@@ -162,7 +180,7 @@ const saveNote = value => {
 assert.match(firstNote().querySelector('summary').textContent, /Napsat poznámku/);
 const noteText = 'Opravit okraj\nUmazat <špínu>';
 saveNote('  ' + noteText + '  ');
-assert(firstNote().closest('.trait-entry').classList.contains('has-note'));
+assert(firstNote().closest('.layer-tree-row').classList.contains('has-note'));
 assert(!firstNote().open);
 assert.equal(firstNote().querySelector('textarea').value, noteText);
 assert.equal(M.locate(w.inspectState(), 't0').trait.note, noteText);
@@ -174,7 +192,7 @@ const noteBackup = M.normalize(JSON.parse(await (await w.TraitStorage.backup(not
 assert.equal(M.locate(noteBackup, 't0').trait.note, noteText);
 noteDb.close();
 saveNote('');
-assert(!firstNote().closest('.trait-entry').classList.contains('has-note'));
+assert(!firstNote().closest('.layer-tree-row').classList.contains('has-note'));
 assert.equal(M.locate(w.inspectState(), 't0').trait.note, undefined);
 click('#layersTab');
 const treeIds = () => Array.from(get('layerTree').querySelectorAll('.layer-tree-main')).map(button => button.dataset.id);
@@ -361,7 +379,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.78'));
+assert(get('toast').textContent.includes('v0.7.79'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

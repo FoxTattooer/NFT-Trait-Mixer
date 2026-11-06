@@ -31,7 +31,7 @@ async function test(worker) {
   w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
   const code=['project.js','storage.js','app.js','psd-core.js','psd-file.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
-  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave;');
+  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testActiveCategory = () => M.category(state,active); globalThis.testFolders = () => organizerFolders(active).folders; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave;');
   await waitFor(()=>w.document.querySelector('#appLayout').getAttribute('aria-busy')==='false');
   const $=id=>w.document.getElementById(id);
   async function choose(bytes,name='example.psd') {
@@ -45,7 +45,7 @@ async function test(worker) {
   $('psdCancel').click();assert(!$('psdDialog').hasAttribute('open'));assert.equal($('cats').querySelectorAll('.category-card').length,0);
   await choose(psd);$('psdConfirm').click();
   await waitFor(()=>!$('psdDialog').hasAttribute('open')||$('psdStatus').textContent.includes('nebyl proveden'));
-  assert(!$('psdDialog').hasAttribute('open'),$('psdStatus').textContent);assert.equal($('cats').querySelectorAll('.category-card').length,1);assert($('organizerTree').textContent.includes('Dreads'));assert.equal($('traits').querySelectorAll('.trait-card').length,1);
+  assert(!$('psdDialog').hasAttribute('open'),$('psdStatus').textContent);assert.equal($('cats').querySelectorAll('.category-card').length,1);assert(w.testFolders().some(folder => folder.name === 'Dreads'));assert.equal(w.testActiveCategory().traits.length,1);
   await waitFor(()=>$('toast').textContent.includes('Importováno'));$('undo').click();assert.equal($('cats').querySelectorAll('.category-card').length,0);
   await choose(new Uint8Array(26),'broken.psd');assert($('psdStatus').textContent.includes('nepodařilo'));assert($('psdConfirm').disabled);$('psdCancel').click();assert.equal($('cats').querySelectorAll('.category-card').length,0);
   const warned=ag.writePsd({width:4,height:4,children:[{name:'Multiply',blendMode:'multiply',imageData:{width:1,height:1,data:new Uint8ClampedArray([255,0,0,255])}}]});
@@ -54,9 +54,9 @@ async function test(worker) {
   w.testSetup();
   await choose(psd);$('psdMode').value='category';$('psdMode').dispatchEvent(new w.Event('change'));$('psdTarget').value='target';$('psdTarget').dispatchEvent(new w.Event('change'));$('psdConfirm').click();
   await waitFor(()=>!$('psdDialog').hasAttribute('open'));
-  assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal($('traits').querySelectorAll('.trait-card').length,2);assert($('organizerTree').textContent.includes('HEADS'));
+  assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal(w.testActiveCategory().traits.length,2);assert(w.testFolders().some(folder => folder.name === 'HEADS'));
   assert.equal(w.testSelection(),'existing-trait');
-  await choose(psd);$('psdConfirm').click();$('psdCancel').click();await new Promise(r=>setTimeout(r,30));assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal($('traits').querySelectorAll('.trait-card').length,2);
+  await choose(psd);$('psdConfirm').click();$('psdCancel').click();await new Promise(r=>setTimeout(r,30));assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal(w.testActiveCategory().traits.length,2);
   const nextTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="1"]');
   const prevTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="-1"]');
   nextTrait().click();assert.notEqual(w.testSelection(),'existing-trait');
@@ -86,7 +86,7 @@ async function test(worker) {
   assert.equal($('psdTree').querySelectorAll('input[data-imported="true"]').length,2);
   $('psdConfirm').click();await waitFor(()=>!$('psdDialog').hasAttribute('open'));
   assert.equal($('cats').querySelectorAll('.category-card').length,categoryCount);
-  assert.equal($('traits').querySelectorAll('.trait-card').length,3);
+  assert.equal(w.testActiveCategory().traits.length,3);
   await choose(partial);assert($('psdConfirm').disabled);$('psdCancel').click();
   const saveOriginal=w.TraitStorage.save;
   w.TraitStorage.save=async()=>{throw new w.DOMException('Simulated quota','QuotaExceededError');};
