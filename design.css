@@ -529,3 +529,19 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
  .compact-header .compact-tool{flex:0 0 38px!important}
  .compact-header .compact-header-end{gap:3px!important}
 }
+
+/* History: compact, touch-friendly and independent from the main editor layout. */
+.history-dialog{width:min(92vw,520px);max-height:min(78dvh,700px);padding:20px!important;border:1px solid #a63877!important;border-radius:19px!important;background:#141019!important;color:#f7eaf4!important;box-shadow:0 22px 75px #000c,0 0 22px #ec258a24!important}
+.history-dialog::backdrop{background:#050308bb}
+.history-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.history-dialog-head h2{margin:4px 0 8px;font-size:22px}
+.history-dialog-head h2 span{font-size:12px;color:#ff91c5;border:1px solid #74405f;border-radius:8px;padding:3px 7px;vertical-align:middle}
+.history-dialog .helper{color:#bfaebc;line-height:1.5}
+.history-list{display:flex;flex-direction:column;gap:6px;max-height:50dvh;overflow:auto;overscroll-behavior:contain;padding:5px 2px}
+.history-step{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:11px!important;width:100%!important;min-height:49px!important;padding:9px 12px!important;text-align:left!important;border:1px solid #43303f!important;border-radius:11px!important;background:#211924!important;color:#e9d9e5!important}
+.history-step:not(:disabled):active{border-color:#fc3b9e!important;background:#3a1b31!important}
+.history-step.is-current{opacity:1!important;border-color:#ff3b9d!important;background:#561735!important;box-shadow:inset 3px 0 #ff3b9d,0 0 9px #fa258536!important}
+.history-step-number{color:#a988a3;font-size:11px;font-variant-numeric:tabular-nums}
+.history-step-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.history-step-status{font-size:10px;color:#b6a2b3}
+.history-step.is-current .history-step-status{color:#ff93c7}
