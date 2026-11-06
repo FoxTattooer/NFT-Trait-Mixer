@@ -370,12 +370,72 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(.history-step.is-curre
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(.toast,.notice):not(.is-error) {
   background:var(--scheme-panel);border-color:var(--scheme-stroke);color:var(--scheme-text);
 }
+/* Control accents are separate from the colorway's surfaces. */
+body[data-color-scheme=mono] { --palette-control-accent: var(--scheme-hover); }
+body[data-color-scheme=graphite-grey] { --palette-control-accent: #9dc9d9; }
+body.compact-workspace, .accent-picker button {
+  --control-accent: var(--palette-control-accent, var(--scheme-accent));
+}
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=quiet] { --control-accent: #b7bbc4; }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=yellow] { --control-accent: #ffe13d; }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=red] { --control-accent: #ff767d; }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=ice] { --control-accent: #9cdbf5; }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=mint] { --control-accent: #8fdbb9; }
+
+.accent-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 9px;
+  border-top: 1px solid var(--scheme-stroke);
+}
+.accent-picker h3 { grid-column: 1 / -1; margin: 0 0 2px; font-size: 12px; }
+.accent-picker button {
+  min-width: 0;
+  min-height: 44px;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 5px 7px;
+  border-color: var(--scheme-stroke);
+  background: var(--scheme-control);
+  color: var(--scheme-text);
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: start;
+}
+.accent-picker button[aria-pressed=true] { border-color: var(--control-accent); }
+.accent-chip { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--control-accent); }
+
+body.compact-workspace :is(
+  #layersTab[data-back] .layer-tab-arrow,
+  .layer-tree-main[aria-expanded=true] .icon:first-child,
+  .layer-tree-check,
+  .quick-traits :is([data-action=quick-prev], [data-action=quick-next]):enabled
+) { color: var(--control-accent); }
+body.compact-workspace[data-color-scheme] #layersTab[data-back].is-active {
+  border-color: var(--control-accent) !important;
+}
+body.compact-workspace[data-color-scheme] :is(.layer-tree-eye, [data-action=toggle-category])[aria-pressed=true] .icon {
+  color: var(--control-accent);
+}
+body.compact-workspace[data-color-scheme] :is(.layer-tree-eye, [data-action=toggle-category])[aria-pressed=false] .icon {
+  color: #a9aab2;
+}
+body.compact-workspace[data-color-scheme] .quick-check {
+  background: var(--control-accent);
+  color: var(--scheme-bg);
+}
 body.compact-workspace[data-color-scheme=mono] .app-header #refreshApp .icon {
-  color:var(--scheme-hover)!important;
+  color: var(--control-accent) !important;
 }
-body[data-color-scheme=mono] :is(.layer-tree-eye,.trait-visibility,[data-action=toggle-category])[aria-pressed=true] .icon {
-  color:var(--scheme-hover);
+
+/* Destructive controls keep a semantic red even in monochrome colorways. */
+body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data-action^="delete-"]) {
+  color: #ff919b !important;
 }
-body[data-color-scheme=mono] :is(.layer-tree-eye,.trait-visibility,[data-action=toggle-category])[aria-pressed=false] .icon {
-  color:var(--muted);
+body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data-action^="delete-"]) .icon {
+  color: inherit !important;
+}
+body.compact-workspace[data-color-scheme] button.danger {
+  border-color: #a4535b !important;
 }

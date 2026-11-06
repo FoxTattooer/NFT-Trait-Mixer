@@ -217,6 +217,21 @@ for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water'
   w.reloadColorScheme();
   assert.equal(w.document.body.dataset.colorScheme, scheme, 'a saved scheme is restored');
 }
+const accent = name => find(`#accentChoices [data-control-accent="${name}"]`);
+assert.equal(w.document.body.dataset.controlAccent, 'auto');
+accent('red').click();
+assert.equal(accent('red').getAttribute('aria-pressed'), 'true');
+assert.equal(w.localStorage.getItem('nft-control-accent:graphite-grey'), 'red');
+click('[data-scheme="mono"]');
+assert.equal(w.document.body.dataset.controlAccent, 'auto', 'accent is saved per colorway');
+accent('quiet').click();
+click('[data-scheme="graphite-grey"]');
+assert.equal(w.document.body.dataset.controlAccent, 'red');
+w.document.body.dataset.controlAccent = 'auto';
+w.reloadColorScheme();
+assert.equal(w.document.body.dataset.controlAccent, 'red', 'accent is restored on launch');
+click('[data-scheme="mono"]');
+assert.equal(w.document.body.dataset.controlAccent, 'quiet');
 w.localStorage.setItem('nft-color-scheme','drip');
 w.reloadColorScheme();
 assert.equal(w.document.body.dataset.colorScheme,'graphite-grey');
@@ -379,7 +394,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.79'));
+assert(get('toast').textContent.includes('v0.7.80'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

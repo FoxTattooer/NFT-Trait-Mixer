@@ -1173,10 +1173,22 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 }
 
 const colorSchemeKey = 'nft-color-scheme';
+const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
+const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint']);
+function applyControlAccent(value) {
+  const accent = controlAccents.has(value) ? value : 'auto';
+  document.body.dataset.controlAccent = accent;
+  for (const choice of $('accentChoices').querySelectorAll('[data-control-accent]')) {
+    choice.setAttribute('aria-pressed', String(choice.dataset.controlAccent === accent));
+  }
+}
 const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']);
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
+  let accent;
+  try { accent = localStorage.getItem(controlAccentKey(scheme)); } catch { /* use the palette default */ }
+  applyControlAccent(accent);
   for (const choice of $('settingsDialog').querySelectorAll('[data-scheme]')) {
     const selected = choice.dataset.scheme === scheme;
     choice.setAttribute('aria-pressed', String(selected));
@@ -1191,16 +1203,24 @@ function restoreColorScheme() {
     try { localStorage.setItem(colorSchemeKey, 'graphite-grey'); } catch { /* preference is read-only */ }
   }
 }
+function saveAppearancePreference(key, value) {
+  const status = $('schemeStatus');
+  status.hidden = true;
+  try { localStorage.setItem(key, value); }
+  catch {
+    status.textContent = 'Volba se použila, ale nepodařilo se ji uložit pro příští návštěvu.';
+    status.hidden = false;
+  }
+}
 function chooseColorScheme(scheme) {
   if (!colorSchemes.has(scheme)) return;
   applyColorScheme(scheme);
-  const status = $('schemeStatus');
-  status.hidden = true;
-  try { localStorage.setItem(colorSchemeKey, scheme); }
-  catch {
-    status.textContent = 'Schéma se použilo, ale nepodařilo se ho uložit pro příští návštěvu.';
-    status.hidden = false;
-  }
+  saveAppearancePreference(colorSchemeKey, scheme);
+}
+function chooseControlAccent(accent) {
+  if (!controlAccents.has(accent)) return;
+  applyControlAccent(accent);
+  saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
 }
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
@@ -1419,6 +1439,7 @@ async function handleAction(action, id, element) {
       break;
     case 'close-settings': $('settingsDialog').close(); break;
     case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
+    case 'set-control-accent': chooseControlAccent(element?.dataset.controlAccent); break;
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-diagnostics':
