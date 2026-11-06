@@ -100,12 +100,19 @@ const header = get('layerPanelHeading');
 assert([...header.querySelectorAll('.layer-panel-actions button')].every(b=>b.classList.contains('icon-button')));
 const schemeProject = JSON.stringify(w.inspectState());
 click('[data-action="open-settings"]');assert(get('settingsDialog').open);
-assert.equal(find('[data-scheme="pink"]').textContent.trim(),'Magic Eden');
-click('[data-scheme="blue"]');assert.equal(w.document.body.dataset.colorScheme,'blue');
-assert.equal(find('[data-scheme="blue"]').getAttribute('aria-pressed'),'true');
-assert.equal(w.localStorage.getItem('nft-color-scheme'),'blue');
-w.document.body.dataset.colorScheme='pink';w.reloadColorScheme();
-assert.equal(w.document.body.dataset.colorScheme,'blue','a saved scheme is restored');
+assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-group')].map(group =>
+  [...group.querySelectorAll('[data-scheme]')].map(button => button.textContent.trim())
+), [['Magic Eden', 'Magic Eden Blue'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White']]);
+for (const scheme of ['blue', 'amber', 'violet', 'icy', 'deep-water', 'mono']) {
+  const selector = `[data-scheme="${scheme}"]`;
+  click(selector);
+  assert.equal(w.document.body.dataset.colorScheme, scheme);
+  assert.equal(find('.scheme-grid [aria-pressed="true"]'), find(selector));
+  assert.equal(w.localStorage.getItem('nft-color-scheme'), scheme);
+  w.document.body.dataset.colorScheme = 'pink';
+  w.reloadColorScheme();
+  assert.equal(w.document.body.dataset.colorScheme, scheme, 'a saved scheme is restored');
+}
 click('[data-scheme="pink"]');assert.equal(w.document.body.dataset.colorScheme,'pink');
 assert.equal(JSON.stringify(w.inspectState()),schemeProject);
 click('[data-action="close-settings"]');assert(!get('settingsDialog').open);
@@ -224,7 +231,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.65'));
+assert(get('toast').textContent.includes('v0.7.66'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';
