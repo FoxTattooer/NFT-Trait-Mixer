@@ -116,3 +116,66 @@ button:focus-visible,select:focus-visible{outline:2px solid #86ffda;outline-offs
   .canvas-wrap canvas {width:100%;height:100%;display:block}
   .preview-meta {min-height:0}
 }
+
+/* Compact landscape studio: one-row header and maximum square artwork. */
+@media (max-width:900px) and (orientation:landscape) {
+  body {padding-top:0;padding-bottom:0}
+  .app-header {
+    display:flex;flex-wrap:nowrap;align-items:center;
+    height:44px;min-height:44px;max-height:44px;
+    padding:2px 6px;gap:5px;overflow:hidden;
+  }
+  .brand {flex:0 0 auto;gap:5px;min-width:0}
+  .brand img {width:30px;height:30px}
+  .brand span {display:none}
+  .app-header .toolbar {
+    display:flex;flex:1 1 auto;min-width:0;align-items:center;
+    justify-content:flex-start;gap:3px;overflow-x:auto;
+    scrollbar-width:none;padding:0;margin:0;
+  }
+  .app-header .toolbar::-webkit-scrollbar {display:none}
+  .app-header .toolbar-group {gap:2px;flex-wrap:nowrap}
+  .app-header .toolbar button,.app-header .toolbar>.primary,.app-header .toolbar-group button {
+    min-height:32px;height:32px;padding:3px 5px;font-size:9px;
+    gap:3px;border-radius:8px;
+  }
+  .app-header .toolbar .icon {width:13px;height:13px}
+  .app-header .header-end {display:flex;flex:0 0 auto;gap:2px}
+  .app-header .header-end [data-panel="rules"] {min-height:32px;height:32px;padding:3px 5px;font-size:9px}
+  .app-header .refresh-button {min-height:32px;width:32px;min-width:32px;padding:6px}
+  .app-layout {
+    height:calc(100dvh - 48px - env(safe-area-inset-bottom));
+    min-height:0;margin:2px 4px 0;gap:5px;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:36px minmax(0,1fr);
+  }
+  .workspace-tabs {gap:4px}
+  .workspace-tabs button {min-height:34px;height:34px;padding:3px;font-size:10px;border-radius:9px}
+  .workspace-tabs .icon {width:14px;height:14px}
+  .layers-panel,.inspector {padding:8px;border-radius:12px}
+  .inspector {padding:0}
+  .tab-panel {padding:8px}
+  .stage {
+    height:100%;max-height:100%;min-height:0;
+    padding:2px;border-radius:11px;
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:center;overflow:hidden;
+  }
+  .stage-heading,.stage .preview-meta,.stage .stage-actions,
+  .stage .stage-tip,.stage #warnings {display:none!important}
+  .stage .canvas-wrap {
+    width:auto!important;
+    height:auto!important;
+    max-width:100%!important;
+    max-height:100%!important;
+    aspect-ratio:1/1;
+    flex:0 1 auto!important;
+    align-self:center;margin:auto;
+    border-radius:8px;
+  }
+  .stage .canvas-wrap canvas {display:block;width:100%;height:100%;object-fit:contain}
+  .panel-heading {margin-bottom:6px}
+  .layers-panel .helper,.layers-panel .panel-footnote {display:none}
+  .category-list {gap:5px}
+  .category-card {border-radius:9px}
+}
