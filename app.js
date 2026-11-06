@@ -74,6 +74,86 @@ function pruneCache() {
   const ids = new Set(state.cats.flatMap(c => c.traits.map(t => t.id)));
   for (const key of imageCache.keys()) if (!ids.has(key)) imageCache.delete(key);
 }
+function renderCategorySort() {
+  const list = $('categorySortList');
+  if (!list) return;
+  $('sortCategoryCount').textContent = state.cats.length;
+  list.replaceChildren();
+  const fragment = document.createDocumentFragment();
+  state.cats.forEach((cat, index) => {
+    const row = document.createElement('div');
+    row.className = 'category-sort-row';
+    row.dataset.categoryId = cat.id;
+    const handle = document.createElement('span');
+    handle.className = 'category-sort-handle';
+    handle.textContent = '⠿';
+    handle.setAttribute('aria-label', 'Přetáhnout kategorii ' + cat.name);
+    const label = document.createElement('span');
+    label.className = 'category-sort-name';
+    label.textContent = cat.name;
+    const count = document.createElement('span');
+    count.className = 'category-sort-traits';
+    count.textContent = cat.traits.length + ' traitů';
+    const order = document.createElement('span');
+    order.className = 'category-sort-index';
+    order.textContent = String(index + 1).padStart(2, '0');
+    row.append(handle, label, count, order);
+    fragment.append(row);
+  });
+  list.append(fragment);
+}
+function commitCategorySort(ids) {
+  if (busy || ids.length !== state.cats.length) return;
+  const byId = new Map(state.cats.map(cat => [cat.id, cat]));
+  if (ids.some(id => !byId.has(id)) || new Set(ids).size !== ids.length) return;
+  if (ids.every((id, index) => id === state.cats[index].id)) return;
+  change(() => { state.cats = ids.map(id => byId.get(id)); }, 'Pořadí kategorií změněno');
+  renderCategorySort();
+}
+function setupCategorySortDrag() {
+  const list = $('categorySortList');
+  let drag = null;
+  const cleanup = () => {
+    if (!drag) return;
+    drag.row.classList.remove('is-sorting');
+    list.querySelectorAll('.sort-target').forEach(el => el.classList.remove('sort-target'));
+    drag = null;
+  };
+  list.addEventListener('pointerdown', e => {
+    const handle = e.target.closest('.category-sort-handle');
+    const row = handle?.closest('.category-sort-row');
+    if (!row || busy) return;
+    e.preventDefault();
+    drag = { row, pointerId: e.pointerId, startY: e.clientY, moved: false };
+    row.classList.add('is-sorting');
+    handle.setPointerCapture(e.pointerId);
+  });
+  list.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    e.preventDefault();
+    if (Math.abs(e.clientY - drag.startY) > 5) drag.moved = true;
+    const bounds = list.getBoundingClientRect();
+    if (e.clientY > bounds.bottom - 35) list.scrollTop += 13;
+    else if (e.clientY < bounds.top + 35) list.scrollTop -= 13;
+    const rows = [...list.querySelectorAll('.category-sort-row')];
+    let target = rows.find(row => e.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2);
+    if (!target) target = rows[rows.length - 1];
+    if (target && target !== drag.row) {
+      const before = e.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
+      list.insertBefore(drag.row, before ? target : target.nextSibling);
+    }
+  });
+  list.addEventListener('pointerup', e => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const moved = drag.moved;
+    const ids = [...list.querySelectorAll('.category-sort-row')].map(row => row.dataset.categoryId);
+    cleanup();
+    if (moved) commitCategorySort(ids);
+  });
+  list.addEventListener('pointercancel', cleanup);
+  $('categorySortDialog').addEventListener('close', cleanup);
+}
+setupCategorySortDrag();
 function historyEntries() {
   const past = undoLabels.map((label, i) => ({ label, position: i, kind: 'past' }));
   const future = redoLabels.slice().reverse().map((label, i) => ({ label, position: undoStack.length + 1 + i, kind: 'future' }));
@@ -736,6 +816,8 @@ async function handleAction(action, id, element) {
     }
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
+    case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
+    case 'close-category-sort': $('categorySortDialog').close(); break;
     case 'open-history': $('historyDialog').showModal(); renderHistoryPanel(); document.querySelector('#historyList .is-current')?.scrollIntoView({ block: 'nearest' }); break;
     case 'close-history': $('historyDialog').close(); break;
     case 'jump-history': jumpHistory(Number(id)); break;
