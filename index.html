@@ -57,7 +57,7 @@
       <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
       <input id="projectFile" type="file" accept="application/json,.json" hidden>
     </div>
-    <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div><div class="header-end compact-header-end">
+    <div class="header-end compact-header-end">
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content">
           <button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button data-action="undo" class="subtle"><svg class="icon"><use href="#i-undo"/></svg>Zpět</button><button data-action="redo" class="subtle"><svg class="icon"><use href="#i-redo"/></svg>Vpřed</button><button data-action="export" class="subtle"><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
@@ -68,6 +68,7 @@
     </div>
   </header>
   <div class="project-bar">
+    <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
     
   </div>
