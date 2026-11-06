@@ -232,7 +232,7 @@ function ask({ title, description = '', value = '', confirm = false, submit = 'U
   $('dialogSubmit').textContent = submit;
   $('dialogSubmit').className = danger ? 'danger' : 'primary';
   $('editDialog').showModal();
-  if (confirm) $('dialogSubmit').focus();
+  if (confirm) $(danger ? 'dialogCancel' : 'dialogSubmit').focus();
   else { $('dialogInput').focus(); $('dialogInput').select(); }
   return new Promise(resolve => { dialogResolve = resolve; });
 }
@@ -529,7 +529,7 @@ function traitCategorySelect(trait, categoryId) {
 function traitNoteEditor(trait) {
   return `<details class="trait-note" id="trait-note-${esc(trait.id)}">
     <summary>${icon('edit')}<span>${trait.note ? 'Poznámka' : 'Napsat poznámku'}</span>${icon('chevron')}</summary>
-    <form class="trait-note-form" data-trait-id="${esc(trait.id)}">
+    <form class="trait-note-form" data-trait-id="${esc(trait.id)}" ${trait.note ? 'data-has-note' : ''}>
       <textarea name="note" rows="2" maxlength="${M.TRAIT_NOTE_LIMIT}" aria-label="Poznámka k traitu ${esc(trait.name)}">${esc(trait.note || '')}</textarea>
       <button type="submit">Uložit poznámku</button>
     </form>
@@ -1174,7 +1174,7 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 
 const colorSchemeKey = 'nft-color-scheme';
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
-const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint']);
+const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint', 'neon-red', 'neon-lime', 'neon-uv']);
 function applyControlAccent(value) {
   const accent = controlAccents.has(value) ? value : 'auto';
   document.body.dataset.controlAccent = accent;
@@ -1456,7 +1456,11 @@ async function handleAction(action, id, element) {
     case 'jump-history': jumpHistory(Number(id)); break;
     case 'undo': restoreHistory(); break;
     case 'redo': restoreHistory(true); break;
-    case 'delete-rule': change(() => { state.rules = state.rules.filter(r => r.id !== id); }, 'Pravidlo odstraněno'); break;
+    case 'delete-rule':
+      if (state.rules.some(rule => rule.id === id) && await ask({ title: 'Smazat pravidlo?', confirm: true, submit: 'Smazat pravidlo', danger: true })) {
+        change(() => { state.rules = state.rules.filter(r => r.id !== id); }, 'Pravidlo odstraněno');
+      }
+      break;
     case 'add-snapshot': {
       if (!state.cats.length) { toast('Nejdřív vytvoř svoji první kategorii.'); break; }
       const name = await ask({ title: 'Uložit sestavu', value: `Sestava ${state.snapshots.length + 1}`, submit: 'Uložit sestavu' });
@@ -1576,7 +1580,16 @@ document.addEventListener('change', event => {
     else delete nextOrg.assignments[traitId];
   }, folderId ? 'Trait zařazen do organizační složky' : 'Trait odebrán z organizační složky');
 });
-$('traits').addEventListener('submit', event => {
+$('traits').addEventListener('input', event => {
+  const field = event.target;
+  const form = field.closest('.trait-note-form[data-has-note]');
+  if (!form || field.name !== 'note') return;
+  const removing = !field.value.trim();
+  const submit = form.querySelector('button[type="submit"]');
+  submit.classList.toggle('danger', removing);
+  submit.textContent = removing ? 'Smazat poznámku' : 'Uložit poznámku';
+});
+$('traits').addEventListener('submit', async event => {
   const form = event.target.closest('.trait-note-form');
   if (!form) return;
   event.preventDefault();
@@ -1586,6 +1599,7 @@ $('traits').addEventListener('submit', event => {
   if (!trait) return;
   const note = M.normalizeTraitNote(form.elements.namedItem('note').value);
   if (note !== (trait.note || '')) {
+    if (!note && !await ask({ title: 'Smazat poznámku?', confirm: true, submit: 'Smazat poznámku', danger: true })) return;
     change(() => {
       if (note) trait.note = note;
       else delete trait.note;

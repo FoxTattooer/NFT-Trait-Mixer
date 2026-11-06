@@ -174,7 +174,9 @@ assert.deepEqual(Buffer.from(await traitPng.blob.arrayBuffer()), Buffer.from(p.c
 const firstNote = () => get('trait-note-t0');
 const saveNote = value => {
   firstNote().open = true;
-  firstNote().querySelector('textarea').value = value;
+  const field = firstNote().querySelector('textarea');
+  field.value = value;
+  field.dispatchEvent(new w.Event('input', { bubbles: true }));
   firstNote().querySelector('form').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
 };
 assert.match(firstNote().querySelector('summary').textContent, /Napsat poznámku/);
@@ -192,7 +194,14 @@ const noteBackup = M.normalize(JSON.parse(await (await w.TraitStorage.backup(not
 assert.equal(M.locate(noteBackup, 't0').trait.note, noteText);
 noteDb.close();
 saveNote('');
-assert(!firstNote().closest('.layer-tree-row').classList.contains('has-note'));
+assert(firstNote().querySelector('button[type="submit"]').classList.contains('danger'));
+assert(get('editDialog').open);
+assert.equal(w.document.activeElement, get('dialogCancel'));
+get('dialogCancel').click();
+assert.equal(M.locate(w.inspectState(), 't0').trait.note, noteText);
+saveNote('');
+get('dialogForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
+await waitFor(() => !firstNote().closest('.layer-tree-row').classList.contains('has-note'));
 assert.equal(M.locate(w.inspectState(), 't0').trait.note, undefined);
 click('#layersTab');
 const treeIds = () => Array.from(get('layerTree').querySelectorAll('.layer-tree-main')).map(button => button.dataset.id);
@@ -224,6 +233,14 @@ assert.equal(accent('red').getAttribute('aria-pressed'), 'true');
 assert.equal(w.localStorage.getItem('nft-control-accent:graphite-grey'), 'red');
 click('[data-scheme="mono"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto', 'accent is saved per colorway');
+assert.equal(get('accentChoices').querySelectorAll('button').length, 9);
+for (const color of ['neon-red', 'neon-lime', 'neon-uv']) {
+  accent(color).click();
+  assert.equal(accent(color).getAttribute('aria-pressed'), 'true');
+  assert.equal(w.localStorage.getItem('nft-control-accent:mono'), color);
+  w.reloadColorScheme();
+  assert.equal(w.document.body.dataset.controlAccent, color);
+}
 accent('quiet').click();
 click('[data-scheme="graphite-grey"]');
 assert.equal(w.document.body.dataset.controlAccent, 'red');
@@ -394,7 +411,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.80'));
+assert(get('toast').textContent.includes('v0.7.81'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

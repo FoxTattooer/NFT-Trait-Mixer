@@ -381,6 +381,18 @@ body.compact-workspace, .accent-picker button {
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=red] { --control-accent: #ff767d; }
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=ice] { --control-accent: #9cdbf5; }
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=mint] { --control-accent: #8fdbb9; }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=neon-red] {
+  --control-accent: #ff344c;
+  --control-accent-glow: #ff143e8c;
+}
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=neon-lime] {
+  --control-accent: #a8ff00;
+  --control-accent-glow: #a0ff0080;
+}
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=neon-uv] {
+  --control-accent: #c05cff;
+  --control-accent-glow: #b131ff99;
+}
 
 .accent-picker {
   display: grid;
@@ -429,13 +441,29 @@ body.compact-workspace[data-color-scheme=mono] .app-header #refreshApp .icon {
   color: var(--control-accent) !important;
 }
 
+body.compact-workspace[data-control-accent^="neon-"] :is(
+  #layersTab[data-back] .layer-tab-arrow,
+  .layer-tree-main[aria-expanded=true] .icon:first-child,
+  :is(.layer-tree-eye, [data-action=toggle-category])[aria-pressed=true] .icon,
+  .quick-traits :is([data-action=quick-prev], [data-action=quick-next]):enabled
+) {
+  filter: drop-shadow(0 0 4px var(--control-accent-glow));
+}
+body.compact-workspace[data-control-accent^="neon-"] #layersTab[data-back].is-active {
+  box-shadow: inset 0 0 8px var(--control-accent-glow), 0 0 12px var(--control-accent-glow) !important;
+}
+.accent-picker [data-control-accent^="neon-"] .accent-chip {
+  box-shadow: 0 0 8px var(--control-accent-glow);
+}
+
 /* Destructive controls keep a semantic red even in monochrome colorways. */
 body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data-action^="delete-"]) {
-  color: #ff919b !important;
+  color: #ffa4ac !important;
+  border-color: #a4535b !important;
 }
 body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data-action^="delete-"]) .icon {
   color: inherit !important;
 }
 body.compact-workspace[data-color-scheme] button.danger {
-  border-color: #a4535b !important;
+  background: linear-gradient(145deg, #4b222a, #30181d) !important;
 }
