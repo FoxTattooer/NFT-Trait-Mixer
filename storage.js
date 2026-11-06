@@ -2,7 +2,8 @@
    Existing v1 projects remain readable. No database deletion or schema upgrade. */
 (function(root) {
   'use strict';
-  const contexts = new WeakMap();
+  const contexts = new WeakMap(), pins = new WeakMap();
+  const isAsset = data => typeof data === "string" && /^asset:image:[a-f0-9]{64}$/.test(data);
   const context = db => { if (!contexts.has(db)) contexts.set(db,new Map()); return contexts.get(db); };
   function request(db,key) {
     return new Promise((resolve,reject)=>{
@@ -27,7 +28,8 @@
   }
   const breathe = () => new Promise(resolve => setTimeout(resolve, 0));
   async function imageBytes(data) {
-    const base64=data.slice(data.indexOf(',')+1);
+    let base64=data.slice(data.indexOf(',')+1);
+    if(/[\r\n]/.test(base64))base64=base64.replace(/[\r\n]/g,'');
     const parts=[];
     // Decode small aligned base64 blocks, avoiding a second giant binary string.
     for(let offset=0;offset<base64.length;offset+=65536) {
@@ -43,7 +45,7 @@
     return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error || new Error('Obrázek nelze načíst z úložiště.'));r.readAsDataURL(blob);});
   }
   const references = p => new Set((p?.storageFormat===2 ? p.cats : []).flatMap(c=>c.traits.map(t=>t.assetKey)));
-  async function readUnlocked(db,progress=()=>{}) {
+  async function readUnlocked(db,progress=()=>{},options={}) {
     const project=await request(db,'current');
     if(!project)return project;
     // Accept the experimental v2 branch as well as the original inline records.
@@ -58,6 +60,15 @@
     }
     const total=project.cats.reduce((n,c)=>n+c.traits.length,0);let done=0;
     const cache=context(db);cache.clear();
+    if (options.lazy) {
+      const keys=await new Promise((resolve,reject)=>{const r=db.transaction('projects').objectStore('projects').getAllKeys();r.onsuccess=()=>resolve(new Set(r.result));r.onerror=()=>reject(r.error);});
+      const retained=pins.get(db)||new Set();
+      for(const c of project.cats)for(const t of c.traits) {
+        if(!/^image:[a-f0-9]{64}$/.test(t.assetKey)||!keys.has(t.assetKey))throw new Error('V uloženém projektu chybí obrázek: '+t.name);
+        retained.add(t.assetKey);t.data='asset:'+t.assetKey;cache.set(t.id,{data:t.data,key:t.assetKey});delete t.assetKey;
+      }
+      pins.set(db,retained);delete project.storageFormat;progress(total,total);return project;
+    }
     for(const c of project.cats)for(const t of c.traits) {
       const key=t.assetKey;
       const blob=await request(db,key);
@@ -78,11 +89,17 @@
       for(let i=0;i<project.cats.length;i++)for(const trait of project.cats[i].traits) {
         let entry=cache.get(trait.id);
         if(!entry || entry.data!==trait.data || !existingKeys.has(entry.key)) {
+          if(isAsset(trait.data)) {
+            const key=trait.data.slice(6);
+            if(!existingKeys.has(key))throw new Error('Chybí uložený obrázek: '+trait.name);
+            entry={data:trait.data,key};
+          } else {
           const blob=await imageBytes(trait.data);
           const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
           const key='image:'+hash;
           if(!existingKeys.has(key)) {await transaction(db,store=>store.put(blob,key));written.add(key);existingKeys.add(key);}
           entry={data:trait.data,key};
+          }
         }
         nextCache.set(trait.id,entry);
         const {data,assetKey,...metadata}=trait;
@@ -95,7 +112,7 @@
       await transaction(db,store=>{
         const r=store.get('current');
         r.onsuccess=()=>{
-          for(const key of references(r.result))if(!keep.has(key))store.delete(key);
+          for(const key of existingKeys)if(typeof key==='string' && key.startsWith('image:') && !keep.has(key) && !pins.get(db)?.has(key))store.delete(key);
           store.put(manifest,'current');
         };
       });
@@ -111,8 +128,41 @@
   function locked(fn) {
     return root.navigator?.locks?.request ? root.navigator.locks.request('nft-trait-storage',fn) : fn();
   }
-  const read = (db,progress) => locked(()=>readUnlocked(db,progress));
+  const read = (db,progress,options) => locked(()=>readUnlocked(db,progress,options));
   const save = (db,project,progress) => locked(()=>saveUnlocked(db,project,progress));
-  const api={open,read,save};
+  async function imageBlob(db,data) {
+    if(!isAsset(data))return imageBytes(data);
+    const blob=await request(db,data.slice(6));
+    if(!blob || typeof blob.arrayBuffer!=='function')throw new Error('Uložený obrázek nelze načíst.');
+    return blob;
+  }
+  async function backup(db,project) {
+    // Encode one image at a time; never stringify a project-sized Base64 string.
+    const {cats,...metadata}=project, parts=[JSON.stringify(metadata).slice(0,-1)+',"cats":['];
+    for(let ci=0;ci<cats.length;ci++) {
+      const {traits,...category}=cats[ci];parts.push((ci?',':'')+JSON.stringify(category).slice(0,-1)+',"traits":[');
+      for(let ti=0;ti<traits.length;ti++) {
+        const trait=traits[ti],data=isAsset(trait.data)?await dataURL(await imageBlob(db,trait.data)):trait.data;
+        parts.push(new Blob([(ti?',':'')+JSON.stringify({...trait,data})]));
+        if(ti%16===0)await breathe();
+      }
+      parts.push(']}');
+    }
+    parts.push(']}');return new Blob(parts,{type:'application/json'});
+  }
+  function compact(db,projects) {
+    const cache=context(db),original=new Map(cache),retained=pins.get(db)||new Set();
+    for(const project of projects)for(const c of project.cats)for(const t of c.traits) {
+      const entry=original.get(t.id);
+      if(entry && entry.data===t.data) { t.data='asset:'+entry.key;retained.add(entry.key); }
+    }
+    for(const [id,entry] of original)cache.set(id,{data:'asset:'+entry.key,key:entry.key});
+    pins.set(db,retained);
+  }
+  function retain(db,projects) {
+    const keys=new Set();for(const project of projects)for(const c of project.cats)for(const t of c.traits)if(isAsset(t.data))keys.add(t.data.slice(6));
+    pins.set(db,keys);
+  }
+  const api={open,read,save,isAsset,imageBlob,backup,retain,compact};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.TraitStorage=api;
 })(globalThis);

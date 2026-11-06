@@ -25,26 +25,49 @@
     return { row, categoryId, id: kind === 'category' || kind === 'folder-root' ? null : id, categoryTarget: id, placement };
   }
   function paintTarget() {
-    clearTarget(); drag.target = targetAt(drag.x,drag.y);
+    const next=targetAt(drag.x,drag.y);
+    if(next?.row===drag.target?.row && next?.placement===drag.target?.placement)return;
+    clearTarget(); drag.target = next;
     if (drag.target) { drag.target.row.classList.add('drop-'+drag.target.placement); hint(drag.target.placement === 'inside' ? 'Pustit dovnitř složky nebo kategorie' : 'Pustit mezi řádky'); }
   }
-  function scrollFrame() {
+  function edgeSpeed(y,top,bottom) {
+    const zone=Math.min(110,Math.max(24,(bottom-top)*.22));
+    const depth=y<top+zone ? -(top+zone-y)/zone : y>bottom-zone ? (y-bottom+zone)/zone : 0;
+    return Math.sign(depth)*1250*Math.pow(Math.min(1,Math.abs(depth)),1.6);
+  }
+  function scrollFrame(time) {
     if (!drag?.started) return;
-    const element = document.elementFromPoint(drag.x,drag.y);
-    let scrollable = element;
-    while (scrollable && scrollable !== document.body) {
-      const style = getComputedStyle(scrollable);
-      if (/(auto|scroll)/.test(style.overflowY) && scrollable.scrollHeight > scrollable.clientHeight) break;
-      scrollable = scrollable.parentElement;
+    if(busy || !drag.handle.isConnected){cleanup();return;}
+    const dt=drag.lastFrame==null ? 1/60 : Math.max(0,Math.min(.04,(time-drag.lastFrame)/1000));drag.lastFrame=time;
+    const viewport=window.visualViewport;
+    const top=viewport?.offsetTop || 0;
+    let bottom=top+(viewport?.height || innerHeight);
+    const tabs=document.querySelector('.workspace-tabs');
+    if(tabs && getComputedStyle(tabs).position==='fixed') {
+      const rect=tabs.getBoundingClientRect();if(rect.top>top && rect.top<bottom)bottom=rect.top;
     }
-    const box = scrollable && scrollable !== document.body ? scrollable.getBoundingClientRect() : {top:0,bottom:innerHeight};
-    const delta = drag.y < box.top + 48 ? -9 : drag.y > box.bottom - 48 ? 9 : 0;
-    if (delta) {
-      if (scrollable && scrollable !== document.body) scrollable.scrollTop += delta;
-      else window.scrollBy(0,delta);
-      paintTarget();
+    const element=document.elementFromPoint(drag.x,Math.max(top,Math.min(bottom-1,drag.y)));
+    let node=element || drag.row,carry=0,moved=false;
+    while(node && node!==document.body && node!==document.documentElement) {
+      const style=getComputedStyle(node);
+      if(/(auto|scroll)/.test(style.overflowY) && node.scrollHeight>node.clientHeight) {
+        const rect=node.getBoundingClientRect(),lo=Math.max(top,rect.top),hi=Math.min(bottom,rect.bottom);
+        const speed=hi>lo ? edgeSpeed(drag.y,lo,hi) : 0,delta=(speed || carry)*dt;
+        if(delta){
+          const before=node.scrollTop;
+          node.scrollTop=Math.max(0,Math.min(node.scrollHeight-node.clientHeight,before+delta));
+          if(Math.abs(node.scrollTop-before)>.1){moved=true;break;}
+          carry=speed || carry;
+        }
+      }
+      node=node.parentElement;
     }
-    frame = requestAnimationFrame(scrollFrame);
+    if(!moved) {
+      const speed=edgeSpeed(drag.y,top,bottom) || carry;
+      if(speed){window.scrollBy(0,speed*dt);moved=true;}
+    }
+    if(moved)paintTarget();
+    frame=requestAnimationFrame(scrollFrame);
   }
   document.addEventListener('pointerdown', event => {
     const handle = event.target.closest('.drag-handle');
@@ -89,7 +112,7 @@
     },'Přesunuto · Zpět vrátí změnu');
     hint('Přesun dokončen. Tlačítko Zpět změnu vrátí.');
   });
-  document.addEventListener('pointercancel',cleanup);
+  document.addEventListener('pointercancel',event=>{if(drag?.pointerId===event.pointerId)cleanup();});
   document.addEventListener('lostpointercapture',event=>{if(drag?.pointerId===event.pointerId)cleanup();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape' && drag){cleanup();hint('Přesun zrušen');}});
   window.addEventListener('blur',cleanup);

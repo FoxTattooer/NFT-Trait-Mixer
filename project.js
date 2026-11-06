@@ -15,7 +15,7 @@
   }
   const selection = (p, values) => Object.fromEntries(p.cats.map(c => [c.id, c.traits.some(t => t.id === values?.[c.id]) ? values[c.id] : null]));
   const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?psd-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
-  function normalize(raw) {
+  function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !raw.selected || typeof raw.selected !== 'object' || Array.isArray(raw.selected) || !Array.isArray(raw.rules)) fail('Soubor není platný projekt Trait Workshop.');
     if (raw.version != null && ![1, 2].includes(raw.version)) fail('Projekt pochází z novější, nepodporované verze aplikace.');
@@ -26,7 +26,7 @@
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), visible: c.visible !== false, traits: c.traits.map(t => {
-        if (!t || typeof t.data !== 'string' || !/^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) || !t.data.startsWith('data:image/png;base64,iVBORw0KGgo')) fail('Projekt obsahuje neplatný PNG obrázek.');
+        if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t) };
       }) };
     });
@@ -169,5 +169,6 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);
+
 
 

@@ -32,4 +32,22 @@ pointer('pointerdown',10,10);pointer('pointermove',20,140);assert(w.document.que
 pointer('pointerup',20,140);assert.deepEqual(w.state.cats.map(c=>c.id),['b','a']);assert.equal(changes,1);assert(!w.document.querySelector('.drag-ghost'));
 pointer('pointerdown',10,10);pointer('pointermove',20,110);w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));pointer('pointerup',20,110);assert.equal(changes,1);
 w.busy=true;pointer('pointerdown',10,10);pointer('pointermove',20,110);assert(!w.document.querySelector('.drag-ghost'));
+// Controlled animation clock: depth controls velocity, time controls distance.
+w.busy=false;let scheduled=null,scrolls=[];
+w.requestAnimationFrame=cb=>{scheduled=cb;return 1;};w.cancelAnimationFrame=()=>{scheduled=null;};w.scrollBy=(x,y)=>scrolls.push(y);
+Object.defineProperty(w,'innerHeight',{value:800,configurable:true});
+function tick(t){const cb=scheduled;scheduled=null;if(cb)cb(t);}
+pointer('pointerdown',10,10);pointer('pointermove',20,705);tick(0);const slow=scrolls.pop();
+pointer('pointermove',20,790);tick(16.67);const fast=scrolls.pop();assert(slow>0&&fast>slow*4,'speed grows toward bottom edge');
+scrolls=[];pointer('pointermove',20,400);tick(33.34);assert.equal(scrolls.length,0,'center does not scroll');
+pointer('pointermove',20,5);tick(50);assert(scrolls.pop()<0,'top scrolls upward');
+pointer('pointercancel',20,5);assert.equal(scheduled,null,'cancel stops frame loop');
+// A full inner scroller hands scrolling to the page instead of trapping the drag.
+const panel=w.document.createElement('div');panel.style.overflowY='auto';target.before(panel);panel.append(target);
+Object.defineProperty(panel,'scrollHeight',{value:1000});Object.defineProperty(panel,'clientHeight',{value:300});panel.scrollTop=700;
+panel.getBoundingClientRect=()=>({top:100,bottom:400,height:300});scrolls=[];
+pointer('pointerdown',10,10);pointer('pointermove',20,395);tick(100);assert(scrolls.pop()>0,'saturated nested list passes movement to outer page');
+pointer('pointercancel',20,395);
+panel.scrollTop=200;scrolls=[];pointer('pointerdown',10,10);pointer('pointermove',20,395);tick(120);assert(panel.scrollTop>200);assert.equal(scrolls.length,0,'inner scroller gets priority');
+pointer('pointerup',20,395);assert.equal(scheduled,null,'drop stops loop');
 w.happyDOM.abort();w.close();console.log('PASS drag: ordering, nesting, cycle rejection, cross-category subtree/traits, clone/undo, pointer drop, Escape and busy guard');

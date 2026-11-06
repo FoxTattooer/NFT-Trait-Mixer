@@ -16,6 +16,7 @@ async function measured(name,fn){let last=performance.now(),maxDelay=0;const tim
 console.log(JSON.stringify({layers:610,pngMiB:+(size/1048576).toFixed(1),dimensions:'256x256 random RGBA',backend:'fake-indexeddb; native Blob; Node, not iPhone Safari'}));
 await measured('initial save',()=>S.save(db,state));assert.equal(writes,610);
 state.name='Renamed';await measured('metadata save',()=>S.save(db,state));assert.equal(writes,0);
-await measured('restore',async()=>{const p=await S.read(db);assert.equal(p.cats[0].traits.length,610);for(let i=0;i<610;i++)assert.equal(p.cats[0].traits[i].data,state.cats[0].traits[i].data);});
+await measured('lazy restore',async()=>{const p=await S.read(db,()=>{},{lazy:true});assert.equal(p.cats[0].traits.length,610);assert(p.cats[0].traits.every(t=>S.isAsset(t.data)));});
+await measured('eager compatibility restore',async()=>{const p=await S.read(db);assert.equal(p.cats[0].traits.length,610);for(let i=0;i<610;i++)assert.equal(p.cats[0].traits[i].data,state.cats[0].traits[i].data);});
 db.close();
 })().catch(e=>{console.error(e);process.exitCode=1;});

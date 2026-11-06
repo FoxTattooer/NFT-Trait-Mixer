@@ -40,16 +40,20 @@ function storageFailure(error = lastStorageError) {
   warning.replaceChildren(text,retry,backup);warning.hidden = false;
 }
 function openStorage() { return TraitStorage.open(); }
-function storedProject() { return TraitStorage.read(db, (done,total) => storageStatus(`Obnovuji vrstvy ${done} / ${total}…`)); }
+function storedProject() { return TraitStorage.read(db, (done,total) => storageStatus(`Obnovuji vrstvy ${done} / ${total}…`), { lazy: true }); }
 function flushSave() {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
   const savingRevision = revision, project = M.clone(state);
   queuedRevision = savingRevision;
-  saveQueue = saveQueue.then(() => TraitStorage.save(db, project, (done,total) => {
+  saveQueue = saveQueue.then(() => {
+    TraitStorage.retain(db, [state, project, ...undoStack, ...redoStack]);
+    return TraitStorage.save(db, project, (done,total) => {
     if (revision === savingRevision) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
-  })).then(() => {
+    });
+  }).then(() => {
+    TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
     persistedRevision = savingRevision;
     if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
     return true;
@@ -189,12 +193,13 @@ function renderTraits() {
       <div class="organizer-tree-actions"><button data-action="add-organizer-folder" data-category="${esc(c.id)}">＋ Složka</button><button data-action="add-organizer-subfolder" data-category="${esc(c.id)}" ${currentFolder ? '' : 'disabled'}>＋ Podsložka</button><button data-action="rename-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Přejmenovat</button><button class="danger" data-action="delete-organizer-folder" data-category="${esc(c.id)}" data-id="${esc(currentFolder || '')}" ${currentFolder ? '' : 'disabled'}>Smazat</button></div>${currentFolder ? (() => { const folder = folders.find(f => f.id === currentFolder), blocked = organizerDescendants(folders, currentFolder); return `<label class="organizer-move-label" for="organizerMoveFolder">Přesunout složku do</label><select id="organizerMoveFolder" class="organizer-move-select" data-action="move-organizer-folder" data-category="${esc(c.id)}" data-folder-id="${esc(currentFolder)}"><option value="" ${!folder?.parentId ? 'selected' : ''}>Pod ${esc(c.name)} (hlavní)</option>${folders.filter(f => !blocked.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder?.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>`; })() : ''}`;
     $('organizerHeading').innerHTML = `<div class="organizer-current"><div><span class="eyebrow">ORGANIZAČNÍ PŘEHLED</span><strong>${currentFolder ? esc(organizerPath(folders, currentFolder)) : 'Všechny traity'}</strong></div><span>${visibleTraits.length} traitů</span></div>`;
     traitPage = Math.min(traitPage, Math.max(0, Math.ceil(visibleTraits.length / PAGE_SIZE) - 1));
-    $('traits').innerHTML = !safeMode && visibleTraits.length ? visibleTraits.slice(traitPage * PAGE_SIZE, (traitPage + 1) * PAGE_SIZE).map(t => `<div class="trait-entry"><button class="trait-card ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img src="${t.data}" alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button><select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
+    $('traits').innerHTML = !safeMode && visibleTraits.length ? visibleTraits.slice(traitPage * PAGE_SIZE, (traitPage + 1) * PAGE_SIZE).map(t => `<div class="trait-entry"><button class="trait-card ${t.id === selected?.id ? 'is-selected' : ''}" data-action="choose-trait" data-category="${esc(c.id)}" data-id="${esc(t.id)}" aria-pressed="${t.id === selected?.id}" title="${esc(t.name)}"><img ${imageAttributes(t.data)} alt="" loading="lazy"><span class="trait-name">${esc(t.name)}</span></button><select class="trait-folder-select" data-action="assign-trait-folder" data-category="${esc(c.id)}" data-trait-id="${esc(t.id)}" aria-label="Zařadit ${esc(t.name)} do organizační složky"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[t.id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select>${traitCategorySelect(t, c.id)}</div>`).join('') : '<p class="organizer-empty">V této složce zatím nejsou žádné traity.</p>';
   }
   if (!safeMode && c) {
     const count = $('traits').querySelectorAll('.trait-card').length;
     $('traits').insertAdjacentHTML('beforeend', '<div style="grid-column:1/-1;display:flex;gap:8px"><button data-action="trait-prev" '+(!traitPage?'disabled':'')+'>‹ Předchozí</button><span>Strana '+(traitPage+1)+'</span><button data-action="trait-next" '+(count<PAGE_SIZE?'disabled':'')+'>Další ›</button></div>');
   }
+  mountThumbnails();
   $('traitInfo').hidden = !selected;
   $('traitInfo').innerHTML = selected ? `<span class="eyebrow">VYBRANÝ TRAIT</span><strong class="selected-name">${esc(selected.name)}</strong><div class="trait-info-actions">${button('rename-trait', 'Přejmenovat', selected.id, 'edit')}${button('delete-trait', 'Smazat', selected.id, 'trash', 'class="danger"')}</div>` : '';
 }
@@ -231,8 +236,8 @@ function renderSnapshotLayerLibrary() {
   const openCategories = libraryOpen;
   container.innerHTML = state.cats.length ? state.cats.map((c, i) => {
     const selected = c.traits.find(t => t.id === state.selected[c.id]);
-    const items = !safeMode && inspectorPanel === 'snapshots' && openCategories.has(c.id) && c.traits.length ? c.traits.slice((libraryPages[c.id] || 0) * PAGE_SIZE, ((libraryPages[c.id] || 0) + 1) * PAGE_SIZE).map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (t.id === selected?.id ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + (t.id === selected?.id) + '" title="' + esc(t.name) + '"><img src="' + t.data + '" alt="" loading="lazy"></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span>' + traitCategorySelect(t, c.id) + '</div>').join('') : '<p class="empty-list">Rozbal kategorii pro načtení náhledů.</p>';
-    return '<details class="library-category" data-category="' + esc(c.id) + '"><summary><span class="layer-index">' + String(i + 1).padStart(2, '0') + '</span><span class="library-category-name">' + esc(c.name) + '</span>' + (!safeMode && openCategories.has(c.id) && selected ? '<img class="library-current" src="' + selected.data + '" alt="" loading="lazy">' : '<span class="library-current-empty">∅</span>') + '<span class="library-count">' + c.traits.length + ' traitů</span></summary><button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="' + esc(c.id) + '" title="Přidat PNG do ' + esc(c.name) + '" aria-label="Přidat PNG do ' + esc(c.name) + '">' + icon('plus') + '</button><div class="library-traits">' + items + (openCategories.has(c.id) && !safeMode ? '<div style="grid-column:1/-1;display:flex;gap:8px">'+button('library-prev','‹',c.id,'',!(libraryPages[c.id]||0)?'disabled':'')+'<span>Strana '+((libraryPages[c.id]||0)+1)+'</span>'+button('library-next','›',c.id,'',((libraryPages[c.id]||0)+1)*PAGE_SIZE>=c.traits.length?'disabled':'')+'</div>' : '') + '</div></details>';
+    const items = !safeMode && inspectorPanel === 'snapshots' && openCategories.has(c.id) && c.traits.length ? c.traits.slice((libraryPages[c.id] || 0) * PAGE_SIZE, ((libraryPages[c.id] || 0) + 1) * PAGE_SIZE).map(t => '<div class="library-trait-item"><div class="library-trait-preview"><button class="library-trait ' + (t.id === selected?.id ? 'is-selected' : '') + '" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" aria-pressed="' + (t.id === selected?.id) + '" title="' + esc(t.name) + '"><img ' + imageAttributes(t.data) + ' alt="" loading="lazy"></button><div class="library-trait-actions">' + tool('rename-trait', 'Přejmenovat ' + t.name, t.id, 'edit') + tool('delete-trait', 'Smazat ' + t.name, t.id, 'trash', false, true) + '</div></div><span class="library-trait-name">' + esc(t.name) + '</span>' + traitCategorySelect(t, c.id) + '</div>').join('') : '<p class="empty-list">Rozbal kategorii pro načtení náhledů.</p>';
+    return '<details class="library-category" data-category="' + esc(c.id) + '"><summary><span class="layer-index">' + String(i + 1).padStart(2, '0') + '</span><span class="library-category-name">' + esc(c.name) + '</span>' + (!safeMode && openCategories.has(c.id) && selected ? '<img class="library-current" ' + imageAttributes(selected.data) + ' alt="" loading="lazy">' : '<span class="library-current-empty">∅</span>') + '<span class="library-count">' + c.traits.length + ' traitů</span></summary><button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="' + esc(c.id) + '" title="Přidat PNG do ' + esc(c.name) + '" aria-label="Přidat PNG do ' + esc(c.name) + '">' + icon('plus') + '</button><div class="library-traits">' + items + (openCategories.has(c.id) && !safeMode ? '<div style="grid-column:1/-1;display:flex;gap:8px">'+button('library-prev','‹',c.id,'',!(libraryPages[c.id]||0)?'disabled':'')+'<span>Strana '+((libraryPages[c.id]||0)+1)+'</span>'+button('library-next','›',c.id,'',((libraryPages[c.id]||0)+1)*PAGE_SIZE>=c.traits.length?'disabled':'')+'</div>' : '') + '</div></details>';
   }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
   for (const details of container.querySelectorAll('.library-category')) {
     details.open = openCategories.has(details.dataset.category);
@@ -241,6 +246,34 @@ function renderSnapshotLayerLibrary() {
       if (details.open) { libraryOpen.clear(); libraryOpen.add(details.dataset.category); } else libraryOpen.delete(details.dataset.category);
       renderSnapshotLayerLibrary();
     });
+  }
+  mountThumbnails();
+}
+const thumbnailURLs = new Map(), thumbnailQueue = new Set(), thumbnailWatching = new Set();
+let thumbnailJobs = 0;
+const thumbnailObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+  for(const entry of entries)if(entry.isIntersecting){thumbnailObserver.unobserve(entry.target);thumbnailWatching.delete(entry.target);thumbnailQueue.add(entry.target);}
+  pumpThumbnails();
+}, {rootMargin:'80px'}) : null;
+function imageAttributes(data) { return TraitStorage.isAsset(data) ? 'data-asset="'+esc(data)+'"' : 'src="'+esc(data)+'"'; }
+function mountThumbnails() {
+  for(const [img,url] of thumbnailURLs)if(!img.isConnected){URL.revokeObjectURL(url);thumbnailURLs.delete(img);}
+  for(const img of thumbnailWatching)if(!img.isConnected){thumbnailObserver?.unobserve(img);thumbnailWatching.delete(img);}
+  for(const img of document.querySelectorAll('img[data-asset]')) {
+    if(img.dataset.assetLoading || thumbnailWatching.has(img))continue;
+    if(thumbnailObserver){thumbnailWatching.add(img);thumbnailObserver.observe(img);}else thumbnailQueue.add(img);
+  }
+  pumpThumbnails();
+}
+function pumpThumbnails() {
+  while(thumbnailJobs<2 && thumbnailQueue.size) {
+    const img=thumbnailQueue.values().next().value;thumbnailQueue.delete(img);
+    if(!img.isConnected || img.dataset.assetLoading)continue;
+    img.dataset.assetLoading='true';thumbnailJobs++;
+    TraitStorage.imageBlob(db,img.dataset.asset).then(blob=>{
+      if(!img.isConnected)return;
+      const url=URL.createObjectURL(blob);thumbnailURLs.set(img,url);img.src=url;img.removeAttribute('data-asset');
+    }).catch(()=>{if(img.isConnected)img.alt='Náhled nelze načíst';}).finally(()=>{thumbnailJobs--;pumpThumbnails();});
   }
 }
 function visibleLayers(project) {
@@ -264,10 +297,14 @@ async function paintLayers(canvas, layers, valid = () => true) {
   ctx.clearRect(0, 0, 1024, 1024);
   for (const trait of layers) {
     if (!valid()) return;
-    const image = await decodeImage(trait.data);
-    if (!valid()) { image.src = ''; return; }
-    ctx.drawImage(image, 0, 0, 1024, 1024);
-    image.src = '';
+    let url=null,image;
+    try {
+      const source=TraitStorage.isAsset(trait.data) ? (url=URL.createObjectURL(await TraitStorage.imageBlob(db,trait.data))) : trait.data;
+      if(!valid())return;
+      image=await decodeImage(source);
+      if(!valid())return;
+      ctx.drawImage(image,0,0,1024,1024);
+    } finally { if(image)image.src='';if(url)URL.revokeObjectURL(url); }
   }
 }
 function paint(canvas, images) {
@@ -383,10 +420,10 @@ async function exportPackage() {
       entries.push({ name: root + '/' + folder + '/', data: new Uint8Array(0) });
       for (const [traitIndex, trait] of category.traits.entries()) {
         const traitName = String(traitIndex + 1).padStart(3, '0') + ' ' + filename(trait.name);
-        entries.push({ name: root + '/' + folder + '/' + traitName + '.png', data: pngBytes(trait.data) });
+        entries.push({ name: root + '/' + folder + '/' + traitName + '.png', data: new Uint8Array(await (await TraitStorage.imageBlob(db,trait.data)).arrayBuffer()) });
       }
     }
-    entries.push({ name: root + '/project.json', data: new TextEncoder().encode(JSON.stringify(project, null, 2)) });
+    entries.push({ name: root + '/project.json', data: new Uint8Array(await (await TraitStorage.backup(db,project)).arrayBuffer()) });
     entries.push({ name: root + '/final.png', data: new Uint8Array(await finalBlob.arrayBuffer()) });
     download(zipStored(entries), root + '.zip'); toast('ZIP balíček projektu je připravený ke stažení');
   } finally { busy = false; render(); }
@@ -611,7 +648,13 @@ async function handleAction(action, id, element) {
       if (!db) { toast('Nejdřív stáhni Zálohu JSON. Úložiště není otevřené.', true); break; }
       if (await flushSave()) toast('Projekt je uložený v zařízení');
       break;
-    case 'save-project': download(new Blob([JSON.stringify(state)], { type: 'application/json' }), `${filename(state.name)}.json`); toast('Záloha projektu je připravená ke stažení'); break;
+    case 'save-project': {
+      if(busy)return;
+      const project=M.clone(state);busy=true;render();storageStatus('Připravuji zálohu po vrstvách…');
+      try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');storageStatus('Záloha dokončena'); }
+      finally {busy=false;render();}
+      break;
+    }
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
     case 'undo': restoreHistory(); break;
@@ -727,7 +770,7 @@ async function init() {
   try {
     db = await openStorage();
     const saved = await storedProject();
-    if (saved) state = M.normalize(saved);
+    if (saved) state = M.normalize(saved, { allowStoredAssets: true });
     storageStatus(saved ? 'Projekt obnoven z tohoto zařízení' : 'Automatické ukládání je zapnuté');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }

@@ -33,3 +33,22 @@ body{padding:0 0 calc(86px + env(safe-area-inset-bottom))}.app-header{padding:12
 @media(max-width:900px) and (orientation:landscape){
 body{padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left))}.app-header{padding:6px 10px;grid-template-columns:auto 1fr}.app-header .toolbar{grid-row:2}.app-header .header-end{display:flex}.project-bar{display:none}.app-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:48px minmax(0,1fr);grid-template-areas:'tabs stage' 'settings stage';height:calc(100dvh - 120px);min-height:180px;overflow:hidden}.workspace-tabs{position:static;grid-area:tabs;padding:0;background:none;border:0;backdrop-filter:none}.workspace-tabs button{min-height:44px;flex-direction:row;font-size:10px}.layers-panel,.inspector{grid-area:settings;overflow:auto;max-height:100%;min-height:0}.stage{grid-area:stage;overflow:auto;max-height:100%;position:static}.canvas-wrap{width:min(100%,60dvh)}.toast{bottom:12px}
 }
+/* Touch feedback and explicit drop states; no persistent hover on touch screens. */
+button,.category-card,.organizer-folder-row,.trait-entry,.library-trait,select{transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .14s ease}
+@media(hover:hover) and (pointer:fine){
+ .category-card:hover,.trait-entry:hover{border-color:#64bfa3;box-shadow:0 3px 16px #0003}
+ .organizer-folder-row:hover{background-color:#19352c;border-color:#3e826b}
+ .drag-handle:hover{color:#91ffdb;background:#245c48!important}
+ .library-trait:hover{border-color:#60eac0;transform:translateY(-2px)}
+}
+button:active:not(:disabled){transform:scale(.97);border-color:#8affd8;box-shadow:inset 0 0 0 1px #64efbd55;background-color:#24543f}
+button.primary:active:not(:disabled){background:#8bffd3}
+button:focus-visible,select:focus-visible{outline:2px solid #86ffda;outline-offset:3px}
+.category-card.is-active,.trait-card.is-selected,.library-trait.is-selected,.organizer-folder-row.is-selected{box-shadow:inset 3px 0 #65f7c5,0 0 0 1px #55e9b726}
+.drop-row.is-lifted{opacity:.6;background:#1c4938;border-color:#83ffd3}
+.drag-ghost{transform:rotate(-2deg) scale(1.025);background:#174936f5;box-shadow:0 16px 36px #0008,0 0 20px #42efad25}
+.drop-before::before,.drop-after::after{content:"";position:absolute;left:4px;right:4px;height:4px;border-radius:4px;background:#8affd7;box-shadow:0 0 12px #43f4ac88;pointer-events:none;z-index:3}
+.drop-before::before{top:-3px}.drop-after::after{bottom:-3px}
+.drop-inside{box-shadow:inset 0 0 20px #4bffc51a!important}
+.is-dragging-layer,.is-dragging-layer *{scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){button,.category-card,.organizer-folder-row,.trait-entry,.library-trait,select{transition:none}.drag-ghost,.library-trait:hover,button:active:not(:disabled){transform:none}}
