@@ -400,3 +400,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
  .compact-header .compact-toolbar{gap:clamp(4px,2vw,11px)!important}
 }
 @media(max-width:360px){.compact-header .compact-tool{width:32px!important;min-width:32px!important;flex-basis:32px!important;height:34px!important;min-height:34px!important}.compact-header .compact-toolbar{gap:3px!important}}
+
+/* Three-item overflow: Rules / Export / History. */
+.header-menu-content{width:205px!important}
+.header-menu-content>.history-menu{border-top:1px solid #44313e;margin-top:3px;padding-top:3px}
+.header-menu-content>.history-menu>summary{display:flex;align-items:center;gap:10px;min-height:39px;padding:8px 10px;border-radius:8px;cursor:pointer;color:#f1e6ee;font-size:12px;list-style:none}
+.header-menu-content>.history-menu>summary::-webkit-details-marker{display:none}
+.header-menu-content>.history-menu>summary:hover{background:#382031}
+.header-menu-content>.history-menu>summary .icon{width:17px;height:17px}
+.history-menu-body{padding:7px 4px 3px;color:#bca9b9;font-size:11px}
+.history-menu-actions{display:flex;gap:5px;margin-top:7px}
+.header-menu-content .history-menu-actions button{flex:1;justify-content:center!important;gap:4px!important;font-size:11px!important;background:#251b27!important;border:1px solid #574056!important}
