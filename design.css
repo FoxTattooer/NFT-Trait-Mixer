@@ -606,3 +606,23 @@ dialog.history-dialog{
  .stage{grid-area:stage!important;position:static!important;align-self:stretch!important;max-height:100%!important;overflow:hidden!important}
  .stage .canvas-wrap{max-height:100%!important;max-width:100%!important}
 }
+
+/* Landscape-only header actions and info; leave portrait preview footer untouched. */
+.landscape-preview-actions[hidden],.landscape-info-bubble[hidden]{display:none!important}
+.landscape-preview-actions{display:none;position:relative;align-items:center;gap:7px;flex:1 1 auto;justify-content:center;min-width:0}
+.landscape-preview-actions>button{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;padding:8px;border-radius:11px;border:1px solid #a73c76;background:#24131f;color:#ffc1dd;box-shadow:0 0 8px #f02c8a33}
+.landscape-preview-actions>button .icon{width:20px;height:20px}
+.landscape-preview-actions>button:disabled{opacity:.35}
+.landscape-info-bubble{position:absolute;z-index:80;top:calc(100% + 8px);right:10px;display:flex;flex-direction:column;gap:5px;min-width:190px;padding:12px;border-radius:12px;border:1px solid #b54480;background:#211522;color:#f6deed;box-shadow:0 12px 30px #000a;font-size:12px}
+.header-menu-content{z-index:9999!important}
+.app-header.compact-header{overflow:visible!important}
+@media(max-width:1200px) and (max-height:650px) and (orientation:landscape){
+ .app-header.compact-header{position:relative!important;z-index:100!important}
+ .project-bar{display:flex!important;align-items:center!important}
+ .landscape-preview-actions:not([hidden]){display:flex!important}
+ .stage .preview-meta{display:none!important}
+ .stage{overflow:hidden!important;min-height:0!important}
+ .stage .canvas-wrap{width:min(100%,calc(100dvh - 155px))!important;height:auto!important;aspect-ratio:1!important;max-height:100%!important;flex:0 1 auto!important;align-self:center!important;margin:auto!important}
+ .stage .canvas-wrap canvas{width:100%!important;height:100%!important;object-fit:contain!important}
+ .header-menu-content{max-height:calc(100dvh - 90px)!important;overflow-y:auto!important}
+}
