@@ -489,3 +489,43 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
  .compact-header .brand img{width:34px!important;height:34px!important}
  .compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{width:34px!important;min-width:34px!important;flex-basis:34px!important}
 }
+
+/* iPhone header: more substantial controls, vertically centered and safely below status bar. */
+.app-header.compact-header{
+ min-height:82px!important;
+ padding-top:max(20px,env(safe-area-inset-top))!important;
+ padding-bottom:17px!important;
+ align-items:center!important;
+}
+.compact-header .brand{flex-basis:46px!important;width:46px!important;min-width:46px!important}
+.compact-header .brand img{width:46px!important;height:46px!important;object-fit:contain!important}
+.compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{
+ width:45px!important;min-width:45px!important;height:46px!important;min-height:46px!important;
+ border-radius:12px!important;padding:10px!important;
+}
+.compact-header .compact-tool{flex:0 0 45px!important}
+.compact-header .compact-tool .icon,.compact-header .header-refresh .icon,.compact-header .header-menu>summary .icon{width:21px!important;height:21px!important}
+@media(max-width:900px){
+ .app-header.compact-header{
+  min-height:84px!important;padding: max(20px,env(safe-area-inset-top)) 10px 18px!important;gap:4px!important;
+ }
+ .compact-header .brand{flex-basis:43px!important;width:43px!important;min-width:43px!important}
+ .compact-header .brand img{width:43px!important;height:43px!important}
+ .compact-header .compact-toolbar{gap:clamp(3px,1.1vw,7px)!important}
+ .compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{
+  width:43px!important;min-width:43px!important;height:45px!important;min-height:45px!important;padding:9px!important;
+ }
+ .compact-header .compact-tool{flex:0 0 43px!important}
+ .compact-header .compact-header-end{gap:5px!important}
+}
+@media(max-width:375px){
+ .app-header.compact-header{padding-left:7px!important;padding-right:7px!important;gap:3px!important}
+ .compact-header .brand{flex-basis:38px!important;width:38px!important;min-width:38px!important}
+ .compact-header .brand img{width:38px!important;height:38px!important}
+ .compact-header .compact-toolbar{gap:2px!important}
+ .compact-header .compact-tool,.compact-header .header-refresh,.compact-header .header-menu>summary{
+  width:38px!important;min-width:38px!important;height:43px!important;min-height:43px!important;padding:8px!important;
+ }
+ .compact-header .compact-tool{flex:0 0 38px!important}
+ .compact-header .compact-header-end{gap:3px!important}
+}
