@@ -42,19 +42,30 @@
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3Z"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4M10 5h4"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6"/></symbol>
   </svg>
 
-  <header class="app-header">
-    <div class="brand"><img src="icons/icon-192-v073.png" width="48" height="48" alt=""><span><strong>NFT Trait Mixer</strong><small>NFT trait mixer app by Fox Tattooer</small></span></div>
-  <div class="toolbar" aria-label="Akce projektu">
-    <div class="toolbar-group"><button data-action="new-project" class="subtle"><svg class="icon"><use href="#i-plus"/></svg>Nový</button><button id="load" data-action="open-project" class="subtle"><svg class="icon"><use href="#i-folder"/></svg>Otevřít</button><button id="save" data-action="save-project" class="subtle" title="Stáhnout zálohu včetně obrázků"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button></div>
-    <button id="importPsd" type="button" class="subtle" title="Načíst vrstvy a skupiny z Photoshopu">Import PSD</button>
-    <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
-    <button id="export" data-action="export" class="primary" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
-    <input id="projectFile" type="file" accept="application/json,.json" hidden>
-  </div>
-    <div class="header-end"><span class="version">v0.7.5</span><button data-action="show-panel" data-panel="rules" class="subtle" aria-pressed="false"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi" aria-label="Aktualizovat aplikaci"><svg class="icon"><use href="#i-refresh"/></svg><span>Aktualizovat</span></button><button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg><span>Do telefonu</span></button></div>
+  <header class="app-header compact-header">
+    <div class="brand"><img src="icons/icon-192-v073.png" width="40" height="40" alt="NFT Trait Mixer"></div>
+    <div class="toolbar compact-toolbar" aria-label="Akce projektu">
+      <button data-action="new-project" class="subtle compact-tool" aria-label="Nový projekt" title="Nový projekt"><svg class="icon"><use href="#i-plus"/></svg></button>
+      <button id="load" data-action="open-project" class="subtle compact-tool" aria-label="Otevřít projekt" title="Otevřít projekt"><svg class="icon"><use href="#i-folder"/></svg></button>
+      <button id="save" data-action="save-project" class="subtle compact-tool" aria-label="Záloha JSON" title="Záloha JSON"><svg class="icon"><use href="#i-download"/></svg></button>
+      <button id="importPsd" type="button" class="subtle compact-tool psd-tool" aria-label="Import PSD" title="Import PSD">PSD</button>
+      <button id="export" data-action="export" class="primary compact-tool" aria-label="Export PNG" title="Export PNG" disabled><svg class="icon"><use href="#i-download"/></svg></button>
+      <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
+      <input id="projectFile" type="file" accept="application/json,.json" hidden>
+    </div>
+    <div class="header-end compact-header-end">
+      <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
+        <div class="header-menu-content">
+          <button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button>
+          <button id="refreshApp" data-action="refresh-app" class="subtle refresh-button" title="Načíst nejnovější verzi"><svg class="icon"><use href="#i-refresh"/></svg>Aktualizovat</button>
+          <button id="install" data-action="install" class="subtle"><svg class="icon"><use href="#i-phone"/></svg>Do telefonu</button>
+        </div>
+      </details>
+    </div>
   </header>
   <div class="project-bar">
     <div class="project-heading"><button id="projectName" data-action="rename-project" class="project-name" title="Přejmenovat projekt">Můj NFT projekt</button><span id="saveStatus" class="save-status" role="status">Načítání projektu…</span></div>
