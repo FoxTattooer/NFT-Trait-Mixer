@@ -820,3 +820,15 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  .stage #quickTraits{display:none!important}
  .stage #warnings:empty{display:none!important}
 }
+
+/* Landscape: give the preview 60% and keep a usable 40% editor. */
+@media (orientation:landscape) and (max-height:650px) and (max-width:1200px){
+ .app-layout{grid-template-columns:minmax(0,2fr) minmax(0,3fr)!important}
+ .layers-panel,.inspector{min-width:0!important}
+ .stage .canvas-wrap{
+  width:min(100%,calc(100dvh - 120px))!important;
+  height:min(100%,calc(100dvh - 120px))!important;
+  max-width:100%!important;max-height:100%!important;
+  aspect-ratio:1!important;
+ }
+}
