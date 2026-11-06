@@ -927,3 +927,20 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  .app-header>.landscape-header-tools .icon{width:18px;height:18px}
  .app-header>.landscape-preview-actions,.app-header>.history-actions{display:none!important}
 }
+
+/* v0.7.52: one and only one landscape action group, matching original layout. */
+.landscape-header-tools{display:none!important}
+@media (orientation:landscape){
+ .app-header>.landscape-preview-actions:not([hidden]){
+  display:flex!important;position:static!important;visibility:visible!important;
+  align-items:center!important;justify-content:center!important;gap:7px!important;
+  flex:0 0 auto!important;min-width:0!important;
+ }
+ .app-header>.landscape-preview-actions>button{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;
+  padding:6px!important;
+ }
+ .app-header>.history-actions{display:flex!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important}
+ .app-header>.history-actions>button{width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:6px!important}
+}
