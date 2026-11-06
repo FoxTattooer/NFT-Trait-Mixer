@@ -102,8 +102,8 @@ const schemeProject = JSON.stringify(w.inspectState());
 click('[data-action="open-settings"]');assert(get('settingsDialog').open);
 assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-group')].map(group =>
   [...group.querySelectorAll('[data-scheme]')].map(button => button.textContent.trim())
-), [['Magic Eden', 'Magic Eden Blue'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White']]);
-for (const scheme of ['blue', 'amber', 'violet', 'icy', 'deep-water', 'mono']) {
+), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon'], ['Icy', 'Deep Water Blue', 'Black & White']]);
+for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono']) {
   const selector = `[data-scheme="${scheme}"]`;
   click(selector);
   assert.equal(w.document.body.dataset.colorScheme, scheme);
@@ -231,7 +231,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.66'));
+assert(get('toast').textContent.includes('v0.7.67'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

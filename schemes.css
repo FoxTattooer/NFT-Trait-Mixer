@@ -2,19 +2,29 @@
 body.compact-workspace,
 .scheme-grid [data-scheme=pink] {
   --scheme-bg:#0d0a11;--scheme-panel:#18121d;--scheme-control:#231925;
-  --scheme-stroke:#654358;--scheme-accent:#ff399b;--scheme-text:#f6c5e2;
+  --scheme-stroke:#654358;--scheme-accent:#ff63b4;--scheme-text:#f6c5e2;
   --scheme-wash:#3c1f36;--scheme-primary:#8b1853;--scheme-primary-end:#47132f;
   --scheme-glow:#ef459f50;
   --scheme-sheen:#ffffff18;
   --scheme-panel-surface:linear-gradient(155deg,var(--scheme-panel),var(--scheme-bg));
   --scheme-frame-shadow:0 0 0 1px var(--scheme-accent),0 0 12px var(--scheme-glow);
-  --scheme-active-surface:linear-gradient(180deg,var(--scheme-primary),var(--scheme-primary-end));
+  --scheme-active-surface:linear-gradient(145deg,var(--scheme-primary),var(--scheme-primary-end));
 }
 :is(body[data-color-scheme=blue],.scheme-grid [data-scheme=blue]) {
   --scheme-bg:#0a0d15;--scheme-panel:#111826;--scheme-control:#182237;
   --scheme-stroke:#435f89;--scheme-accent:#73b4ff;--scheme-text:#c7e1ff;
   --scheme-wash:#1e3352;--scheme-primary:#234b8a;--scheme-primary-end:#162b50;
   --scheme-glow:#4c94ff52;
+}
+:is(body[data-color-scheme=eden-new],.scheme-grid [data-scheme=eden-new]) {
+  --scheme-bg:#0c0813;--scheme-panel:#1b1028;--scheme-control:#2c1a3c;
+  --scheme-stroke:#785487;--scheme-accent:#ff79c6;--scheme-text:#ffe1f5;
+  --scheme-wash:#48264d;--scheme-primary:#9a287a;--scheme-primary-end:#4a2b81;
+  --scheme-glow:#d74ade58;
+  --scheme-sheen:#ffc5f453;
+  --scheme-panel-surface:radial-gradient(ellipse at top left,#3a1744,var(--scheme-panel) 57%,#101125);
+  --scheme-active-surface:linear-gradient(120deg,var(--scheme-primary),#6e2a87 58%,var(--scheme-primary-end));
+  --scheme-frame-shadow:0 0 0 1px #ff93d66b,0 0 15px #ff4abb52,0 10px 25px #7458ee6b;
 }
 :is(body[data-color-scheme=violet],.scheme-grid [data-scheme=violet]) {
   --scheme-bg:#100c16;--scheme-panel:#181124;--scheme-control:#231936;
@@ -102,6 +112,7 @@ body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount
   background:linear-gradient(110deg,var(--scheme-bg) 8%,var(--scheme-primary) 49%,var(--scheme-accent) 88%);
   box-shadow:inset 0 1px var(--scheme-sheen);
 }
+.scheme-grid [data-scheme=eden-new] .scheme-swatch {background:linear-gradient(115deg,#34133e,#f258bc 43%,#9d79f8 73%,#a7dbff)}
 .scheme-grid [data-scheme=violet] .scheme-swatch {background:linear-gradient(115deg,#211335,#8058d8 57%,#ea79bb)}
 .scheme-grid [data-scheme=amber] .scheme-swatch {background:linear-gradient(172deg,#ffda9b,#9e5e2e 50%,#3b2415 54%,#b7783e)}
 .scheme-grid [data-scheme=icy] .scheme-swatch {background:linear-gradient(155deg,#3d596b,#e1f8ff 45%,#83aec3 53%,#536b81)}
@@ -113,65 +124,78 @@ body.compact-workspace .layer-panel-actions :is(#compactToggle,#addCat,#catCount
   border-radius:50%;background:var(--scheme-accent);color:var(--scheme-bg);font-weight:800;
 }
 
-/* Shared chrome keeps both Magic Eden variants in the same style. */
-body.compact-workspace[data-color-scheme] {
+/* Preserve the original Magic Eden and Magic Eden Blue chrome. */
+body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) {
   --mint:var(--scheme-text);--purple:var(--scheme-accent);--accent:var(--scheme-accent);
   --bg:var(--scheme-bg);--panel:var(--scheme-panel);--line:var(--scheme-stroke);
+  background:radial-gradient(ellipse at 50% -15%,var(--scheme-panel),var(--scheme-bg) 64%);
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.panel,.stage,.workspace-tabs,.quick-traits,.organizer-tree,.trait-entry,.snapshot-library,.saved-card) {
+  background:var(--scheme-panel);border-color:var(--scheme-stroke);
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) .app-header {border-bottom-color:var(--scheme-accent)!important}
+body[data-color-scheme]:not([data-color-scheme=pink]) .stage .canvas-wrap {
+  border-color:var(--scheme-accent)!important;box-shadow:var(--scheme-frame-shadow)!important;
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-row,.category-card,.library-category,.snapshot-tile,.category-sort-row,.history-entry,.version-history-entry) {
+  background:var(--scheme-control);border-color:var(--scheme-stroke);
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-folder,.layer-tree-main[aria-pressed=true],.organizer-folder-row.is-selected,.organizer-all.is-selected,.category-sort-row.is-sorting) {
+  background:var(--scheme-wash)!important;color:var(--scheme-text)!important;border-color:var(--scheme-stroke)!important;
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) .layer-tree-row::before {background:var(--scheme-stroke)}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-check,.layer-tree-eye[aria-pressed=true],.layer-tree-folder .layer-tree-main,.category-sort-head h2 span,.version-tag) {color:var(--scheme-text)}
+body[data-color-scheme]:not([data-color-scheme=pink]) #cats .category-card.is-active,
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.quick-trait.is-selected,.trait-card.is-selected,.library-trait.is-selected,.snapshot-art) {
+  border-color:var(--scheme-accent)!important;box-shadow:0 0 9px var(--scheme-glow)!important;
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.quick-check,.version-dot) {background:var(--scheme-accent);color:var(--scheme-bg);box-shadow:0 0 8px var(--scheme-glow)}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(button.primary,.workspace-tabs button.is-active,.inspector-tabs button.is-active) {
+  background:var(--scheme-active-surface)!important;
+  border-color:var(--scheme-accent)!important;color:#fff!important;box-shadow:0 0 10px var(--scheme-glow)!important;
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(button.outline,button.accent,.header-menu summary,.app-header .history-actions button) {
+  background:var(--scheme-control);border-color:var(--scheme-stroke);color:var(--scheme-text);
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu[open]>summary,.header-menu-content button:hover,.layer-tree-more[aria-expanded=true],.layer-tree-row .layer-tree-main:hover:not(:disabled)) {
+  background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;box-shadow:0 0 8px var(--scheme-glow)!important;
+}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(dialog,.header-menu-content,.layer-context) {background:var(--scheme-panel)!important;border-color:var(--scheme-stroke)!important}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button,.app-header .header-menu-content button .icon,.library-category>summary) {
+  background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
+}
+body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp {
+  background:linear-gradient(145deg,var(--scheme-control),var(--scheme-panel))!important;border-color:var(--scheme-stroke)!important;
+  box-shadow:0 2px 9px var(--scheme-glow)!important;
+}
+body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp[data-update-state=available] {
+  background:var(--scheme-active-surface)!important;border-color:var(--scheme-accent)!important;
+}
+body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) #refreshApp :is(.icon,#refreshLabel,.app-version) {color:var(--scheme-text)!important}
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(button,summary,input,select,a):focus-visible {outline-color:var(--scheme-accent)!important}
+
+/* Richer surfaces for the palettes beyond the two Magic Eden variants. */
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) {
   background:radial-gradient(ellipse at 50% -15%,var(--scheme-control),var(--scheme-bg) 64%);
   accent-color:var(--scheme-accent);
 }
-body[data-color-scheme] :is(.panel,.stage,.workspace-tabs,.quick-traits,.organizer-tree,.trait-entry,.snapshot-library,.saved-card) {
-  background:var(--scheme-panel);border-color:var(--scheme-stroke);
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.stage,.panel) {
+  background:var(--scheme-panel-surface)!important;border-color:var(--scheme-stroke)!important;
 }
-body[data-color-scheme] :is(.stage,.panel) {background:var(--scheme-panel-surface)}
-body.compact-workspace[data-color-scheme] .app-header.compact-header {
-  background:var(--scheme-bg)!important;border-bottom-color:var(--scheme-accent)!important;
-  box-shadow:0 2px 10px var(--scheme-glow)!important;
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .app-header.compact-header {
+  background:var(--scheme-bg)!important;box-shadow:0 2px 10px var(--scheme-glow)!important;
 }
-body[data-color-scheme] .stage .canvas-wrap {
-  border-color:var(--scheme-accent)!important;box-shadow:var(--scheme-frame-shadow)!important;
-}
-body[data-color-scheme] :is(.layer-tree-row,.category-card,.library-category,.snapshot-tile,.category-sort-row,.history-entry,.version-history-entry) {
-  background:var(--scheme-control);border-color:var(--scheme-stroke);
-}
-body[data-color-scheme] :is(.layer-tree-folder,.layer-tree-main[aria-pressed=true],.organizer-folder-row.is-selected,.organizer-all.is-selected,.category-sort-row.is-sorting) {
-  background:var(--scheme-wash)!important;color:var(--scheme-text)!important;border-color:var(--scheme-stroke)!important;
-}
-body[data-color-scheme] .layer-tree-row::before {background:var(--scheme-stroke)}
-body[data-color-scheme] :is(.layer-tree-check,.layer-tree-eye[aria-pressed=true],.layer-tree-folder .layer-tree-main,.category-sort-head h2 span,.version-tag) {color:var(--scheme-text)}
-body[data-color-scheme] #cats .category-card.is-active,
-body[data-color-scheme] :is(.quick-trait.is-selected,.trait-card.is-selected,.library-trait.is-selected,.snapshot-art) {
-  border-color:var(--scheme-accent)!important;box-shadow:0 0 9px var(--scheme-glow)!important;
-}
-body[data-color-scheme] :is(.quick-check,.version-dot) {background:var(--scheme-accent);color:var(--scheme-bg);box-shadow:0 0 8px var(--scheme-glow)}
-body[data-color-scheme] :is(button.primary,.workspace-tabs button.is-active,.inspector-tabs button.is-active) {
-  background:var(--scheme-active-surface)!important;
-  border-color:var(--scheme-accent)!important;color:#fff!important;
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue]))
+:is(button.primary,.workspace-tabs button.is-active,.inspector-tabs button.is-active) {
   box-shadow:inset 0 1px var(--scheme-sheen),0 0 10px var(--scheme-glow)!important;
 }
-body[data-color-scheme] :is(button.outline,button.accent,.header-menu summary,.app-header .history-actions button) {
-  background:var(--scheme-control);border-color:var(--scheme-stroke);color:var(--scheme-text);
-}
-body[data-color-scheme] :is(.header-menu[open]>summary,.layer-tree-more[aria-expanded=true]) {
-  background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;box-shadow:0 0 8px var(--scheme-glow)!important;
-}
-body[data-color-scheme] :is(dialog,.header-menu-content,.layer-context) {background:var(--scheme-panel)!important;border-color:var(--scheme-stroke)!important}
-body[data-color-scheme] :is(.layer-context button,.app-header .header-menu-content button .icon,.library-category>summary) {
-  background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
-}
-body.compact-workspace[data-color-scheme] .app-header #refreshApp {
-  background:linear-gradient(145deg,var(--scheme-control),var(--scheme-panel))!important;border-color:var(--scheme-stroke)!important;
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .app-header #refreshApp {
   box-shadow:inset 0 1px var(--scheme-sheen),0 2px 9px var(--scheme-glow)!important;
 }
-body.compact-workspace[data-color-scheme] .app-header #refreshApp[data-update-state=available] {
-  background:var(--scheme-active-surface)!important;border-color:var(--scheme-accent)!important;
-}
-body.compact-workspace[data-color-scheme] #refreshApp :is(.icon,#refreshLabel,.app-version) {color:var(--scheme-text)!important}
-body[data-color-scheme] :is(button,summary,input,select,a):focus-visible {outline-color:var(--scheme-accent)!important}
 
 /* Tie the older controls and drag indicators to the same palette. */
-body.compact-workspace[data-color-scheme] #quickUploadPng,
-body.compact-workspace[data-color-scheme] :is(
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) #quickUploadPng,
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(
   .app-header .header-menu>summary,.app-header .history-actions>button,
   .workspace-tabs button:not(.is-active),.layer-stepper,.quick-traits-head>button,
   .quick-traits-next,.trait-visibility,.count
@@ -180,32 +204,32 @@ body.compact-workspace[data-color-scheme] :is(
   border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
   box-shadow:inset 0 1px var(--scheme-sheen)!important;
 }
-body.compact-workspace[data-color-scheme] :is(.app-header summary .icon,.layer-context .icon,#quickUploadPng .icon) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.app-header summary .icon,.layer-context .icon,#quickUploadPng .icon) {
   color:var(--scheme-text)!important;
 }
-body.compact-workspace[data-color-scheme] :is(select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea) {
   background-color:var(--scheme-bg);border-color:var(--scheme-stroke);
 }
-body.compact-workspace[data-color-scheme] :is(.header-menu[open]>summary,.trait-visibility[aria-pressed=true]) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.header-menu[open]>summary,.trait-visibility[aria-pressed=true]) {
   background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;
 }
-body[data-color-scheme] :is(.category-sort-handle,.layer-tree-eye,.layer-context label) {color:var(--scheme-text)}
-body[data-color-scheme] :is(.drag-ghost,.drop-row.is-lifted,.drop-inside) {
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.category-sort-handle,.layer-tree-eye,.layer-context label) {color:var(--scheme-text)}
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.drag-ghost,.drop-row.is-lifted,.drop-inside) {
   background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;
   box-shadow:0 0 16px var(--scheme-glow)!important;
 }
-body[data-color-scheme] .drop-before {box-shadow:0 -3px var(--scheme-accent)!important}
-body[data-color-scheme] .drop-after {box-shadow:0 3px var(--scheme-accent)!important}
-body[data-color-scheme] .drop-before::before,
-body[data-color-scheme] .drop-after::after {
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .drop-before {box-shadow:0 -3px var(--scheme-accent)!important}
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .drop-after {box-shadow:0 3px var(--scheme-accent)!important}
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .drop-before::before,
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .drop-after::after {
   background:var(--scheme-accent);box-shadow:0 0 10px var(--scheme-glow);
 }
-body[data-color-scheme] .drop-inside {outline-color:var(--scheme-accent)!important}
-body[data-color-scheme] .category-sort-row.is-sorting {box-shadow:0 0 12px var(--scheme-glow)}
-body[data-color-scheme] :is(.history-dialog,.category-sort-dialog,.version-history-dialog) {
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .drop-inside {outline-color:var(--scheme-accent)!important}
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) .category-sort-row.is-sorting {box-shadow:0 0 12px var(--scheme-glow)}
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.history-dialog,.category-sort-dialog,.version-history-dialog) {
   box-shadow:0 20px 58px #000b,0 0 15px var(--scheme-glow)!important;
 }
-body[data-color-scheme] :is(.trait-card.is-selected,.library-trait.is-selected,.quick-trait.is-selected) {
+body[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.trait-card.is-selected,.library-trait.is-selected,.quick-trait.is-selected) {
   background:var(--scheme-wash);
 }
 
@@ -226,9 +250,12 @@ body[data-color-scheme=mono] .app-header #refreshApp[data-update-state=available
 }
 
 /* Use a distinct yellow interaction ring in Black & White. */
-body.compact-workspace[data-color-scheme] :is(button,summary,select):active:not(:disabled) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(button,summary,select):active:not(:disabled) {
   outline:2px solid var(--scheme-hover,var(--scheme-accent))!important;
   outline-offset:-2px;
+}
+body.compact-workspace[data-color-scheme] .scheme-grid button:active {
+  background:var(--scheme-card-bg);border-color:var(--scheme-accent);
 }
 body.compact-workspace[data-color-scheme=mono] :is(button,summary,select):active:not(:disabled) {
   border-color:var(--scheme-hover);background-color:var(--scheme-wash);
@@ -237,10 +264,13 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
   outline:2px solid var(--scheme-hover)!important;
 }
 @media (hover:hover) and (pointer:fine) {
-  body.compact-workspace[data-color-scheme] :is(.header-menu-content button,.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
+  body.compact-workspace[data-color-scheme] .scheme-grid button:hover {
+    background:var(--scheme-card-bg);border-color:var(--scheme-accent);
+  }
+  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(.header-menu-content button,.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
     background:var(--scheme-wash)!important;color:var(--scheme-text);
   }
-  body.compact-workspace[data-color-scheme] :is(button,summary,select):hover:not(:disabled):not(:focus-visible) {
+  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink],[data-color-scheme=blue])) :is(button,summary,select):hover:not(:disabled):not(:focus-visible) {
     outline:1px solid var(--scheme-hover,var(--scheme-accent))!important;
     outline-offset:-1px;
   }

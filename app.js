@@ -1142,7 +1142,7 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 }
 
 const colorSchemeKey = 'nft-color-scheme';
-const colorSchemes = new Set(['pink', 'blue', 'amber', 'violet', 'icy', 'deep-water', 'mono']);
+const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono']);
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
