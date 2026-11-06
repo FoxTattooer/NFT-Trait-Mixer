@@ -399,6 +399,7 @@ function render(keepPreview = false) {
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
+  syncLandscapeControls();
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
@@ -837,21 +838,31 @@ window.addEventListener('beforeinstallprompt', event => { event.preventDefault()
 window.addEventListener('appinstalled', () => { installPrompt = null; $('install').hidden = true; toast('Aplikace je přidaná na plochu'); });
 
 
-// Keep preview controls in the project title row only on iPhone landscape.
-// Moving the same DOM node preserves event delegation and current state.
-function positionPreviewMeta() {
-  const meta = document.querySelector('.stage .preview-meta, .project-bar > .preview-meta');
-  const bar = document.querySelector('.project-bar');
-  const stage = document.querySelector('.stage');
-  if (!meta || !bar || !stage) return;
+// Landscape controls are separate from the portrait footer; portrait DOM stays untouched.
+function syncLandscapeControls() {
   const landscape = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)').matches;
-  if (landscape && meta.parentElement !== bar) bar.insertBefore(meta, bar.querySelector('.history-actions'));
-  else if (!landscape && meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
+  const actions = $('landscapePreviewActions');
+  if (!actions) return;
+  actions.hidden = !landscape;
+  $('landscapeShuffle').disabled = $('random').disabled;
+  $('landscapeSnapshot').disabled = $('snapshot').disabled;
+  $('landscapeLayerCount').textContent = $('status').textContent;
+  if (!landscape) $('landscapeInfoBubble').hidden = true;
 }
-window.addEventListener('resize', positionPreviewMeta);
-window.addEventListener('orientationchange', positionPreviewMeta);
-positionPreviewMeta();
-
+function positionLandscapeMenu() {
+  const menu = document.querySelector('.header-menu');
+  const panel = menu?.querySelector('.header-menu-content');
+  if (!menu || !panel || !menu.open) return;
+  const rect = menu.getBoundingClientRect();
+  panel.style.position = 'fixed';
+  panel.style.top = Math.min(rect.bottom + 8, window.innerHeight - 150) + 'px';
+  panel.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+  panel.style.left = 'auto';
+}
+document.querySelector('.header-menu')?.addEventListener('toggle', positionLandscapeMenu);
+$('landscapeInfo')?.addEventListener('click', () => { syncLandscapeControls(); $('landscapeInfoBubble').hidden = !$('landscapeInfoBubble').hidden; });
+window.addEventListener('resize', () => { syncLandscapeControls(); positionLandscapeMenu(); });
+window.addEventListener('orientationchange', syncLandscapeControls);
 async function setupOffline() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol === 'file:') return;
   try {
@@ -872,7 +883,7 @@ async function init() {
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
   } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;
-  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();
+  ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); syncLandscapeControls(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;
 }
 init();
