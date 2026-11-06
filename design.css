@@ -626,3 +626,22 @@ dialog.history-dialog{
  .stage .canvas-wrap canvas{width:100%!important;height:100%!important;object-fit:contain!important}
  .header-menu-content{max-height:calc(100dvh - 90px)!important;overflow-y:auto!important}
 }
+
+/* Landscape uses the original complete preview strip, moved in DOM, not hidden. */
+@media (max-width:1200px) and (max-height:650px) and (orientation:landscape) {
+ .landscape-preview-actions{display:none!important}
+ .project-bar>.preview-meta{
+  display:flex!important;visibility:visible!important;flex:1 1 auto!important;
+  align-items:center!important;gap:8px!important;min-width:0!important;
+  width:auto!important;max-width:none!important;margin:0!important;
+  padding:5px 10px!important;min-height:43px!important;
+  border:1px solid #73425f!important;border-radius:12px!important;
+  background:#201620!important;
+ }
+ .project-bar>.preview-meta #status{display:block!important;flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:11px!important}
+ .project-bar>.preview-meta .preview-inline-actions{display:flex!important;flex:0 0 auto!important;gap:6px!important}
+ .project-bar>.preview-meta .preview-inline-actions button{display:inline-flex!important;width:33px!important;height:33px!important;min-width:33px!important;min-height:33px!important;padding:7px!important}
+ .project-bar>.preview-meta .canvas-size{display:block!important;flex:0 0 auto!important;white-space:nowrap!important;font-size:10px!important}
+ .project-bar>.history-actions{flex:0 0 auto!important}
+ .stage{min-height:0!important}
+}
