@@ -225,3 +225,19 @@ button:focus-visible,select:focus-visible{outline:2px solid #ff7cbd;outline-offs
  .app-header .brand span{display:none!important}
  .stage .canvas-wrap{box-shadow:0 0 0 1px #ff298540,0 2px 10px #0004}
 }
+
+/* Secondary palette: graphite/plum instead of leftover mint/green. */
+.layer-stepper{background:linear-gradient(120deg,#28212e,#1b1a23);border-color:#64536c}
+.layer-stepper button{background:#392b40;border-color:#79647f;color:#f6eaf5}
+.layer-folder-tree{border-left-color:#635367}
+.organizer-folder-row.is-selected{background:#342335;border-color:#a66c9d}
+.organizer-all.is-selected{background:#342335;color:#e9b8df}
+.organizer-folder-row:hover{background-color:#302534}
+.drag-handle{color:#c7b6c7}
+.trait-card.is-selected{background:#392037;border-color:#f04a9b;color:#fff}
+.trait-card.is-selected::after{background:#ff4b9e;color:#fff}
+.trait-entry .trait-card.is-selected{background:#392037}
+.organizer-tree-actions button,.organizer-move-select,.trait-folder-select,.trait-category-select{border-color:#615466;background:#211d28}
+.empty-art{background:#302337;border-color:#76526d;color:#efb9d6}
+.save-status{color:#e9afd0}
+@media(hover:hover) and (pointer:fine){.organizer-folder-row:hover{border-color:#95688d}.drag-handle:hover{color:#ff9ccb;background:#42283c!important}}
