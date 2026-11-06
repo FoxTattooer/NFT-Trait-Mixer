@@ -57,3 +57,45 @@ button:focus-visible,select:focus-visible{outline:2px solid #86ffda;outline-offs
 @media(max-width:900px){.stage-heading,.preview-meta,.stage-actions{padding-inline:6px}.stage-heading{margin-top:5px}.stage-actions{margin-bottom:6px}.canvas-wrap{aspect-ratio:1;flex-shrink:0}}
 
 .trait-visibility{grid-column:1/-1;justify-content:center;min-height:44px;font-size:12px;color:var(--mint);background:#132b23;border-color:#397e66}.trait-visibility[aria-pressed="true"]{background:#1b4937;border-color:#65e9bc}.trait-visibility .icon{width:18px;height:18px}
+
+
+/* Landscape mobile: fit the entire square live preview inside the visible stage. */
+@media (max-width:900px) and (orientation:landscape) {
+  .app-layout {
+    height:calc(100dvh - 110px - env(safe-area-inset-bottom));
+    min-height:0;
+    grid-template-rows:48px minmax(0,1fr);
+  }
+  .stage {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:0;
+    max-height:100%;
+    overflow:hidden;
+    padding:5px;
+  }
+  .stage-heading {
+    align-self:stretch;
+    flex:0 0 auto;
+    margin:0 0 4px;
+  }
+  .canvas-wrap {
+    width:auto;
+    height:auto;
+    max-width:100%;
+    max-height:calc(100% - 30px);
+    aspect-ratio:1 / 1;
+    flex:0 1 auto;
+    margin-inline:auto;
+    overflow:hidden;
+  }
+  .canvas-wrap canvas {
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+  }
+  .preview-meta {flex:0 0 auto;width:100%;margin-top:3px}
+  .stage-actions,.stage-tip,.stage #warnings {display:none}
+}
