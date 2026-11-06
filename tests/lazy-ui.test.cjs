@@ -14,7 +14,7 @@ w.FileReader=class{readAsDataURL(b){b.arrayBuffer().then(v=>{this.result='data:i
 w.Option=function(text,value){const o=w.document.createElement('option');o.text=text;o.value=value;return o;};
 const urls=new Map();let serial=0,revoked=0;w.URL.createObjectURL=b=>{const key='blob:test-'+(++serial);urls.set(key,b);return key;};w.URL.revokeObjectURL=k=>{urls.delete(k);revoked++;};
 w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get(src).arrayBuffer()):src);
-w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);return this.native.getContext('2d');};
+w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
 w.eval(['project.js','storage.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
@@ -30,7 +30,8 @@ await waitFor(()=>w.document.querySelector('#status').textContent.includes('náh
 assert(w.inspectState().cats[0].traits.every(t=>S.isAsset(t.data)));assert(reads<40,'startup must not fetch all 610 image records');
 const sampled=w.document.getElementById('canvas').native.getContext('2d').getImageData(512,512,1,1).data;assert.equal(sampled[0],1,'selected lazy image paints correct pixels');
 await w.runAction('trait-next');await new Promise(r=>setTimeout(r,30));assert(revoked>0,'detached previews release object URLs');
-await w.runAction('save-project');const backup=w.__downloads.pop();assert(backup.name.endsWith('.json'));const restored=M.normalize(JSON.parse(await backup.blob.text()));assert.equal(restored.cats[0].traits.length,610);assert.equal(restored.cats[0].traits[609].data,p.cats[0].traits[609].data);
+await w.runAction('save-project');const backup=w.__downloads.pop();assert(backup.name.endsWith('.json'));assert.equal(w.document.getElementById('canvas').native.getContext('2d').getImageData(512,512,1,1).data[0],1,'backup preserves existing preview');const restored=M.normalize(JSON.parse(await backup.blob.text()));assert.equal(restored.cats[0].traits.length,610);assert.equal(restored.cats[0].traits[609].data,p.cats[0].traits[609].data);
+w.__load=async()=>{throw Error('Simulated decoder failure');};w.eval('draw()');await waitFor(()=>w.document.getElementById('status').textContent.includes('Simulated'));assert.equal(w.document.getElementById('canvas').native.getContext('2d').getImageData(512,512,1,1).data[0],1,'failed redraw keeps previous image');w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get(src).arrayBuffer()):src);
 await w.runAction('choose-trait','t2');await new Promise(r=>setTimeout(r,30));
 await w.waitSave();assert(!w.document.getElementById('storageWarning').textContent.includes('Chybí'));
 // Portable ZIP must embed PNGs and JSON, never internal asset references.

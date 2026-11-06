@@ -301,7 +301,15 @@ async function paintLayers(canvas, layers, valid = () => true) {
     try {
       const source=TraitStorage.isAsset(trait.data) ? (url=URL.createObjectURL(await TraitStorage.imageBlob(db,trait.data))) : trait.data;
       if(!valid())return;
-      image=await decodeImage(source);
+      try { image=await decodeImage(source); }
+      catch(error) {
+        if(!url || !valid())throw error;
+        // Retry a single stored image without a Blob URL after Safari's download handoff.
+        const blob=await TraitStorage.imageBlob(db,trait.data);
+        const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error || error);reader.readAsDataURL(blob);});
+        if(!valid())return;
+        image=await decodeImage(data);
+      }
       if(!valid())return;
       ctx.drawImage(image,0,0,1024,1024);
     } finally { if(image)image.src='';if(url)URL.revokeObjectURL(url); }
@@ -316,7 +324,12 @@ async function draw() {
   if (safeMode) { $('status').textContent = 'Obnovovací režim · náhledy vypnuté'; return; }
   const ticket = ++drawTicket, layers = visibleLayers(state);
   try {
-    await paintLayers($('canvas'), layers, () => ticket === drawTicket);
+    const frame=document.createElement('canvas');frame.width=frame.height=1024;
+    try {
+      await paintLayers(frame, layers, () => ticket === drawTicket);
+      if(ticket!==drawTicket)return;
+      const ctx=$('canvas').getContext('2d');ctx.clearRect(0,0,1024,1024);ctx.drawImage(frame,0,0);
+    } finally {frame.width=frame.height=1;}
     if (ticket !== drawTicket) return;
     $('status').textContent = layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření';
   } catch (error) {
@@ -324,7 +337,7 @@ async function draw() {
     $('status').textContent = error.message; $('export').disabled = true;
   }
 }
-function render() {
+function render(keepPreview = false) {
   if (!M.category(state, active)) active = state.cats[0]?.id || null;
   const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state);
   $('projectName').textContent = state.name;
@@ -349,7 +362,7 @@ function render() {
   }
   // Avoid rebuilding hundreds of DOM nodes and decoding previews while importing PSD.
   if (busy) return;
-  renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); draw();
+  renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
 function download(blob, name) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -652,7 +665,7 @@ async function handleAction(action, id, element) {
       if(busy)return;
       const project=M.clone(state);busy=true;render();storageStatus('Připravuji zálohu po vrstvách…');
       try { download(await TraitStorage.backup(db,project), `${filename(project.name)}.json`);toast('Záloha projektu je připravená ke stažení');storageStatus('Záloha dokončena'); }
-      finally {busy=false;render();}
+      finally {busy=false;render(true);}
       break;
     }
     case 'export': await exportPNG(); break;
