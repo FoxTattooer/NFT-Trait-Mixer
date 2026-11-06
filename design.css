@@ -774,3 +774,49 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 #cats[data-view="expanded"] .layer-stepper{display:flex!important;min-height:52px!important}
 #cats[data-view="expanded"]>.category-card.is-active .category-tools{display:flex!important}
 #cats[data-view="expanded"]>.category-card.is-active .layer-folder-tree{display:block!important}
+
+/* Landscape workspace: hard 50/50 split. Keep the preview entirely in the
+   right column; all category and trait controls stay in the left column. */
+@media (orientation:landscape) and (max-height:650px) and (max-width:1200px){
+ html,body{overflow:hidden!important}
+ body{padding-bottom:0!important}
+ .app-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  grid-template-rows:40px minmax(0,1fr)!important;
+  grid-template-areas:"tabs stage" "settings stage"!important;
+  gap:5px!important;
+  height:calc(100dvh - 106px)!important;
+  min-height:0!important;max-height:none!important;
+  margin:0 5px!important;padding:0!important;
+  overflow:hidden!important;
+ }
+ .workspace-tabs{grid-area:tabs!important;position:static!important;inset:auto!important;min-width:0!important;padding:0!important}
+ .workspace-tabs button{height:38px!important;min-height:38px!important;padding:3px!important}
+ .layers-panel,.inspector{
+  grid-area:settings!important;order:unset!important;
+  min-width:0!important;min-height:0!important;max-height:100%!important;
+  height:100%!important;overflow-y:auto!important;overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;
+ }
+ .stage{
+  grid-area:stage!important;order:unset!important;
+  min-width:0!important;min-height:0!important;
+  width:100%!important;height:100%!important;max-height:100%!important;
+  padding:4px!important;margin:0!important;
+  display:flex!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;
+  overflow:hidden!important;position:static!important;align-self:stretch!important;
+ }
+ .stage .canvas-wrap{
+  width:auto!important;height:auto!important;
+  max-width:100%!important;max-height:100%!important;
+  aspect-ratio:1/1!important;
+  width:min(100%,calc(100dvh - 120px))!important;
+  height:min(100%,calc(100dvh - 120px))!important;
+  flex:0 1 auto!important;align-self:center!important;margin:auto!important;
+ }
+ .stage .canvas-wrap canvas{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
+ .stage #quickTraits{display:none!important}
+ .stage #warnings:empty{display:none!important}
+}
