@@ -258,3 +258,24 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
 .organizer-folder-row.is-selected,.organizer-all.is-selected{background:#261a2a}
 .dropzone{background:#1d131b}
 @media(max-width:900px){.workspace-tabs{background:#0c0c11fa}}
+
+/* Eliminate legacy green from layer steppers and trait visibility actions. */
+.layer-stepper,.category-card .layer-stepper{
+ background:linear-gradient(110deg,#241b2a,#15121b)!important;
+ border-color:#66516e!important;
+ color:#f2eaf3!important;
+}
+.layer-stepper button,.category-card .layer-stepper button{
+ background:linear-gradient(180deg,#392a42,#251c2d)!important;
+ border-color:#796181!important;
+ color:#f8eaf5!important;
+}
+.trait-entry .trait-info-actions button,
+.trait-entry [data-action*="visibility"],
+.trait-entry [data-action*="preview"],
+.trait-entry [data-action*="toggle"]{
+ background:linear-gradient(180deg,#34253b,#201923)!important;
+ border-color:#805c81!important;
+ color:#f7c5e2!important;
+}
+.trait-entry .trait-info-actions button:active{background:#4b2945!important}
