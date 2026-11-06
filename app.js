@@ -444,6 +444,8 @@ function renderQuickTraits() {
  list.querySelectorAll('.quick-trait').forEach(el => {
    const isSelected = selectedIds.has(el.dataset.id) && visible;
    el.setAttribute('aria-pressed', String(isSelected));
+   const action = selectedIds.has(el.dataset.id) && c.visible !== false ? 'Skrýt' : 'Zobrazit';
+   el.setAttribute('aria-label', `${action} ${el.title}`);
    el.classList.toggle('is-selected', isSelected);
    el.querySelector('.quick-check').hidden = !isSelected;
  });
@@ -903,8 +905,6 @@ function render(keepPreview = false) {
   if (busy) return;
   fillSelect($('layerCategory'), state.cats.map(c => [c.id, c.name]), 'Vyber kategorii');
   if (active) $('layerCategory').value = active;
-  const nameLength = M.category(state, active)?.name.length || 0;
-  $('layerCategoryPicker').style.setProperty('--category-label-length', String(Math.min(22, nameLength)));
   renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
 function download(blob, name) {
@@ -1131,6 +1131,16 @@ async function refreshApp() {
   } finally { control.disabled = reloadRequested; }
 }
 
+function toggleTraitInPreview(category, id, keepQuickScroll = false) {
+  change(() => {
+    M.toggleTrait(state, category.id, id);
+    if (keepQuickScroll) quickSelectedId = state.selected[category.id];
+  });
+  if (M.isSelected(state, category.id, id) && M.conflicts(state).hidden.has(category.id)) {
+    toast('Vrstva je zapnutá, ale skrývá ji pravidlo.');
+  }
+}
+
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
@@ -1271,23 +1281,24 @@ async function handleAction(action, id, element) {
     case 'export-package': await exportPackage(); break;
     case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { $('traitFiles').click(); } break;
     case 'toggle-trait-visibility': {
-      const found=M.locate(state,id);if(!found)break;
-      change(() => M.toggleTrait(state, found.cat.id, id));
-      if(found.cat.visible!==false && M.conflicts(state).hidden.has(found.cat.id))toast('Vrstva je zapnutá, ale skrývá ji pravidlo.');
+      if (located) toggleTraitInPreview(located.cat, id);
       break;
     }
     case 'choose-trait': {
       const categoryId = element?.dataset.category || active;
-      if (M.category(state, categoryId) && (!id || M.category(state, categoryId).traits.some(t => t.id === id))) {
-        const category = M.category(state, categoryId);
-        const fromLayers = !!element?.closest('#layerTree, #quickTraits');
-        if (active === categoryId && state.selected[categoryId] === id && (!fromLayers || category.visible !== false)) break;
-        active = categoryId;
-        change(() => {
-          M.choosePrimary(state, categoryId, id);
-          if (id && fromLayers) category.visible = true;
-        });
+      const category = M.category(state, categoryId);
+      if (!category || (id && located?.cat.id !== categoryId)) break;
+      if (element?.closest('#quickTraitsItems') && M.isSelected(state, categoryId, id)) {
+        toggleTraitInPreview(category, id, true);
+        break;
       }
+      const fromLayers = !!element?.closest('#layerTree, #quickTraits');
+      if (active === categoryId && state.selected[categoryId] === id && (!fromLayers || category.visible !== false)) break;
+      active = categoryId;
+      change(() => {
+        M.choosePrimary(state, categoryId, id);
+        if (id && fromLayers) category.visible = true;
+      });
       break;
     }
     case 'rename-trait': {
