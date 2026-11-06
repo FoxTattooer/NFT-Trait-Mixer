@@ -987,19 +987,6 @@ function syncLandscapeControls() {
   if (!meta || !bar || !stage || !actions) return;
   // The original preview footer stays intact for portrait. Landscape uses 3 actions.
   if (meta.parentElement !== stage) stage.insertBefore(meta, stage.querySelector('#warnings'));
-  // Put the existing preview and history buttons into the logo toolbar in landscape.
-  // Moving the original nodes preserves their listeners, disabled state and actions.
-  const header = document.querySelector('.app-header');
-  const headerEnd = header?.querySelector('.header-end');
-  const history = document.querySelector('.history-actions');
-  if (landscape && headerEnd) {
-    if (actions.parentElement !== header) header.insertBefore(actions, headerEnd);
-    if (history && history.parentElement !== header) header.insertBefore(history, headerEnd);
-  } else {
-    const heading = bar.querySelector('.project-heading');
-    if (heading && actions.parentElement !== bar) heading.after(actions);
-    if (history && history.parentElement !== bar) bar.appendChild(history);
-  }
   actions.hidden = !landscape;
   if (landscape) actions.style.setProperty('display','flex','important');
   else actions.style.removeProperty('display');
