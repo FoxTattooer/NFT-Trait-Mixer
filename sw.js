@@ -1,8 +1,9 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.75';
-const SHELL = ['./', './index.html', './styles.css?build=0768', './design.css?build=0768', './compact.css?build=0773', './schemes.css?build=0772', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0775', './showroom.css?build=0775', './showroom.js?build=0775', './art/showroom-dripd.png', './app.js?build=0773', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = PREFIX + 'v0.7.76';
+const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
+const SHELL = ['./', './index.html', './styles.css?build=0768', './design.css?build=0768', './compact.css?build=0773', './schemes.css?build=0772', './drag.js?build=0760', './project.js?build=0760', './diagnostics.js?build=0776', './showroom.css?build=0775', './showroom.js?build=0775', SHOWROOM_ART, './app.js?build=0773', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -31,6 +32,11 @@ self.addEventListener('fetch', event => {
   // Keep each shell version together, including while a newer version waits.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
+    // The versioned intro artwork must be ready even on a stalled connection.
+    if (url.href === new URL(SHOWROOM_ART, self.registration.scope).href) {
+      const artwork = await cache.match(event.request);
+      if (artwork) return artwork;
+    }
     const key = event.request.mode === 'navigate' ? new URL('./index.html', self.registration.scope).href : event.request;
     // Prefer deployed files when online; retain cached shell for offline usage.
     try {

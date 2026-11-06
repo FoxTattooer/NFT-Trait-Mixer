@@ -105,7 +105,7 @@ assert(!showroomMenu.open);
 assert(get('showroomDialog').open);
 assert(get('showroomDialog').hasAttribute('data-intro'), 'opening starts the branded transition');
 assert.equal(get('showroomTitle').textContent, 'Showroom by DRIPD');
-assert.equal(get('showroomIntro').querySelector('img').getAttribute('src'), 'art/showroom-dripd.png');
+assert.equal(get('showroomIntro').querySelector('img').getAttribute('src'), 'art/showroom-dripd.png?build=0775');
 const introEnd = new w.Event('animationend');
 Object.defineProperty(introEnd, 'animationName', { value: 'showroom-intro' });
 get('showroomIntro').dispatchEvent(introEnd);
@@ -319,7 +319,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.75'));
+assert(get('toast').textContent.includes('v0.7.76'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';

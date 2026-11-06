@@ -1,5 +1,8 @@
 'use strict';
 const { test } = require('node:test');
+const { readFileSync } = require('node:fs');
+const { join } = require('node:path');
+const { runInNewContext } = require('node:vm');
 const assert = require('node:assert/strict');
 const M = require('../project');
 const Showroom = require('../showroom');
@@ -39,4 +42,47 @@ test('Showroom starts fresh, groups choices, and keeps editor state isolated', (
   assert.deepEqual(session.options(3).map(variant => variant?.traitId), [undefined, 'h1']);
   assert.deepEqual(session.composition().selected, { bg2: 'b2', skin: 's1' });
   assert.equal(JSON.stringify(project), original);
+});
+
+test('installed Showroom serves the original intro art before consulting the network', async () => {
+  const scope = 'https://example.test/NFT-Trait-Mixer/';
+  const listeners = new Map();
+  const entries = new Map();
+  const original = readFileSync(join(__dirname, '../art/showroom-dripd.png'));
+  const index = readFileSync(join(__dirname, '../index.html'), 'utf8');
+  const artwork = index.match(/<img src="(art\/showroom-dripd\.png[^"]+)"/)[1];
+  const artworkURL = new URL(artwork, scope).href;
+  const cache = {
+    async addAll(requests) {
+      for (const request of requests) entries.set(request.url, request.url === artworkURL ? original : index);
+    },
+    async match(key) { return entries.get(key.url ?? key); },
+  };
+  let networkRequests = 0;
+  runInNewContext(readFileSync(join(__dirname, '../sw.js'), 'utf8'), {
+    URL,
+    Request: function (path) { return { url: new URL(path, scope).href }; },
+    self: {
+      registration: { scope },
+      location: new URL(scope),
+      addEventListener: (event, callback) => listeners.set(event, callback),
+    },
+    caches: { open: async () => cache, has: async () => false },
+    fetch: async () => { networkRequests++; throw Error('Offline'); },
+  });
+  let installing;
+  listeners.get('install')({ waitUntil: task => { installing = task; } });
+  await installing;
+  function request(url, mode) {
+    let response;
+    listeners.get('fetch')({
+      request: { method: 'GET', url, mode },
+      respondWith: task => { response = task; },
+    });
+    return response;
+  }
+  assert.equal(await request(scope, 'navigate'), index);
+  const afterNavigation = networkRequests;
+  assert.equal(await request(artworkURL, 'no-cors'), original);
+  assert.equal(networkRequests, afterNavigation, 'a stalled connection cannot delay the intro image');
 });
