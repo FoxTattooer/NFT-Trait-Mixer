@@ -877,3 +877,19 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  }
  body.landscape-editor-mode #traitsPanel>#quickTraits[hidden]{display:none!important}
 }
+
+/* Unconditional landscape isolation: prevent any carousel from occupying preview. */
+@media (orientation:landscape){
+ body.landscape-editor-mode .stage>#quickTraits{display:none!important}
+ body.landscape-editor-mode .stage>.preview-meta,
+ body.landscape-editor-mode .stage>.stage-heading,
+ body.landscape-editor-mode .stage>.stage-actions,
+ body.landscape-editor-mode .stage>.stage-tip,
+ body.landscape-editor-mode .stage>#warnings{display:none!important}
+ body.landscape-editor-mode #catsPanel>#quickTraits,
+ body.landscape-editor-mode #traitsPanel>#quickTraits{display:flex!important;max-width:100%!important;width:100%!important;min-height:64px!important;margin:8px 0!important}
+ body.landscape-editor-mode #catsPanel>#quickTraits[hidden],
+ body.landscape-editor-mode #traitsPanel>#quickTraits[hidden]{display:none!important}
+ body.landscape-editor-mode .stage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important}
+ body.landscape-editor-mode .stage>.canvas-wrap{flex:none!important;aspect-ratio:1!important;width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;margin:auto!important}
+}
