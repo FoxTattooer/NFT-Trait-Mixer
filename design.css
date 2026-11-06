@@ -832,3 +832,30 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
   aspect-ratio:1!important;
  }
 }
+
+/* Landscape preview-first: no trait UI can consume preview height.
+   Keep all existing editing functions in the left inspector tabs. */
+@media (orientation:landscape) and (max-height:650px) and (max-width:1200px){
+ .project-bar{display:none!important}
+ .app-header{min-height:0!important;margin:0!important;padding:3px 8px!important;gap:3px!important}
+ .app-header .brand{min-height:0!important}
+ .app-header .toolbar{padding:0!important;margin:0!important;gap:3px!important}
+ .app-header .toolbar button{min-height:34px!important;height:34px!important;padding:4px 7px!important}
+ .app-layout{
+  height:calc(100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+  grid-template-columns:minmax(0,2fr) minmax(0,3fr)!important;
+  grid-template-rows:40px minmax(0,1fr)!important;
+ }
+ .stage{justify-content:center!important;gap:0!important}
+ .stage>.canvas-wrap{
+  box-sizing:border-box!important;
+  width:auto!important;height:auto!important;
+  inline-size:min(100%,calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom)))!important;
+  block-size:min(100%,calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom)))!important;
+  aspect-ratio:1/1!important;flex:0 1 auto!important;
+  max-width:100%!important;max-height:100%!important;
+  margin:auto!important;
+ }
+ .stage>.preview-meta,.stage>.stage-actions,.stage>.stage-heading,
+ .stage>#quickTraits,.stage>#warnings,.stage>.stage-tip{display:none!important}
+}
