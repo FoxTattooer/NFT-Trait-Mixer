@@ -672,3 +672,23 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 .category-sort-index{min-width:23px;text-align:right}
 .category-sort-foot{display:flex;justify-content:flex-end;margin-top:12px}
 .category-sort-foot button{min-height:39px;padding:8px 20px}
+
+.compact-toggle{margin-left:auto!important}
+.compact-categories .category-card{padding:0!important;margin-bottom:5px!important;border-radius:11px!important}
+.compact-categories .category-card .category-top{min-height:46px!important;padding:3px 7px!important;gap:6px!important}
+.compact-categories .category-card .category-pick{min-height:38px!important;padding:3px!important;flex:1!important;min-width:0!important}
+.compact-categories .category-card .category-name{font-size:13px!important;line-height:1.2!important}
+.compact-categories .category-card .category-meta{font-size:10px!important;line-height:1.2!important}
+.compact-categories .category-card:not(.is-active) .category-stepper,.compact-categories .category-card:not(.is-active) .category-tools{display:none!important}
+.compact-categories .category-card.is-active{border-color:#f12d91!important;box-shadow:0 0 8px #f12d9155!important}
+.quick-traits[hidden]{display:none!important}
+.quick-traits{display:flex;align-items:center;gap:7px;width:100%;min-height:82px;padding:8px;border:1px solid #513249;border-radius:13px;background:#17121c;overflow:hidden}
+.quick-traits-head{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:88px;max-width:110px;color:#eee;font-size:12px}
+.quick-traits-head>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick-traits-head>button,.quick-traits-next{min-width:30px!important;width:30px!important;height:30px!important;padding:2px!important;border:1px solid #5c455c!important;border-radius:9px!important;background:#1b1720!important}
+.quick-traits-items{display:flex;flex:1;min-width:0;gap:6px;justify-content:space-around}
+.quick-trait{position:relative;flex:1 1 0;min-width:0;max-width:88px;aspect-ratio:1;border:1px solid #463647;border-radius:11px;padding:2px;background:#24202a;overflow:hidden}
+.quick-trait img{width:100%;height:100%;object-fit:contain}
+.quick-trait.is-selected{border:2px solid #ff2f98;box-shadow:0 0 10px #f92b8977}
+.quick-check{position:absolute;right:1px;bottom:1px;background:#f51b8b;border-radius:50%;padding:2px 5px;font-size:12px;color:white}
+@media(max-width:900px) and (orientation:portrait){.quick-traits{min-height:70px;padding:5px;gap:4px}.quick-traits-head{min-width:66px;max-width:76px;font-size:10px}.quick-trait{max-width:70px}}
