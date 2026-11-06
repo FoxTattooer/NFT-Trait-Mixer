@@ -67,10 +67,10 @@
   <p id="dragStatus" class="sr-only" role="status" aria-live="polite"></p>
   <main id="appLayout" class="app-layout" data-mobile-panel="layers" aria-busy="true">
     <aside id="catsPanel" class="panel layers-panel" aria-labelledby="layersHeading">
-      <div class="panel-heading"><div><span class="eyebrow">01 / KOMPOZICE</span><h2 id="layersHeading">Kategorie <span id="catCount" class="count">0</span></h2></div><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
-      <p class="helper">Pořadí změníš tahem za ⠿. Vrchní vrstvy překrývají spodní.</p><div id="cats" class="category-list"></div>
+      <div class="panel-heading"><div><h2 id="layersHeading">Kategorie <span id="catCount" class="count">0</span></h2></div><button id="addCat" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button></div>
+      <div id="cats" class="category-list"></div>
       <button data-action="add-category" class="outline full-width"><svg class="icon"><use href="#i-plus"/></svg>Přidat kategorii</button>
-      <p class="panel-footnote">Složku pusť na jinou složku pro vnoření, nebo mezi řádky pro změnu pořadí. Přesun lze vrátit tlačítkem Zpět.</p>
+      
     </aside>
     <section class="stage" aria-label="Náhled kompozice">
       <div class="stage-heading"><span class="eyebrow">ŽIVÝ NÁHLED</span><span class="canvas-size">1024 × 1024</span></div>
@@ -78,7 +78,7 @@
       <div class="preview-meta"><span id="status" role="status">Připraveno k tvoření</span><span class="transparent-label">▧ Průhledné pozadí</span></div>
       <div id="warnings" class="conflict-list" role="status"></div>
       <div class="stage-actions"><button id="random" data-action="random" disabled><svg class="icon"><use href="#i-shuffle"/></svg>Náhodná kombinace</button><button id="snapshot" data-action="add-snapshot" class="subtle" disabled><svg class="icon"><use href="#i-bookmark"/></svg>Uložit sestavu</button></div>
-      <p class="stage-tip">Stejná velikost PNG vrstev ti zajistí přesné zarovnání.</p>
+      
     </section>
     <nav class="workspace-tabs" aria-label="Pracovní panely">
       <button data-action="show-panel" data-panel="layers" class="is-active" aria-pressed="true"><svg class="icon"><use href="#i-layers"/></svg>Vrstvy</button>
@@ -88,20 +88,20 @@
     <aside class="panel inspector" aria-label="Editor vrstev a pravidel">
       <nav class="inspector-tabs" aria-label="Editor"><button data-action="show-panel" data-panel="traits" class="is-active" aria-pressed="true">Traity</button><button data-action="show-panel" data-panel="snapshots" aria-pressed="false">Sestavy</button></nav>
       <section id="traitsPanel" class="tab-panel is-active">
-        <div class="panel-heading"><div><span class="eyebrow">02 / VARIANTY</span><h2 id="catTitle">Vyber kategorii</h2></div><span id="traitCount" class="count">0</span></div>
+        <div class="panel-heading"><div><h2 id="catTitle">Vyber kategorii</h2></div><span id="traitCount" class="count">0</span></div>
         <nav class="category-stepper" aria-label="Přepínání vrstev"><button id="categoryPrev" data-action="cycle-category" data-direction="-1" aria-label="Předchozí vrstva">‹ Předchozí</button><span id="categoryPosition" aria-live="polite"></span><button id="categoryNext" data-action="cycle-category" data-direction="1" aria-label="Další vrstva">Další ›</button></nav>
         <div id="dropzone" class="dropzone"><svg class="icon"><use href="#i-upload"/></svg><button id="addTrait" data-action="add-traits" class="primary" disabled>Nahrát PNG</button></div>
         <input id="traitFiles" type="file" accept="image/png,.png" multiple hidden><p id="uploadStatus" class="helper" role="status"></p><div id="traitOrganizer" class="trait-organizer" hidden><aside id="organizerTree" class="organizer-tree"></aside><div class="organizer-browser"><div id="organizerHeading" class="organizer-heading"></div><div id="traits" class="traits"></div></div></div><div id="traitInfo" class="trait-info" hidden></div>
       </section>
       <section id="rulesPanel" class="tab-panel" hidden>
-        <div class="panel-heading"><div><span class="eyebrow">03 / SOUVISLOSTI</span><h2>Pravidla a výjimky</h2></div></div>
-        <p class="helper">Vybraný trait může skrýt jinou vrstvu nebo zakázat konkrétní kombinaci.</p><label class="switch-row"><input id="rulesEnabled" type="checkbox" checked><span>Používat pravidla</span></label>
+        <div class="panel-heading"><div><h2>Pravidla a výjimky</h2></div></div>
+        <label class="switch-row"><input id="rulesEnabled" type="checkbox" checked><span>Používat pravidla</span></label>
         <form id="ruleForm"><label for="ruleSource">Když je vybraný trait</label><select id="ruleSource" required></select><label for="ruleAction">Co se má stát</label><select id="ruleAction"><option value="hide">Skrýt kategorii</option><option value="block">Zakázat kombinaci</option></select><label for="ruleTargetCat">Cílová kategorie</label><select id="ruleTargetCat" required></select><div id="targetTraitField" hidden><label for="ruleTargetTrait">Zakázaný trait</label><select id="ruleTargetTrait"></select></div><button id="addRule" type="submit" class="outline full-width" disabled>+ Přidat pravidlo</button></form>
         <div id="rules" class="saved-list"></div>
       </section>
       <section id="snapshotsPanel" class="tab-panel" hidden>
-        <section class="snapshot-library" aria-labelledby="snapshotLibraryHeading"><div class="panel-heading"><div><span class="eyebrow">04 / OBSAH</span><h3 id="snapshotLibraryHeading">Procházet vrstvy</h3></div></div><p class="helper">Rozbal kategorii a prohlédni si její traity v miniaturách. Klepnutím na miniaturu ji rovnou vybereš do náhledu.</p><div id="snapshotLayerLibrary" class="layer-library"></div></section>
-        <div class="panel-heading"><div><span class="eyebrow">05 / OBLÍBENÉ</span><h2>Uložené sestavy</h2></div></div><p class="helper">Vrať se k oblíbeným kombinacím jedním klepnutím. Ukládá se výběr traitů i viditelnost vrstev.</p><button data-action="add-snapshot" class="outline full-width">+ Uložit aktuální sestavu</button><div id="snapshots" class="saved-list"></div><section class="snapshot-export" aria-labelledby="snapshotExportHeading"><div class="panel-heading"><div><span class="eyebrow">BONUS / EXPORT</span><h3 id="snapshotExportHeading">Kompletní balíček</h3></div></div><p class="helper">Stáhni všechny kategorie a traity jako ZIP, včetně názvů, finálního PNG a projektu pro pozdější otevření.</p><button id="exportPackage" data-action="export-package" class="outline full-width" disabled><svg class="icon"><use href="#i-download"/></svg>Stáhnout celý projekt jako ZIP</button></section>
+        <section class="snapshot-library" aria-labelledby="snapshotLibraryHeading"><div class="panel-heading"><div><h3 id="snapshotLibraryHeading">Procházet vrstvy</h3></div></div><div id="snapshotLayerLibrary" class="layer-library"></div></section>
+        <div class="panel-heading"><div><h2>Uložené sestavy</h2></div></div><button data-action="add-snapshot" class="outline full-width">+ Uložit aktuální sestavu</button><div id="snapshots" class="saved-list"></div><section class="snapshot-export" aria-labelledby="snapshotExportHeading"><div class="panel-heading"><div><h3 id="snapshotExportHeading">Kompletní balíček</h3></div></div><button id="exportPackage" data-action="export-package" class="outline full-width" disabled><svg class="icon"><use href="#i-download"/></svg>Stáhnout celý projekt jako ZIP</button></section>
       </section>
     </aside>
   </main>
