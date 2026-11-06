@@ -875,6 +875,8 @@ async function handleAction(action, id, element) {
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
     case 'close-category-sort': $('categorySortDialog').close(); break;
+    case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
+    case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-history': $('historyDialog').showModal(); renderHistoryPanel(); document.querySelector('#historyList .is-current')?.scrollIntoView({ block: 'nearest' }); break;
     case 'close-history': $('historyDialog').close(); break;
     case 'jump-history': jumpHistory(Number(id)); break;
