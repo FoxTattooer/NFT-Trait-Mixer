@@ -245,6 +245,7 @@ function showPanel(panel) {
   mobilePanel = panel;
   if (panel !== 'layers') inspectorPanel = panel;
   $('appLayout').dataset.mobilePanel = mobilePanel;
+  syncLandscapeTraitPlacement();
   document.querySelectorAll('.workspace-tabs button').forEach(b => { const selected = b.dataset.panel === mobilePanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
@@ -531,6 +532,7 @@ function render(keepPreview = false) {
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
   renderQuickTraits();
+  syncLandscapeTraitPlacement();
   syncLandscapeControls();
   $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
@@ -1011,17 +1013,18 @@ window.addEventListener('orientationchange', syncLandscapeControls);
 function syncLandscapeTraitPlacement(){
   const strip = $('quickTraits');
   const stage = document.querySelector('.stage');
-  const inspector = $('traitsPanel');
-  if (!strip || !stage || !inspector) return;
-  const landscape = matchMedia('(orientation: landscape) and (max-height: 650px) and (max-width: 1200px)').matches;
+  const layers = $('catsPanel');
+  const traits = $('traitsPanel');
+  if (!strip || !stage || !layers || !traits) return;
+  const landscape = window.innerWidth > window.innerHeight;
+  document.body.classList.toggle('landscape-editor-mode', landscape);
   if (landscape) {
-    if (strip.parentElement !== inspector) inspector.appendChild(strip);
+    // The visible left-side panel owns the carousel; NEVER leave it in the preview.
+    const destination = mobilePanel === 'layers' ? layers : traits;
+    if (strip.parentElement !== destination) destination.appendChild(strip);
   } else if (strip.parentElement !== stage) {
     stage.appendChild(strip);
-    const warnings = $('warnings');
-    if (warnings) stage.appendChild(warnings);
   }
-  document.body.classList.toggle('landscape-editor-mode', landscape);
 }
 window.addEventListener('resize', syncLandscapeTraitPlacement);
 window.addEventListener('orientationchange', syncLandscapeTraitPlacement);
