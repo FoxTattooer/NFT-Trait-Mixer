@@ -979,7 +979,7 @@ window.addEventListener('appinstalled', () => { installPrompt = null; $('install
 
 // Landscape controls are separate from the portrait footer; portrait DOM stays untouched.
 function syncLandscapeControls() {
-  const landscape = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)').matches;
+  const landscape = window.innerWidth > window.innerHeight;
   const meta = document.querySelector('.preview-meta');
   const bar = document.querySelector('.project-bar');
   const stage = document.querySelector('.stage');
@@ -1001,6 +1001,8 @@ function syncLandscapeControls() {
     if (history && history.parentElement !== bar) bar.appendChild(history);
   }
   actions.hidden = !landscape;
+  if (landscape) actions.style.setProperty('display','flex','important');
+  else actions.style.removeProperty('display');
   $('landscapeShuffle').disabled = $('random').disabled;
   $('landscapeSnapshot').disabled = $('snapshot').disabled;
   $('landscapeLayerCount').textContent = $('status').textContent;
