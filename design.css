@@ -893,3 +893,18 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  body.landscape-editor-mode .stage{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:hidden!important}
  body.landscape-editor-mode .stage>.canvas-wrap{flex:none!important;aspect-ratio:1!important;width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;margin:auto!important}
 }
+
+/* Landscape header controls: restore actions without sacrificing canvas height. */
+@media (orientation:landscape) and (max-height:650px) and (max-width:1200px){
+ .app-header{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:nowrap!important;gap:7px!important}
+ .app-header>.brand{flex:0 0 auto!important}
+ .app-header>.toolbar{display:flex!important;flex:0 1 auto!important;min-width:0!important;align-items:center!important;justify-content:center!important;overflow-x:auto!important;grid-row:auto!important;grid-column:auto!important}
+ .app-header>.landscape-preview-actions{display:flex!important;flex:0 0 auto!important;align-items:center!important;gap:4px!important;min-width:0!important}
+ .app-header>.landscape-preview-actions[hidden]{display:none!important}
+ .app-header>.landscape-preview-actions>button{height:34px!important;width:34px!important;min-width:34px!important;padding:5px!important}
+ .app-header>.history-actions{display:flex!important;flex:0 0 auto!important;gap:4px!important}
+ .app-header>.history-actions button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important}
+ .app-header>.header-end{display:flex!important;flex:0 0 auto!important;align-items:center!important;gap:4px!important}
+ .app-header>.header-end button,.app-header>.header-end summary{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:5px!important}
+ .app-header .brand img{width:32px!important;height:32px!important}
+}
