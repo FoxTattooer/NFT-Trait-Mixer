@@ -363,3 +363,12 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
  .stage .preview-meta #status{font-size:9px!important}
  .stage .preview-inline-actions button{height:24px!important;min-height:24px!important;width:25px!important;min-width:25px!important}
 }
+
+/* Project heading alignment: undo/redo on the right, not in toolbar. */
+.project-bar{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important}
+.project-bar .project-heading{flex:1 1 auto!important;min-width:0!important}
+.project-bar .history-actions{display:flex!important;flex:0 0 auto!important;gap:6px!important;align-items:center!important}
+.project-bar .history-actions .icon-button{display:inline-flex!important;width:37px!important;min-width:37px!important;flex:0 0 37px!important;height:37px!important;min-height:37px!important;padding:8px!important;border:1px solid #514151!important;border-radius:11px!important;background:linear-gradient(180deg,#211b25,#141218)!important}
+.project-bar .history-actions .icon{width:18px;height:18px}
+.project-bar .history-actions .icon-button:disabled{opacity:.36}
+@media(max-width:900px) and (orientation:portrait){.project-bar{padding-top:10px!important;padding-bottom:8px!important}.project-bar .history-actions{display:flex!important}}
