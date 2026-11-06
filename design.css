@@ -944,3 +944,13 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  .app-header>.history-actions{display:flex!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important}
  .app-header>.history-actions>button{width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:6px!important}
 }
+
+/* v0.7.53: original controls live in header permanently; no JS relocation. */
+@media (orientation:landscape){
+ .app-header>.landscape-preview-actions:not([hidden]){display:flex!important;align-items:center!important;gap:7px!important;position:static!important;visibility:visible!important;flex:0 0 auto!important}
+ .app-header>.history-actions{display:flex!important;align-items:center!important;gap:7px!important;flex:0 0 auto!important}
+ .app-header>.landscape-preview-actions>button,.app-header>.history-actions>button{width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;padding:6px!important}
+}
+@media (orientation:portrait){
+ .app-header>.landscape-preview-actions,.app-header>.history-actions{display:none!important}
+}
