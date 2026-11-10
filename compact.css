@@ -297,6 +297,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
     color: var(--scheme-muted, var(--muted));
     font-size: 9px;
     line-height: 13px;
+    opacity: .75;
     pointer-events: none;
   }
   .workspace-credit img { width: 8px; height: 13px; opacity: .75; }
