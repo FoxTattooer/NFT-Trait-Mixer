@@ -278,10 +278,30 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   display:block;padding:0 10px 4px;color:#ac9caf;font-size:11px;line-height:1.4;
 }
 
-.layer-tab-back {display:none}
+.layer-tab-back, .workspace-credit {display:none}
 @media (max-width:900px) and (orientation:portrait) {
+  body.compact-workspace {
+    --workspace-credit-height: 18px;
+    padding-bottom: calc(86px + var(--workspace-credit-height) + env(safe-area-inset-bottom));
+  }
+  body.compact-workspace .toast {
+    bottom: calc(90px + var(--workspace-credit-height) + env(safe-area-inset-bottom));
+  }
+  .workspace-credit {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: -3px;
+    color: var(--scheme-muted, var(--muted));
+    font-size: 9px;
+    line-height: 13px;
+    pointer-events: none;
+  }
+  .workspace-credit img { width: 8px; height: 13px; opacity: .75; }
   body.compact-workspace:has(#appLayout[data-mobile-panel=layers]) {
-    padding-bottom:calc(62px + env(safe-area-inset-bottom));
+    padding-bottom:calc(62px + var(--workspace-credit-height) + env(safe-area-inset-bottom));
   }
   #appLayout[data-mobile-panel=layers] .workspace-tabs {
     align-items:center;gap:7px;padding:5px 10px calc(5px + env(safe-area-inset-bottom));
@@ -296,7 +316,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   }
   #layersTab[data-back] .layer-tab-arrow {width:24px;height:24px}
   body.compact-workspace:has(#appLayout[data-mobile-panel=layers]) .toast {
-    bottom:calc(66px + env(safe-area-inset-bottom));
+    bottom:calc(66px + var(--workspace-credit-height) + env(safe-area-inset-bottom));
   }
 }
 @media (max-width:900px) and (orientation:portrait) and (prefers-reduced-motion:no-preference) {

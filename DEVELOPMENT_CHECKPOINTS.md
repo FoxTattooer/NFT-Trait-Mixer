@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.83 | checkpoint/v0.7.83-fox-credit | Drobný podpis Created by Fox s původní kapkou pod navigací editoru na výšku |
 | 0.7.82 | checkpoint/v0.7.82-trait-search | Hledání traitů s miniaturami a skok na výsledek ve Vrstvách |
 | 0.7.81 | checkpoint/v0.7.81-neon-accents | Tři nové neonové akcenty a bezpečnější potvrzování mazání |
 | 0.7.80 | checkpoint/v0.7.80-palette-accents | Samostatný akcent ovládání pro každou paletu a červené mazání |
