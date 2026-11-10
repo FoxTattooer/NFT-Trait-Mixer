@@ -297,10 +297,10 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
     color: var(--scheme-muted, var(--muted));
     font-size: 9px;
     line-height: 13px;
-    opacity: .75;
+    opacity: .35;
     pointer-events: none;
   }
-  .workspace-credit img { width: 8px; height: 13px; opacity: .75; }
+  .workspace-credit img { width: 8px; height: 13px; }
   body.compact-workspace:has(#appLayout[data-mobile-panel=layers]) {
     padding-bottom:calc(62px + var(--workspace-credit-height) + env(safe-area-inset-bottom));
   }

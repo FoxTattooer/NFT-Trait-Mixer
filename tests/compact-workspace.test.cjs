@@ -467,7 +467,7 @@ w.useRegistration(registration);
 await w.runAction('refresh-app');
 assert.equal(checks,1);
 assert.equal(get('refreshApp').dataset.updateState,'current');
-assert(get('toast').textContent.includes('v0.7.84'));
+assert(get('toast').textContent.includes('v0.7.85'));
 registration.update = async () => {
   registration.installing = worker;
   worker.state = 'redundant';
