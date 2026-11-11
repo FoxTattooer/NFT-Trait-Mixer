@@ -1,4 +1,4 @@
-/* Native .procreate reader. Only layer metadata and individual image tiles are read. */
+/* Native .procreate reader. Reads layer data and the optional small Quick Look image. */
 (function (root) {
   'use strict';
   const MAX_DIRECTORY_READ = 24 * 1024 * 1024;
@@ -27,6 +27,17 @@
     } }), { useWebWorkers: false, checkSignature: true });
     if (offset !== result.length) throw new Error('Soubor Procreate je neúplný.');
     return result;
+  }
+
+  async function readThumbnail(entry) {
+    try {
+      const bytes = await readEntry(entry, 768 * 1024);
+      const header = new DataView(bytes.buffer);
+      if (bytes.length < 33 || header.getUint32(0) !== 0x89504e47 || header.getUint32(4) !== 0x0d0a1a0a ||
+          header.getUint32(8) !== 13 || header.getUint32(12) !== 0x49484452) return;
+      const width = header.getUint32(16), height = header.getUint32(20);
+      if (width > 0 && height > 0 && width <= 1024 && height <= 1024) return bytes.buffer;
+    } catch { /* The thumbnail is independent of the layers. */ }
   }
 
   function describe(archive) {
@@ -108,7 +119,7 @@
     }
     const reader = new zip.ZipReader(new BoundedReader(file), { useWebWorkers: false });
     try {
-      let archive;
+      let archive, thumbnail;
       const entries = [];
       let entryCount = 0;
       for await (const entry of reader.getEntriesGenerator()) {
@@ -116,7 +127,8 @@
         if (entry.filename === 'Document.archive' && !entry.directory) {
           if (archive) throw documentError();
           archive = await readEntry(entry, MAX_ARCHIVE);
-        } else if (!entry.directory && tilePath.test(entry.filename)) entries.push(entry);
+        } else if (!entry.directory && entry.filename === 'QuickLook/Thumbnail.png') thumbnail ??= entry;
+        else if (!entry.directory && tilePath.test(entry.filename)) entries.push(entry);
       }
       if (!archive) throw documentError();
       const session = describe(plist.parse(archive));
@@ -144,6 +156,7 @@
       const source = await digest(utf8.encode('procreate:' + hashes.join(':')));
       const turned = session.orientation === 3 || session.orientation === 4;
       session.metadata = { source, width: turned ? height : width, height: turned ? width : height, tree: session.nodes };
+      session.readThumbnail = () => thumbnail ? readThumbnail(thumbnail) : undefined;
       session.close = () => reader.close();
       return session;
     } catch (error) {

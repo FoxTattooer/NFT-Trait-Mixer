@@ -14,6 +14,7 @@ const libraryBodyMarkup = new WeakMap();
 const PAGE_SIZE = 24;
 let traitSearchLimit = PAGE_SIZE, traitSearchMarkup = '';
 let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, dialogResolve;
+let recentProject;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
 let installPrompt = null, workerRegistration = null;
 const undoStack = [], redoStack = [], imageCache = new Map();
@@ -912,12 +913,15 @@ function updatePreviewStatus(message, failed = false) {
 async function draw() {
   if (safeMode) { updatePreviewStatus('Obnovovací režim · náhledy vypnuté'); return; }
   const ticket = ++drawTicket, layers = visibleLayers(state);
+  const recentId = recentProject?.project === state ? recentProject.id : undefined;
+  recentProject = null;
   try {
     const frame=document.createElement('canvas');frame.width=frame.height=1024;
     try {
       await paintLayers(frame, layers, () => ticket === drawTicket);
       if(ticket!==drawTicket)return;
       const ctx=$('canvas').getContext('2d');ctx.clearRect(0,0,1024,1024);ctx.drawImage(frame,0,0);
+      if (recentId && layers.length) window.TraitRecent?.captureCanvas(recentId, frame, true);
     } finally {frame.width=frame.height=1;}
     if (ticket !== drawTicket) return;
     updatePreviewStatus(layers.length ? `${layers.length} viditelných vrstev · náhled připraven` : 'Připraveno k tvoření');
@@ -1040,9 +1044,19 @@ async function loadProject(file) {
   busy = true; render();
   try {
     const next = M.normalize(JSON.parse(await file.text()));
-    for (const c of next.cats) for (const t of c.traits) await decodeImage(t.data);
+    let fallback, capturedFallback = false;
+    const recent = window.TraitRecent;
+    for (const c of next.cats) for (const t of c.traits) {
+      const image = await decodeImage(t.data);
+      if (recent && !safeMode && !capturedFallback) {
+        fallback = recent.makeThumb(image);
+        capturedFallback = true;
+      }
+    }
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
+    const recentId = recent?.record(file, undefined, fallback);
+    if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
     showProjectSource('Otevřeno ze zálohy JSON');
     layerOverview = false; showPanel('layers');
   } catch (error) { window.TraitDiagnostics?.error('json-open', error); toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }

@@ -1,5 +1,5 @@
 'use strict';
-importScripts('./vendor/procreate-zip.js', './vendor/procreate-lzo.js', './procreate-plist.js', './procreate-tiles.js', './procreate-file.js?build=0787');
+importScripts('./vendor/procreate-zip.js', './vendor/procreate-lzo.js', './procreate-plist.js', './procreate-tiles.js', './procreate-file.js?build=0789');
 
 let session;
 let queue = Promise.resolve();
@@ -10,7 +10,8 @@ self.onmessage = ({ data }) => {
       if (data.type === 'parse') {
         await session?.close();
         session = await ProcreateFile.parse(data.file, zip, ProcreatePlist);
-        self.postMessage({ requestId: data.requestId, result: session.metadata });
+        const thumbnail = await session.readThumbnail();
+        self.postMessage({ requestId: data.requestId, result: { ...session.metadata, thumbnail } }, thumbnail ? [thumbnail] : []);
       } else if (data.type === 'render') {
         if (!session) throw new Error('Nejdřív otevři dokument Procreate.');
         const buffer = await ProcreateFile.raster(session, data.nodeId, codecs, (w, h) => new OffscreenCanvas(w, h));

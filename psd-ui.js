@@ -5,7 +5,7 @@
   let worker, localSession, metadata, epoch = 0, request = 0, previewURL, working = false;
   let nativeImport = false, workerError = null;
   let savingBatch = false, cancelRequested = false;
-  let recordImport, importStage;
+  let recordImport, importStage, recentId;
   const pending = new Map();
   const progressBox = $('layerImportProgress'), bar = $('layerImportBar');
   function indeterminateProgress(detail) {
@@ -40,7 +40,7 @@
   const status = message => { $('psdStatus').textContent = message; };
   function dispose() {
     progressBox.hidden = true; epoch++; worker?.terminate(); worker = null; workerError = null; localSession = null; metadata = null; working = false;
-    recordImport = null; importStage = null; $('importDiagnostics').hidden = true;
+    recordImport = null; importStage = null; recentId = null; $('importDiagnostics').hidden = true;
     for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error('Import zrušen.')); } pending.clear();
     if (previewURL) URL.revokeObjectURL(previewURL); previewURL = null;
     $('psdPreview').removeAttribute('src'); $('psdTree').replaceChildren(); fileInput.value = ''; procreateInput.value = '';
@@ -142,7 +142,7 @@
       }
       if (current !== epoch) return;
       if (typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
-        try { worker = new Worker(procreate ? './procreate-worker.js?build=0787' : './psd-worker.js'); }
+        try { worker = new Worker(procreate ? './procreate-worker.js?build=0789' : './psd-worker.js'); }
         catch { throw importError('Zpracování vrstev na pozadí se nepodařilo spustit.', 'WORKER_START'); }
         worker.onmessage = ({ data }) => {
           const p = pending.get(data.requestId);
@@ -163,7 +163,8 @@
       if (current !== epoch) return;
       indeterminateProgress('Čtu strukturu ' + format);
       const result = await call('parse', { file }); if (current !== epoch) return;
-      metadata = { ...result, source: source ?? result.source };
+      const { thumbnail, ...info } = result;
+      metadata = { ...info, source: source ?? info.source };
       source = metadata.source;
       $('psdTree').innerHTML = treeHTML(metadata.tree);
       $('psdDimensions').textContent = `${metadata.width} × ${metadata.height} px → PNG 1024 × 1024. Poměr stran a pozice zůstanou zachované; obdélník se doplní průhlednými okraji.`;
@@ -180,6 +181,10 @@
         selected: chosen().length
       });
       status('Vyber vrstvy a způsob rozdělení. Projekt se změní až po potvrzení.');
+      const recent = window.TraitRecent;
+      recentId = recent?.record(file, source);
+      if (procreate) recent?.capturePng(recentId, thumbnail);
+      else recent?.capturePsd(recentId, file);
     } catch (error) {
       if (current !== epoch) return;
       reportFailure(phase, error, procreate ? 'PROCREATE_OPEN' : 'PSD_OPEN');
@@ -193,6 +198,7 @@
     trackStage('preview');
     try {
       const buffer = await call('render', { nodeId }); if (current !== epoch) return;
+      window.TraitRecent?.capturePng(recentId, buffer);
       if (previewURL) URL.revokeObjectURL(previewURL);
       previewURL = URL.createObjectURL(new Blob([buffer], { type: 'image/png' })); $('psdPreview').src = previewURL;
       $('psdPreviewName').textContent = allNodes(metadata.tree).find(n => n.id === nodeId).name;
@@ -295,6 +301,7 @@
           const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
           let buffer = await call('render', { nodeId: job.nodeId });
           if (current !== epoch) return;
+          if (offset === 0 && index === 0) window.TraitRecent?.capturePng(recentId, buffer);
           trait.data = stagedImages ? await TraitStorage.stagePng(buffer, stagedImages) : await dataURL(buffer);
           buffer = null;
           if (current !== epoch) return;

@@ -1,16 +1,16 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.88';
+const CACHE = PREFIX + 'v0.7.89';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SHELL = [
-  './', './index.html', './styles.css?build=0768', './design.css?build=0779', './compact.css?build=0788',
-  './schemes.css?build=0781', './drag.js?build=0760', './project.js?build=0788', './diagnostics.js?build=0788',
+  './', './index.html', './styles.css?build=0768', './design.css?build=0779', './compact.css?build=0789',
+  './schemes.css?build=0781', './drag.js?build=0760', './project.js?build=0788', './diagnostics.js?build=0789',
   './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png',
-  './app.js?build=0788', './storage.js?build=0788', './final.js?build=0788', './final-ui.js?build=0788',
+  './app.js?build=0789', './recent.js?build=0789', './storage.js?build=0788', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',
-  './psd-file.js', './psd-ui.js?build=0787', './psd-worker.js', './vendor/ag-psd.js',
-  './procreate-worker.js?build=0787', './procreate-file.js?build=0787', './procreate-plist.js', './procreate-tiles.js',
+  './psd-file.js', './psd-ui.js?build=0789', './psd-worker.js', './vendor/ag-psd.js',
+  './procreate-worker.js?build=0789', './procreate-file.js?build=0789', './procreate-plist.js', './procreate-tiles.js',
   './vendor/procreate-zip.js', './vendor/procreate-lzo.js', './manifest.webmanifest', './icons/icon-192-v073.png',
   './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png',
   './icons/icon-192.png', './icons/icon-512.png',

@@ -38,14 +38,14 @@ def check_update(page, context, server, url, old_root, root):
     assert saved
     server.active_release = root
     page.locator('#refreshApp').click()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.88', timeout=30000)
+    expect(page.locator('#appVersion')).to_have_text('v0.7.89', timeout=30000)
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
     page.locator('.file-menu summary').click()
     expect(page.get_by_role('button', name='Import z Procreate')).to_be_visible()
     context.set_offline(True)
     page.reload()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.88')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.89')
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
     print(f'upgrade from {old_version}, retained IndexedDB project, new import entry and offline reload passed', flush=True)
@@ -57,7 +57,7 @@ def run(page, context, url, stress, mask):
     page.on('crash', lambda: errors.append('Page crashed'))
     page.goto(url)
     page.wait_for_function("document.querySelector('#appLayout').getAttribute('aria-busy') === 'false' && navigator.serviceWorker.controller")
-    expect(page.locator('#appVersion')).to_have_text('v0.7.88')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.89')
     panel = page.locator('#catsPanel').bounding_box()
     canvas = page.locator('.stage').bounding_box()
     assert canvas['x'] < panel['x'] and .59 < canvas['width'] / (canvas['width'] + panel['width']) < .61, (panel, canvas)
@@ -111,6 +111,8 @@ def run(page, context, url, stress, mask):
     assert durable_count() == 8
     page.reload()
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
+    expect(page.locator('#recentFiles li')).to_have_count(1)
+    assert page.locator('#recentFiles img').evaluate('img => img.decode().then(() => img.naturalWidth)') == 72
     cancelled = attempts()[-1]
     assert (cancelled['stage'], cancelled['saved'], cancelled['selected']) == ('cancelled', 8, 610)
     choose(stress)
@@ -196,6 +198,8 @@ def run(page, context, url, stress, mask):
     page.locator('#psdCancel').click()
     assert durable_count() == 610
     assert attempts()[-1]['code'] == 'WORKER_INTERRUPTED'
+    expect(page.locator('#recentFiles .recent-file-name')).to_have_text([mask.name, stress.name])
+    expect(page.locator('#recentFiles img')).to_have_count(2)
     page.get_by_label('Další možnosti').click()
     page.get_by_role('button', name='Diagnostika', exact=True).click()
     expect(page.locator('#diagnosticsReport')).to_contain_text('WORKER_INTERRUPTED')

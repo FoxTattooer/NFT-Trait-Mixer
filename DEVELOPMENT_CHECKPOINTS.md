@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.89 | checkpoint/v0.7.89-recent-files | Historie otevření v Sestavách, s lokálními miniaturami a názvy včetně přípon |
 | 0.7.88 | checkpoint/v0.7.88-final | Lokální zamčené kopie projektů a složek, stromový ZIP s PNG a `project.json` |
 | 0.7.87 | checkpoint/v0.7.87-procreate-import | Přímý import `.procreate`, procenta podle uložených vrstev a export diagnostiky |
 | 0.7.85 | checkpoint/v0.7.85-fox-credit-35 | Podpis Created by Fox včetně kapky s krytím 35 % |
