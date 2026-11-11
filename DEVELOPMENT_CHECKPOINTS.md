@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.95 | checkpoint/v0.7.95-workspace-navigation | Tři polohy spodní lišty na výšku, stálá navigace na šířku, kompaktní ovládání panelů a akcenty podle palety |
 | 0.7.94 | checkpoint/v0.7.94-project-recovery | Automatická lokální záloha a obnovení posledního projektu po pádu i bez připojení |
 | 0.7.93 | checkpoint/v0.7.93-compact-layer-tools | Jednořádkové ovládání vrstev, vlajky a WIP pro celý strom, kompaktní kontrola shod a skleněná spodní navigace |
 | 0.7.92 | checkpoint/v0.7.92-layer-review | Kontrola vrstev, WIP filtr, barevné vlajky, náhledy poznámek a volitelný rychlý výběr |

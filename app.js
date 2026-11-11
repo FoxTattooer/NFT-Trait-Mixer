@@ -311,24 +311,37 @@ $('dialogForm').addEventListener('submit', event => {
 $('dialogInput').addEventListener('input', () => $('dialogInput').setCustomValidity(''));
 $('editDialog').addEventListener('cancel', event => { event.preventDefault(); finishDialog(null); });
 
+const workspaceToolMenus = [$('layerPanelOverflow'), $('managePanelOverflow')];
+function closeWorkspaceToolMenus(focus = false) {
+  for (const menu of workspaceToolMenus) if (menu.open) {
+    menu.open = false;
+    if (focus) menu.querySelector('summary').focus();
+  }
+}
 function showPanel(panel) {
   const changed = mobilePanel !== panel;
-  if (changed) $('layerPanelOverflow').open = false;
+  if (changed) {
+    closeWorkspaceToolMenus();
+    workspaceTabsCollapsed = false;
+  }
   mobilePanel = panel;
   if (panel !== 'layers') inspectorPanel = panel;
   $('appLayout').dataset.mobilePanel = mobilePanel;
   syncLandscapeTraitPlacement();
   renderLayerTree();
-  document.querySelectorAll('.workspace-tabs [data-panel]').forEach(b => { const selected = b.dataset.panel === mobilePanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
-  if (changed) setWorkspaceTabsCollapsed(false);
+  if (changed) resetWorkspaceScroll();
 }
 let layerOverview = false;
 const LAYER_BATCH = 48;
 let layerLimit = LAYER_BATCH;
 let layerContextTrigger, layerContextAnchor;
-const layerReviewHosts = { layers: 'layerReviewLayers', traits: 'layerReviewManage', snapshots: 'layerReviewSnapshots' };
+const layerReviewHosts = {
+  layers: ['layerReviewLayers', 'layerPanelActions'],
+  traits: ['layerReviewManage', 'managePanelActions'],
+  snapshots: ['layerReviewSnapshots', 'snapshotPanelActions'],
+};
 const wipFilters = [
   { label: 'Vše', icon: 'eye' },
   { label: 'Jen WIP', icon: 'eye-half' },
@@ -411,10 +424,10 @@ function reviewMatchGroup(group, inScope) {
   return `<section class="layer-review-match">${summary}<div id="match-copies-${id}" class="layer-review-match-copies" ${open ? '' : 'hidden'}>${copies}${more}</div></section>`;
 }
 function renderLayerReview() {
-  const review = $('layerReview'), host = layerReviewHosts[mobilePanel];
+  const review = $('layerReview'), [host, controls] = layerReviewHosts[mobilePanel] || [];
   review.hidden = !host || !state.cats.length;
   const tools = $('layerReviewTools');
-  const toolbar = !review.hidden && mobilePanel === 'layers' ? $('layerPanelActions') : review;
+  const toolbar = review.hidden ? review : $(controls);
   if (tools.parentElement !== toolbar) {
     if (toolbar === review) review.prepend(tools);
     else toolbar.append(tools);
@@ -533,10 +546,7 @@ function renderLayerTree() {
   grid.setAttribute('aria-label', gridLabel);
   grid.setAttribute('aria-pressed', String(overview && compactView));
   $('layerTree').hidden = overview || manage;
-  const back = mobilePanel === 'layers' && !overview;
-  $('layersTab').toggleAttribute('data-back', back);
-  $('layersTabIcon').setAttribute('href', back ? '#i-back' : '#i-layers');
-  $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět na kategorie' : 'Vrstvy');
+  syncWorkspaceTabs();
   if (!c || (!manage && (overview || mobilePanel !== 'layers'))) {
     tree.replaceChildren(); treeMarkup.delete(tree); mountThumbnails(); return;
   }
@@ -562,7 +572,7 @@ function renderLayerTree() {
   }).join('');
   const more = rows.length > layerLimit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', 'class="outline full-width"') : '';
   const empty = rows.length ? '' : `<p class="empty-list">${wipFilter ? 'Tomuto filtru neodpovídají žádné vrstvy.' : 'Tato kategorie je zatím prázdná.'}</p>`;
-  const tools = `<div class="layer-tree-tools">${button('add-traits', 'Přidat PNG', '', 'upload')}${button('add-organizer-folder', 'Přidat složku', '', 'folder')}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
+  const tools = `<div class="layer-tree-tools">${button('add-traits', 'PNG', '', 'upload', 'aria-label="Přidat PNG" title="Přidat PNG"')}${button('add-organizer-folder', 'Složka', '', 'folder', 'aria-label="Přidat složku" title="Přidat složku"')}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
   const markup = entries + more + empty + (manage ? '' : tools);
   // Keep existing thumbnail elements and the focused row on selection changes.
   if (treeMarkup.get(tree) !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup.set(tree, markup); }
@@ -997,6 +1007,7 @@ function revealLayerRow(cat, kind, id, parentId) {
   active = cat.id;
   layerOverview = false;
   layerLimit = Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH;
+  selectWorkspaceTab(true);
   showPanel('layers');
   render(true);
   const row = Array.from($('layerTree').querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === id);
@@ -1492,6 +1503,7 @@ const colorSchemeKey = 'nft-color-scheme';
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
 const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint', 'neon-red', 'neon-lime', 'neon-uv']);
 const accentCoverageKey = 'nft-accent-coverage', accentGlowKey = 'nft-accent-glow';
+const schemeAccentPreference = (key, scheme = document.body.dataset.colorScheme) => `${key}:${scheme}`;
 const accentCoverages = new Set(['less', 'normal', 'strong']);
 let accentGlow = null;
 function applyAccentCoverage(value) {
@@ -1505,9 +1517,8 @@ function applyAccentGlow() {
   const level = accentGlow ?? (document.body.dataset.controlAccent.startsWith('neon-') ? 50 : 0);
   $('accentGlow').value = String(level);
   $('accentGlowValue').value = `${level} %`;
-  document.body.toggleAttribute('data-accent-glow-adjusted', accentGlow !== null);
   document.body.style.setProperty('--accent-glow-scale', String(level / 50));
-  document.body.style.setProperty('--accent-glow-opacity', `${Math.min(100, level * 2)}%`);
+  document.body.style.setProperty('--accent-glow-opacity', `${level}%`);
 }
 function applyControlAccent(value) {
   const accent = controlAccents.has(value) ? value : 'auto';
@@ -1521,8 +1532,15 @@ const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'ic
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
-  let accent;
-  try { accent = localStorage.getItem(controlAccentKey(scheme)); } catch { /* use the palette default */ }
+  let accent, coverage;
+  accentGlow = null;
+  try {
+    accent = localStorage.getItem(controlAccentKey(scheme));
+    coverage = localStorage.getItem(schemeAccentPreference(accentCoverageKey, scheme)) ?? localStorage.getItem(accentCoverageKey);
+    const glow = localStorage.getItem(schemeAccentPreference(accentGlowKey, scheme)) ?? localStorage.getItem(accentGlowKey);
+    if (glow !== null && /^\d{1,3}$/.test(glow) && Number(glow) <= 100) accentGlow = Number(glow);
+  } catch { /* use the palette defaults */ }
+  applyAccentCoverage(coverage);
   applyControlAccent(accent);
   for (const choice of $('settingsDialog').querySelectorAll('[data-scheme]')) {
     const selected = choice.dataset.scheme === scheme;
@@ -1531,15 +1549,8 @@ function applyColorScheme(value) {
   }
 }
 function restoreColorScheme() {
-  let saved, coverage;
-  accentGlow = null;
-  try {
-    saved = localStorage.getItem(colorSchemeKey);
-    coverage = localStorage.getItem(accentCoverageKey);
-    const glow = localStorage.getItem(accentGlowKey);
-    if (glow !== null && /^\d{1,3}$/.test(glow) && Number(glow) <= 100) accentGlow = Number(glow);
-  } catch { /* use the defaults */ }
-  applyAccentCoverage(coverage);
+  let saved;
+  try { saved = localStorage.getItem(colorSchemeKey); } catch { /* use the default */ }
   applyColorScheme(saved === 'drip' ? 'graphite-grey' : saved);
   if (saved === 'drip') {
     try { localStorage.setItem(colorSchemeKey, 'graphite-grey'); } catch { /* preference is read-only */ }
@@ -1563,41 +1574,57 @@ function chooseControlAccent(accent) {
   applyControlAccent(accent);
   saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
 }
-const portraitWorkspaceScroll = window.matchMedia('(max-width:900px) and (orientation:portrait)');
-const landscapeWorkspaceScroll = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)');
-const workspaceScrollPanels = [$('catsPanel'), document.querySelector('.inspector')];
-const workspaceScrollTop = new Map();
-let workspaceScrollSource, workspaceScrollDistance = 0;
+const portraitWorkspace = window.matchMedia('(max-width:900px) and (orientation:portrait)');
+let workspaceTabSelected = false, workspaceTabsCollapsed = false;
+let workspaceScrollTop = 0, workspaceScrollDistance = 0;
 function resetWorkspaceScroll() {
-  workspaceScrollTop.set(document, Math.max(0, window.scrollY || 0));
-  for (const panel of workspaceScrollPanels) workspaceScrollTop.set(panel, Math.max(0, panel.scrollTop));
+  workspaceScrollTop = Math.max(0, window.scrollY || 0);
   workspaceScrollDistance = 0;
-  workspaceScrollSource = null;
+}
+function syncWorkspaceTabs() {
+  const portrait = portraitWorkspace.matches;
+  const compact = portrait && workspaceTabSelected;
+  const collapsed = portrait && workspaceTabsCollapsed;
+  const tabs = $('workspaceTabs'), toggle = $('workspaceTabsToggle');
+  const back = mobilePanel === 'layers' && !$('layerTree').hidden && (!portrait || compact);
+  document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
+  tabs.toggleAttribute('data-compact', compact);
+  tabs.hidden = collapsed;
+  $('workspaceTabsHandle').hidden = !collapsed;
+  toggle.hidden = !portrait;
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
+  for (const tab of tabs.querySelectorAll('[data-panel]')) {
+    const selected = (!portrait || compact) && tab.dataset.panel === mobilePanel;
+    tab.classList.toggle('is-active', selected);
+    tab.setAttribute('aria-pressed', String(selected));
+  }
+  $('layersTab').toggleAttribute('data-back', back);
+  $('layersTabIcon').setAttribute('href', back && !portrait ? '#i-back' : '#i-layers');
+  $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět na kategorie' : 'Vrstvy');
 }
 function setWorkspaceTabsCollapsed(collapsed, focus = false) {
-  document.body.toggleAttribute('data-workspace-tabs-collapsed', collapsed);
-  $('workspaceTabs').hidden = collapsed;
-  $('workspaceTabsHandle').hidden = !collapsed;
-  $('workspaceTabsToggle').setAttribute('aria-expanded', String(!collapsed));
-  $('workspaceTabsToggle').querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
+  workspaceTabsCollapsed = portraitWorkspace.matches && collapsed;
+  syncWorkspaceTabs();
   resetWorkspaceScroll();
   if (focus) {
-    const control = collapsed ? $('workspaceTabsHandle') : ($('workspaceTabs').querySelector('[aria-pressed=true]') || $('layersTab'));
+    const control = workspaceTabsCollapsed ? $('workspaceTabsHandle') : ($('workspaceTabs').querySelector('[aria-pressed=true]') || $('layersTab'));
     control.focus({ preventScroll: true });
   }
 }
+function selectWorkspaceTab(selected) {
+  workspaceTabSelected = selected;
+  setWorkspaceTabsCollapsed(false);
+}
 function toggleWorkspaceTabs() {
-  setWorkspaceTabsCollapsed(!$('workspaceTabs').hidden, true);
+  if (portraitWorkspace.matches) setWorkspaceTabsCollapsed(!workspaceTabsCollapsed, true);
 }
 window.addEventListener('scroll', event => {
-  const source = event.target === window ? document : event.target;
-  if (source === document ? !portraitWorkspaceScroll.matches : !landscapeWorkspaceScroll.matches || !workspaceScrollPanels.includes(source)) return;
-  const top = Math.max(0, source === document ? window.scrollY || 0 : source.scrollTop);
-  const delta = top - (workspaceScrollTop.get(source) ?? top);
-  workspaceScrollTop.set(source, top);
-  if (workspaceScrollSource !== source || delta < 0) workspaceScrollDistance = 0;
-  workspaceScrollSource = source;
-  if (!ready || busy || !$('layerContext').hidden || document.body.classList.contains('is-dragging-layer')) {
+  if (!portraitWorkspace.matches || !workspaceTabSelected || workspaceTabsCollapsed || ![document, window].includes(event.target)) return;
+  const top = Math.max(0, window.scrollY || 0);
+  const delta = top - workspaceScrollTop;
+  workspaceScrollTop = top;
+  if (delta < 0 || !ready || busy || !$('layerContext').hidden || document.body.classList.contains('is-dragging-layer')) {
     workspaceScrollDistance = 0;
     return;
   }
@@ -1606,12 +1633,14 @@ window.addEventListener('scroll', event => {
     setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(document.activeElement));
   }
 }, { capture: true, passive: true });
+portraitWorkspace.addEventListener('change', () => setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle')));
+$('showroomDialog').addEventListener('close', () => selectWorkspaceTab(false));
 window.addEventListener('resize', resetWorkspaceScroll);
 $('accentGlow').addEventListener('input', event => {
   accentGlow = Number(event.target.value);
   applyAccentGlow();
 });
-$('accentGlow').addEventListener('change', () => saveAppearancePreference(accentGlowKey, String(accentGlow), $('accentAppearanceStatus')));
+$('accentGlow').addEventListener('change', () => saveAppearancePreference(schemeAccentPreference(accentGlowKey), String(accentGlow), $('accentAppearanceStatus')));
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
 let openShowroom, diagnosticsFromHistory = false;
@@ -1636,7 +1665,9 @@ async function handleAction(action, id, element) {
     case 'show-panel': {
       closeLayerContext();
       const panel = element.dataset.panel;
-      if (panel === 'layers' && mobilePanel === 'layers') layerOverview = !layerOverview;
+      const back = panel === 'layers' && mobilePanel === 'layers' && $('layersTab').hasAttribute('data-back');
+      if (panel === 'layers' && mobilePanel === 'layers') layerOverview = back;
+      selectWorkspaceTab(panel !== 'rules' && !back);
       showPanel(panel);
       renderSnapshotLayerLibrary();
       renderSnapshotThumbnails();
@@ -1652,6 +1683,7 @@ async function handleAction(action, id, element) {
       } else {
         active = category.id;
         layerOverview = true;
+        selectWorkspaceTab(false);
         showPanel('layers');
         render(true);
         const row = $('cats').querySelector(`[data-action="select-category"][data-id="${id}"]`);
@@ -1772,11 +1804,12 @@ async function handleAction(action, id, element) {
     case 'library-prev': libraryPages[id] = Math.max(0, (libraryPages[id] || 0) - 1); renderSnapshotLayerLibrary(); break;
     case 'library-next': libraryPages[id] = (libraryPages[id] || 0) + 1; renderSnapshotLayerLibrary(); break;
     case 'enable-previews': safeMode = false; $('recoveryNotice').hidden = true; render(); break;
-    case 'open-traits': layerOverview = false; showPanel('layers'); break;
+    case 'open-traits': layerOverview = false; selectWorkspaceTab(true); showPanel('layers'); break;
     case 'select-category': {
       if (!c) break;
       layerLimit = LAYER_BATCH; layerOverview = false; active = id;
       organizerSelection[id] = null;
+      selectWorkspaceTab(true);
       render(true);
       break;
     }
@@ -1831,6 +1864,7 @@ async function handleAction(action, id, element) {
       if (name) {
         const nextId = M.uid();
         layerOverview = false;
+        selectWorkspaceTab(true);
         if (wipFilter === 1) wipFilter = 0;
         change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána');
         showPanel('layers');
@@ -1846,7 +1880,7 @@ async function handleAction(action, id, element) {
       if (await ask({ title: `Smazat kategorii „${c.name}“?`, description: `Odstraní se i všech ${c.traits.length} traitů této kategorie a související pravidla. Změnu můžeš vrátit tlačítkem Zpět.`, confirm: true, submit: 'Smazat kategorii', danger: true })) {
         const index = state.cats.findIndex(item => item.id === c.id);
         change(() => { M.removeCategory(state, c.id); active = state.cats[Math.min(index, state.cats.length - 1)]?.id || null; }, 'Kategorie smazána · můžeš použít Zpět');
-        if (!state.cats.length) showPanel('layers');
+        if (!state.cats.length) { selectWorkspaceTab(false); showPanel('layers'); }
       }
       break;
     }
@@ -1891,6 +1925,7 @@ async function handleAction(action, id, element) {
       if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) {
         if (state.cats.length && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
         recoveryDismissed = true;
+        selectWorkspaceTab(false);
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');
         showPanel('layers');
@@ -1926,7 +1961,7 @@ async function handleAction(action, id, element) {
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
     case 'toggle-compact':
-      if (!layerOverview && active) { layerOverview = true; renderLayerTree(); break; }
+      if (!layerOverview && active) { layerOverview = true; selectWorkspaceTab(false); renderLayerTree(); break; }
       compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); toast(compactView ? 'Kompaktní zobrazení kategorií' : 'Rozbalené zobrazení kategorií'); break;
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
@@ -1942,7 +1977,7 @@ async function handleAction(action, id, element) {
     case 'set-accent-coverage':
       if (accentCoverages.has(element?.dataset.coverage)) {
         applyAccentCoverage(element.dataset.coverage);
-        saveAppearancePreference(accentCoverageKey, element.dataset.coverage, $('accentAppearanceStatus'));
+        saveAppearancePreference(schemeAccentPreference(accentCoverageKey), element.dataset.coverage, $('accentAppearanceStatus'));
       }
       break;
     case 'toggle-workspace-tabs': toggleWorkspaceTabs(); break;
@@ -2011,7 +2046,7 @@ async function handleAction(action, id, element) {
         for (const c of state.cats) if (c.id in snapshot.visibility) c.visible = snapshot.visibility[c.id];
         state.rulesEnabled = snapshot.rulesEnabled;
       }, 'Sestava použita');
-      if (action === 'edit-snapshot') { layerOverview = false; showPanel('layers'); }
+      if (action === 'edit-snapshot') { layerOverview = false; selectWorkspaceTab(true); showPanel('layers'); }
       break;
     }
     case 'rename-snapshot': {
@@ -2068,7 +2103,7 @@ $('layerCategory').addEventListener('change', event => {
 });
 window.addEventListener('resize', () => {
   closeLayerContext();
-  $('layerPanelOverflow').open = false;
+  closeWorkspaceToolMenus();
 });
 window.addEventListener('scroll', event => {
   if (!layerContextTrigger || !layerContextAnchor || (event.target instanceof Node && $('layerContext').contains(event.target))) return;
@@ -2078,11 +2113,7 @@ window.addEventListener('scroll', event => {
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
   if (layerContextTrigger) closeLayerContext(true);
-  const overflow = $('layerPanelOverflow');
-  if (overflow.open) {
-    overflow.open = false;
-    overflow.querySelector('summary').focus();
-  }
+  closeWorkspaceToolMenus(true);
 });
 document.addEventListener('change', event => {
   if ($('layerContext').contains(event.target)) closeLayerContext(true);
@@ -2143,8 +2174,7 @@ $('traits').addEventListener('submit', async event => {
   $('trait-note-' + id)?.querySelector('summary')?.focus({ preventScroll: true });
 });
 document.addEventListener('click', event => {
-  const overflow = $('layerPanelOverflow');
-  if (overflow.open && !overflow.contains(event.target)) overflow.open = false;
+  for (const menu of workspaceToolMenus) if (menu.open && !menu.contains(event.target)) menu.open = false;
   const target = event.target.closest('[data-action]');
   if (target?.dataset.action !== 'open-layer-menu' && (!$('layerContext').contains(event.target) || target?.tagName === 'BUTTON')) closeLayerContext();
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
@@ -2272,7 +2302,7 @@ window.addEventListener('offline', () => {
   if ($('refreshApp').dataset.updateState === 'current') setUpdateState('idle');
 });
 async function init() {
-  resetWorkspaceScroll();
+  setWorkspaceTabsCollapsed(false);
   restoreColorScheme();
   try { quickTraitsVisible = localStorage.getItem(quickTraitsPreference) !== 'true'; } catch { /* use the default */ }
   const finishLog = window.TraitDiagnostics?.start('startup');

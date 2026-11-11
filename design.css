@@ -704,13 +704,6 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
 /* PNG upload is an icon beside the selected category, not a full-width callout. */
 #traitsPanel .dropzone{display:none!important}
 #traitsPanel .category-stepper{display:none!important}
-#traitsPanel .panel-heading{display:flex!important;align-items:center!important;gap:9px!important;margin-bottom:9px!important}
-#traitsPanel .panel-heading #catTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:900px) and (orientation:portrait){
- #traitsPanel{padding-top:0!important}
- #traitsPanel .panel-heading{padding-top:3px!important}
- #traitsPanel #uploadStatus:empty{display:none!important}
-}
 
 /* Make the four-square compact toggle visibly switch between two distinct layouts. */
 @media(max-width:900px){
@@ -723,8 +716,6 @@ dialog.category-sort-dialog{position:fixed!important;inset:0!important;margin:au
  body.compact-categories #cats .layer-stepper,body.compact-categories #cats .category-tools,body.compact-categories #cats .layer-folder-tree{display:none!important}
  body:not(.compact-categories) #cats .category-meta{display:block!important}
  body:not(.compact-categories) #cats .layer-stepper{display:flex!important}
- body.compact-categories #compactToggle{border-color:#ff3b9b!important;background:#551633!important;color:#fff!important;box-shadow:0 0 10px #ff29915c!important}
- body:not(.compact-categories) #compactToggle{border-color:#584253!important;background:#1c1821!important;color:#d6c5d1!important;box-shadow:none!important}
 }
 
 /* Definitive category view modes: dense rows vs full editing cards. */
