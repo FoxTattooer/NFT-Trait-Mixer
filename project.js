@@ -85,7 +85,7 @@
     const { folders, assignments } = p.organizer?.[category.id] || { folders: [], assignments: {} };
     const byParent = new Map();
     const parents = new Map();
-    const pending = [];
+    const pending = category.wip ? folders.map(folder => folder.id) : [];
     for (const folder of folders) {
       if (!byParent.has(folder.parentId)) byParent.set(folder.parentId, []);
       byParent.get(folder.parentId).push(folder.id);
@@ -109,12 +109,16 @@
     }
     for (const folder of markedFolders) includePath(folder);
     for (const trait of category.traits) {
-      if (!trait.wip && !markedFolders.has(assignments[trait.id])) continue;
+      if (!category.wip && !trait.wip && !markedFolders.has(assignments[trait.id])) continue;
       traits.add(trait.id);
       includePath(assignments[trait.id]);
     }
     return { folders: markedFolders, traits, paths };
   }
+  const layerMarks = item => ({
+    ...(item.wip === true ? { wip: true } : {}),
+    ...(isFlagColor(item.flag) ? { flag: item.flag } : {}),
+  });
   const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
@@ -126,11 +130,10 @@
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
-      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), visible: c.visible !== false, traits: c.traits.map(t => {
+      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
-          ...(t.wip === true ? { wip: true } : {}), ...(isFlagColor(t.flag) ? { flag: t.flag } : {}) };
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}), ...layerMarks(t) };
       }) };
     });
     p.psdImports = {};
@@ -147,8 +150,8 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f),
-          ...(f.wip === true ? { wip: true } : {}), parentId: f.parentId == null ? null : f.parentId };
+        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f), ...layerMarks(f),
+          parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
       for (const f of folders) if (f.parentId !== null && !folderIds.has(f.parentId)) fail('Projekt obsahuje složku s neplatným rodičem.');

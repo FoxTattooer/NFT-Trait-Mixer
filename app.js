@@ -253,14 +253,17 @@ $('dialogInput').addEventListener('input', () => $('dialogInput').setCustomValid
 $('editDialog').addEventListener('cancel', event => { event.preventDefault(); finishDialog(null); });
 
 function showPanel(panel) {
+  const changed = mobilePanel !== panel;
+  if (changed) $('layerPanelOverflow').open = false;
   mobilePanel = panel;
   if (panel !== 'layers') inspectorPanel = panel;
   $('appLayout').dataset.mobilePanel = mobilePanel;
   syncLandscapeTraitPlacement();
   renderLayerTree();
-  document.querySelectorAll('.workspace-tabs button').forEach(b => { const selected = b.dataset.panel === mobilePanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
+  document.querySelectorAll('.workspace-tabs [data-panel]').forEach(b => { const selected = b.dataset.panel === mobilePanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
+  if (changed) setWorkspaceTabsCollapsed(false);
 }
 let layerOverview = false;
 const LAYER_BATCH = 48;
@@ -274,18 +277,31 @@ const wipFilters = [
 ];
 let wipFilter = 0;
 let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', layerReviewLimit = PAGE_SIZE;
+let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
+let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
 function matchesWipFilter(marked) {
   return wipFilter === 0 || (wipFilter === 1 ? marked : !marked);
 }
-function listedTraits(category) {
+function categoryPassesWip(category) {
+  if (!wipFilter || category.wip || wipFilter === 2) return matchesWipFilter(!!category.wip);
+  return category.traits.some(trait => trait.wip) || organizerFolders(category.id).folders.some(folder => folder.wip);
+}
+function folderPassesWip(marks, id) {
+  return !marks || matchesWipFilter((wipFilter === 1 ? marks.paths : marks.folders).has(id));
+}
+function listedTraits(category, marks) {
   if (!wipFilter) return category.traits;
-  const { traits } = M.workInProgress(state, category);
+  if (category.wip) return matchesWipFilter(true) ? category.traits : [];
+  const { traits } = marks || M.workInProgress(state, category);
   return category.traits.filter(trait => matchesWipFilter(traits.has(trait.id)));
 }
 function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
   return `<span class="layer-flag" data-flag="${color}" ${label ? `role="img" aria-label="${M.FLAG_COLORS[color]} vlajka"` : 'aria-hidden="true"'}>${icon('flag')}</span>`;
+}
+function layerMarkBadges(item) {
+  return (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
@@ -295,23 +311,83 @@ function reviewLink({ cat, trait }, label, showFlag = false) {
     <span class="layer-review-copy"><strong>${esc(label)}${showFlag ? flagIcon(trait.flag, true) : ''}</strong><small>${esc(path)}</small></span>${icon('chevron')}`,
     trait.id, '', 'type="button" class="layer-review-link"');
 }
+function renderMatchScope(categories, marksByCategory) {
+  const category = M.category(state, matchCategory);
+  if (!category) { matchCategory = ''; matchFolder = ''; }
+  const org = category && organizerFolders(category.id);
+  if (matchFolder && !org?.folders.some(folder => folder.id === matchFolder)) matchFolder = '';
+  const scopeCategory = categories.includes(category) ? category : null;
+  const folders = scopeCategory ? org.folders.filter(folder => folderPassesWip(marksByCategory.get(category.id), folder.id)) : [];
+  const scopeFolder = folders.find(folder => folder.id === matchFolder);
+  const categoryChoices = [['', 'Celý projekt'], ...categories.map(cat => [cat.id, cat.name])];
+  const folderChoices = [['', 'Všechny složky'], ...folders.map(folder => [folder.id, organizerPath(org.folders, folder.id)])];
+  for (const [id, choices, current] of [['layerReviewCategory', categoryChoices, scopeCategory?.id || ''], ['layerReviewFolder', folderChoices, scopeFolder?.id || '']]) {
+    const field = $(id), markup = choices.map(([value, label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
+    if (field.innerHTML !== markup) field.innerHTML = markup;
+    field.value = current;
+  }
+  $('layerReviewFolderField').hidden = !folders.length;
+  $('layerReviewScopeLabel').textContent = scopeFolder ? `${category.name} › ${organizerPath(org.folders, scopeFolder.id)}` : scopeCategory?.name || 'Celý projekt';
+  const included = scopeFolder ? organizerDescendants(org.folders, scopeFolder.id) : null;
+  return ({ cat, trait }) => (!scopeCategory || cat.id === scopeCategory.id) && (!included || included.has(org.assignments[trait.id]));
+}
+function reviewFlagLink({ cat, item, kind }) {
+  const { folders } = organizerFolders(cat.id);
+  const path = kind === 'folder' ? [cat.name, organizerPath(folders, item.parentId)].filter(Boolean).join(' › ') : '';
+  return button('reveal-flagged-group', `<span class="layer-thumb">${icon('folder')}</span>
+    <span class="layer-review-copy"><strong>${esc(item.name)}${flagIcon(item.flag, true)}</strong><small>${esc(path || (kind === 'category' ? 'Kategorie' : cat.name))}</small></span>${icon('chevron')}`,
+    item.id, '', `type="button" class="layer-review-link" data-kind="${kind}" data-category="${esc(cat.id)}"`);
+}
+function reviewMatchGroup(group, inScope) {
+  const first = group.find(inScope);
+  const id = group.reduce((key, { trait }) => trait.id < key ? trait.id : key, group[0].trait.id);
+  const open = id === openReviewMatch;
+  const summary = button('toggle-layer-review-match', `<strong>${esc(first.trait.name)}</strong><small>${counted(group.length, 'vrstva', 'vrstvy', 'vrstev')}</small>${icon('chevron')}`, id, '',
+    `type="button" class="layer-review-match-summary" aria-expanded="${open}" aria-controls="match-copies-${id}"`);
+  const copies = open ? group.slice(0, layerReviewCopiesLimit).map(row => `<div class="layer-review-match-row">
+    ${reviewLink(row, row.trait.name, !!row.trait.flag)}
+    ${button('open-layer-menu', '', row.trait.id, 'more', `type="button" class="icon-button layer-review-copy-menu" data-category="${esc(row.cat.id)}" data-kind="trait" aria-label="Akce · ${esc(row.trait.name)}" aria-expanded="false" aria-controls="layerContext"`)}
+  </div>`).join('') : '';
+  const more = open && group.length > layerReviewCopiesLimit ? button('layer-review-more-copies', 'Další vrstvy', id, 'down', 'type="button"') : '';
+  return `<section class="layer-review-match">${summary}<div id="match-copies-${id}" class="layer-review-match-copies" ${open ? '' : 'hidden'}>${copies}${more}</div></section>`;
+}
 function renderLayerReview() {
   const review = $('layerReview'), host = layerReviewHosts[mobilePanel];
   review.hidden = !host || !state.cats.length;
+  const tools = $('layerReviewTools');
+  const toolbar = !review.hidden && mobilePanel === 'layers' ? $('layerPanelActions') : review;
+  if (tools.parentElement !== toolbar) {
+    if (toolbar === review) review.prepend(tools);
+    else toolbar.append(tools);
+  }
   if (review.hidden) return;
   if (review.parentElement !== $(host)) $(host).append(review);
   const filter = $('layerReviewFilter'), mode = wipFilters[wipFilter];
   filter.querySelector('span').textContent = mode.label;
   filter.querySelector('use').setAttribute('href', '#i-' + mode.icon);
+  filter.title = `WIP · ${mode.label}`;
   filter.setAttribute('aria-label', `Filtr WIP · ${mode.label}. Přepnout na ${wipFilters[(wipFilter + 1) % wipFilters.length].label}`);
   filter.toggleAttribute('data-filtered', wipFilter !== 0);
   $('layerReviewToggle').setAttribute('aria-expanded', String(layerReviewOpen));
   $('layerReviewPanel').hidden = !layerReviewOpen;
   if (!layerReviewOpen) return;
 
-  const rows = state.cats.flatMap(cat => cat.traits.map(trait => ({ cat, trait })));
+  const treeOrder = layerReviewSection === 'matches' && matchOrder === 'tree';
+  const categories = state.cats.filter(categoryPassesWip);
+  const marksByCategory = new Map(wipFilter ? categories.map(cat => [cat.id, M.workInProgress(state, cat)]) : []);
+  const rows = categories.flatMap(cat => {
+    const traits = listedTraits(cat, marksByCategory.get(cat.id));
+    if (!treeOrder) return traits.map(trait => ({ cat, trait }));
+    const ids = wipFilter && new Set(traits.map(trait => trait.id));
+    return mixedLayerRows(cat, true).filter(row => row.kind === 'traits' && (!ids || ids.has(row.item.id))).map(({ item }) => ({ cat, trait: item }));
+  });
   const notes = rows.filter(({ trait }) => trait.note);
-  const flags = rows.filter(({ trait }) => trait.flag);
+  const flags = categories.flatMap(cat => [
+    ...(cat.flag && matchesWipFilter(!!cat.wip) ? [{ cat, item: cat, kind: 'category' }] : []),
+    ...organizerFolders(cat.id).folders
+      .filter(folder => folder.flag && folderPassesWip(marksByCategory.get(cat.id), folder.id))
+      .map(item => ({ cat, item, kind: 'folder' })),
+  ]).concat(rows.filter(({ trait }) => trait.flag));
   // Saved PNGs already share the same SHA-256 asset key when their bytes match.
   const byAsset = new Map();
   for (const row of rows) {
@@ -320,7 +396,10 @@ function renderLayerReview() {
     if (!byAsset.has(key)) byAsset.set(key, []);
     byAsset.get(key).push(row);
   }
-  const matches = [...byAsset.values()].filter(group => group.length > 1);
+  const scope = $('layerReviewScope');
+  scope.hidden = layerReviewSection !== 'matches';
+  const inScope = renderMatchScope(categories, marksByCategory);
+  const matches = [...byAsset.values()].filter(group => group.length > 1 && group.some(inScope));
   const counts = {
     matches: counted(matches.length, 'shoda', 'shody', 'shod'),
     notes: counted(notes.length, 'poznámka', 'poznámky', 'poznámek'),
@@ -336,31 +415,31 @@ function renderLayerReview() {
   if (detail.hidden) return;
   let markup;
   if (layerReviewSection === 'matches') {
-    let remaining = layerReviewLimit;
-    markup = '';
-    for (const group of matches) {
-      if (!remaining) break;
-      const items = group.slice(0, remaining);
-      remaining -= items.length;
-      markup += `<section class="layer-review-match"><p>Stejný PNG soubor · ${counted(group.length, 'vrstva', 'vrstvy', 'vrstev')}</p><div>${items.map(row => reviewLink(row, row.trait.name)).join('')}</div></section>`;
+    if (matchOrder === 'name') {
+      matches.sort((a, b) => a.find(inScope).trait.name.localeCompare(b.find(inScope).trait.name, 'cs'));
     }
-    if (matches.reduce((total, group) => total + group.length, 0) > layerReviewLimit) {
+    markup = matches.slice(0, layerReviewLimit).map(group => reviewMatchGroup(group, inScope)).join('');
+    if (matches.length > layerReviewLimit) {
       markup += button('layer-review-more', 'Zobrazit další shody', '', 'down', 'type="button"');
     }
-    markup ||= '<p class="empty-list">V projektu nejsou vrstvy se stejným PNG souborem.</p>';
+    markup ||= '<p class="empty-list">V tomto rozsahu nejsou vrstvy se stejným PNG souborem.</p>';
   } else {
     const isNotes = layerReviewSection === 'notes', list = isNotes ? notes : flags;
-    markup = list.slice(0, layerReviewLimit).map(row => reviewLink(row, isNotes ? row.trait.note : row.trait.name, !isNotes)).join('');
+    markup = list.slice(0, layerReviewLimit).map(row => row.trait ? reviewLink(row, isNotes ? row.trait.note : row.trait.name, !isNotes) : reviewFlagLink(row)).join('');
     if (list.length > layerReviewLimit) markup += button('layer-review-more', 'Zobrazit další', '', 'down', 'type="button"');
     markup ||= `<p class="empty-list">${isNotes ? 'V projektu zatím nejsou poznámky.' : 'V projektu zatím nejsou vlajky.'}</p>`;
   }
-  if (markup !== layerReviewMarkup) { detail.innerHTML = markup; layerReviewMarkup = markup; }
+  if (markup !== layerReviewMarkup) {
+    if (layerContextTrigger && detail.contains(layerContextTrigger)) closeLayerContext();
+    detail.innerHTML = markup;
+    layerReviewMarkup = markup;
+  }
 }
 
 function layerThumbnail(category, trait, className = '') {
   return `<img${className ? ` class="${className}"` : ''} data-layer-thumbnail data-category="${esc(category.id)}" data-trait="${esc(trait.id)}" draggable="false" alt="" decoding="async" loading="lazy">`;
 }
-function mixedLayerRows(category) {
+function mixedLayerRows(category, includeAll = false) {
   const merge = M.layerChildren(state, category);
   const visible = [];
   const stack = merge(null).reverse().map(row => ({ ...row, depth: 0 }));
@@ -368,25 +447,26 @@ function mixedLayerRows(category) {
   while (stack.length) {
     const row = stack.pop();
     visible.push(row);
-    if (row.kind === 'folders' && expanded?.has(row.item.id)) {
+    if (row.kind === 'folders' && (includeAll || expanded?.has(row.item.id))) {
       const children = merge(row.item.id);
       for (let i = children.length - 1; i >= 0; i--) stack.push({ ...children[i], depth: row.depth + 1 });
     }
   }
-  if (!wipFilter) return visible;
+  if (includeAll || !wipFilter) return visible;
   const marks = M.workInProgress(state, category);
-  return visible.filter(({ kind, item }) => matchesWipFilter(
-    kind === 'folders' ? (wipFilter === 1 ? marks.paths : marks.folders).has(item.id) : marks.traits.has(item.id)
-  ));
+  return visible.filter(({ kind, item }) => kind === 'folders'
+    ? folderPassesWip(marks, item.id)
+    : matchesWipFilter(marks.traits.has(item.id)));
 }
 function renderLayerTree() {
   if (!busy) renderLayerReview();
-  const c = M.category(state, active), manage = mobilePanel === 'traits';
+  const category = M.category(state, active), c = category && categoryPassesWip(category) ? category : null;
+  const manage = mobilePanel === 'traits';
   const tree = $(manage ? 'traits' : 'layerTree');
   const inactive = $(manage ? 'layerTree' : 'traits');
   if (inactive.firstChild) { inactive.replaceChildren(); treeMarkup.delete(inactive); }
   const overview = !c || layerOverview;
-  $('layerPanelHeading').hidden = !c;
+  $('layerPanelHeading').hidden = !state.cats.length;
   $('categoryOverview').hidden = !overview;
   const grid = $('compactToggle');
   const gridLabel = !overview ? 'Zobrazit kategorie' : compactView ? 'Zobrazit podrobné karty' : 'Zobrazit kompaktní seznam';
@@ -414,7 +494,7 @@ function renderLayerTree() {
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       <button type="button" class="layer-tree-main" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb" data-drag-kind="trait" data-drag-id="${id}" data-category="${esc(c.id)}" title="Podrž miniaturu a přetáhni">${image}</span>`}
-        <span class="layer-tree-label">${esc(item.name)}</span>${item.wip ? '<span class="layer-wip-mark">WIP</span>' : ''}${item.flag ? flagIcon(item.flag, true) : ''}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label">${esc(item.name)}</span>${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -462,22 +542,27 @@ function positionLayerContext(trigger) {
   menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, width - menu.offsetWidth - 8))}px`;
   menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, height - menu.offsetHeight - 8))}px`;
 }
-function flagOptions(trait) {
+function layerMarkActions(item, attributes) {
   const options = Object.entries(M.FLAG_COLORS).map(([color, label]) =>
-    button('set-layer-flag', `${flagIcon(color)}<span>${label}</span>`, trait.id, '',
-      `type="button" data-flag="${color}" aria-pressed="${trait.flag === color}"`)).join('');
-  const remove = trait.flag ? button('set-layer-flag', 'Odebrat vlajku', trait.id, '', 'type="button" data-flag=""') : '';
-  return `<details class="layer-flag-options"><summary>${flagIcon(trait.flag)}${trait.flag ? 'Barva vlajky' : 'Přidat vlajku'}</summary>
-    <div class="layer-flag-palette" role="group" aria-label="Barvy vlajky">${options}</div>${remove}</details>`;
+    button('set-layer-flag', `${flagIcon(color)}<span>${label}</span>`, item.id, '',
+      `type="button" ${attributes} data-flag="${color}" aria-pressed="${item.flag === color}"`)).join('');
+  const remove = item.flag ? button('set-layer-flag', 'Odebrat vlajku', item.id, '', `type="button" ${attributes} data-flag=""`) : '';
+  return `<details class="layer-flag-options"><summary>${flagIcon(item.flag)}${item.flag ? 'Barva vlajky' : 'Přidat vlajku'}</summary>
+    <div class="layer-flag-palette" role="group" aria-label="Barvy vlajky">${options}</div>${remove}</details>` +
+    button('toggle-layer-wip', item.wip ? 'Odebrat WIP' : 'Označit jako WIP', item.id, 'eye-half', attributes);
 }
 function openLayerContext(trigger, id) {
   if (layerContextTrigger === trigger) { closeLayerContext(true); return; }
   closeLayerContext();
-  const c = M.category(state, active), menu = $('layerContext');
+  const c = M.category(state, trigger.dataset.category || active), menu = $('layerContext');
   if (!c) return;
   const { folders, assignments } = organizerFolders(c.id);
   const attributes = `data-category="${esc(c.id)}"`;
-  if (trigger.dataset.kind === 'folder') {
+  const kind = trigger.dataset.kind;
+  const markAttributes = `${attributes} data-kind="${kind}"`;
+  if (kind === 'category') {
+    menu.innerHTML = button('rename-category', 'Přejmenovat', id, 'edit') + layerMarkActions(c, markAttributes);
+  } else if (kind === 'folder') {
     const folder = folders.find(item => item.id === id);
     if (!folder) return;
     const excluded = organizerDescendants(folders, id);
@@ -485,7 +570,7 @@ function openLayerContext(trigger, id) {
       button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
       button('rename-organizer-folder', 'Přejmenovat', id, 'edit', attributes) +
       `<label>Přesunout složku<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(f => !excluded.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` +
-      button('toggle-layer-wip', folder.wip ? 'Odebrat WIP' : 'Označit jako WIP', id, 'eye-half', `${attributes} data-kind="folder"`) +
+      layerMarkActions(folder, markAttributes) +
       button('delete-organizer-folder', 'Smazat složku', id, 'trash', `${attributes} class="danger"`);
   } else {
     const trait = c.traits.find(item => item.id === id);
@@ -497,8 +582,7 @@ function openLayerContext(trigger, id) {
       button('reorder-trait-down', 'Posunout níž', id, 'down', index === siblings.length - 1 ? 'disabled' : '') +
       (folders.length ? `<label>Přesunout do složky<select data-action="assign-trait-folder" ${attributes} data-trait-id="${esc(id)}"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` : '') +
       (state.cats.length > 1 ? `<label>Přesunout do kategorie${traitCategorySelect(trait, c.id)}</label>` : '') +
-      flagOptions(trait) +
-      button('toggle-layer-wip', trait.wip ? 'Odebrat WIP' : 'Označit jako WIP', id, 'eye-half') +
+      layerMarkActions(trait, markAttributes) +
       button('delete-trait', 'Smazat', id, 'trash', 'class="danger"');
   }
   layerContextTrigger = trigger;
@@ -519,10 +603,10 @@ function openLayerContext(trigger, id) {
 function dragHandle(kind, id, categoryId, label) {
   return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
 }
-function renderCategoryStepper(c) {
-  const index = c.traits.findIndex(t => t.id === state.selected[c.id]);
-  const selected = c.traits[index];
-  return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${c.traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${c.traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!c.traits.length || (c.traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
+function renderCategoryStepper(c, traits) {
+  const index = traits.findIndex(t => t.id === state.selected[c.id]);
+  const selected = traits[index];
+  return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!traits.length || (traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
 }
 let compactView = localStorage.getItem('nft-compact-categories') !== 'false';
 let quickCategoryId = null;
@@ -537,14 +621,15 @@ function renderQuickTraits() {
  toggle.hidden = window.innerWidth > window.innerHeight;
  toggle.setAttribute('aria-expanded', String(quickTraitsVisible));
  toggle.querySelector('span').textContent = quickTraitsVisible ? 'Skrýt rychlý výběr' : 'Zobrazit rychlý výběr';
- strip.hidden = !quickTraitsVisible || !c || !c.traits.length || safeMode || busy || mobilePanel !== 'layers' || window.innerWidth > window.innerHeight;
+ const traits = quickTraitsVisible && c && !safeMode && !busy && mobilePanel === 'layers' && window.innerWidth <= window.innerHeight ? listedTraits(c) : [];
+ strip.hidden = !traits.length;
  if (strip.hidden) { list.replaceChildren(); list.dataset.ids = ''; quickCategoryId = null; return; }
- const ids = c.traits.map(t => t.id).join('|');
+ const ids = traits.map(t => t.id).join('|');
  const needsBuild = list.dataset.category !== c.id || list.dataset.ids !== ids;
  if (needsBuild) {
    list.dataset.category = c.id;
    list.dataset.ids = ids;
-   list.innerHTML = c.traits.map(t => '<button class="quick-trait" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '">' + layerThumbnail(c, t) + '<span class="quick-check" hidden>✓</span></button>').join('');
+   list.innerHTML = traits.map(t => '<button class="quick-trait" data-action="choose-trait" data-category="' + esc(c.id) + '" data-id="' + esc(t.id) + '" title="' + esc(t.name) + '" aria-label="Vybrat ' + esc(t.name) + '">' + layerThumbnail(c, t) + '<span class="quick-check" hidden>✓</span></button>').join('');
    mountThumbnails();
  }
  const selected = state.selected[c.id];
@@ -583,13 +668,31 @@ function scrollQuickTraits(direction) {
  const step = item ? item.getBoundingClientRect().width + 6 : 76;
  list.scrollBy({left: direction * step, behavior:'smooth'});
 }
-function renderCategories(hidden) {
+function renderCategories(hidden, categories) {
   document.body.classList.toggle('compact-categories', compactView);
   $('cats').dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
   $('catCountLabel').textContent = state.cats.length;
   $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
-  $('cats').innerHTML = state.cats.length ? state.cats.map((c, i) => `<div class="category-card ${c.id === active ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${esc(c.id)}"><div class="category-top drop-row" data-drop-kind="category" data-drop-id="${esc(c.id)}" data-category="${esc(c.id)}"><button class="category-pick" data-action="select-category" data-id="${esc(c.id)}" aria-pressed="${c.id === active}"><svg class="icon"><use href="#i-folder"/></svg><span class="category-copy"><span class="category-name">${esc(c.name)}</span><span class="category-meta">${c.traits.length} traitů${hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : ''}</span></span></button>${tool('rename-category', `Přejmenovat kategorii ${c.name}`, c.id, 'edit')}${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${esc(c.name)}" aria-pressed="${c.visible !== false}"`)}</div>${c.id === active && organizerFolders(c.id).folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, organizerFolders(c.id).folders, organizerFolders(c.id).assignments)}</div>` : ''}${renderCategoryStepper(c)}${c.id === active ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', i === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', i === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}</div>`).join('') : '<p class="empty-list">Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.</p>';
+  const positions = new Map(state.cats.map((cat, index) => [cat.id, index]));
+  $('cats').innerHTML = categories.map(c => {
+    const id = esc(c.id), name = esc(c.name), current = c.id === active;
+    const index = positions.get(c.id), marks = wipFilter ? M.workInProgress(state, c) : null;
+    const traits = listedTraits(c, marks), { folders, assignments } = organizerFolders(c.id);
+    const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
+    return `<div class="category-card ${current ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${id}">
+      <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
+        <button class="category-pick" data-action="select-category" data-id="${id}" aria-pressed="${current}">${icon('folder')}
+          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${traits.length} traitů${hiddenLabel}</span></span>${layerMarkBadges(c)}
+        </button>
+        ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
+        ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
+      </div>
+      ${current && folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, folders, assignments, marks)}</div>` : ''}
+      ${renderCategoryStepper(c, traits)}
+      ${current ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}
+    </div>`;
+  }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
 }
 function organizerFolders(categoryId) {
   return state.organizer?.[categoryId] || { folders: [], assignments: {} };
@@ -607,8 +710,8 @@ function organizerDescendants(folders, folderId) {
   }
   return ids;
 }
-function renderOrganizerFolderRows(category, folders, assignments, parentId = null, depth = 0) {
-  return folders.filter(f => f.parentId === parentId).map(folder => {
+function renderOrganizerFolderRows(category, folders, assignments, marks, parentId = null, depth = 0) {
+  return folders.filter(f => f.parentId === parentId && folderPassesWip(marks, f.id)).map(folder => {
     const nestedIds = organizerDescendants(folders, folder.id);
     const count = Object.values(assignments).filter(id => nestedIds.has(id)).length;
     const selected = organizerSelection[category.id] === folder.id;
@@ -617,9 +720,9 @@ function renderOrganizerFolderRows(category, folders, assignments, parentId = nu
     const expanded = organizerExpanded[category.id]?.has(folder.id);
     return `<div class="organizer-folder-row drop-row ${selected ? 'is-selected' : ''}" data-drop-kind="folder" data-drop-id="${esc(folder.id)}" data-category="${esc(category.id)}" style="padding-left:${Math.min(depth, 6)*12}px">${dragHandle('folder', folder.id, category.id, folder.name)}
       ${hasChildren ? `<button class="organizer-folder-toggle" data-action="organizer-toggle-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} ${esc(folder.name)}" aria-expanded="${!!expanded}">${expanded ? '⌄' : '›'}</button>` : '<span class="organizer-folder-spacer"></span>'}
-      <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label"><svg class="icon"><use href="#i-folder"/></svg>${esc(folder.name)}</span><span class="folder-count">${count}</span></button>
+      <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label">${icon('folder')}${esc(folder.name)}</span>${layerMarkBadges(folder)}<span class="folder-count">${count}</span></button>
       ${canDelete ? `<span class="organizer-folder-tools">${tool('delete-organizer-folder', `Smazat prázdnou složku ${folder.name}`, folder.id, 'trash', false, true)}</span>` : ''}
-    </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, folder.id, depth + 1) : ''}`;
+    </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, marks, folder.id, depth + 1) : ''}`;
   }).join('');
 }
 function traitCategorySelect(trait, categoryId) {
@@ -635,20 +738,22 @@ function traitNoteEditor(trait) {
     </form>
   </details>`;
 }
-function renderTraits() {
-  const c = M.category(state, active), selected = c?.traits.find(t => t.id === state.selected[c.id]);
+function renderTraits(categories = state.cats.filter(categoryPassesWip)) {
+  const c = categories.find(cat => cat.id === active), traits = c ? listedTraits(c) : [];
+  const selected = c && traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
-  $('traitCount').textContent = c ? `${c.traits.length} ${c.traits.length === 1 ? 'trait' : c.traits.length >= 2 && c.traits.length <= 4 ? 'traity' : 'traitů'}` : '';
+  $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerMarkBadges(c)}` : '';
   const rename = $('manageRenameCategory');
   rename.disabled = !c || busy;
   rename.dataset.id = c?.id || '';
   rename.setAttribute('aria-label', c ? `Přejmenovat kategorii ${c.name}` : 'Přejmenovat kategorii');
-  const categoryIndex = state.cats.findIndex(cat => cat.id === active);
-  $('categoryPosition').textContent = c ? `Vrstva ${categoryIndex + 1} / ${state.cats.length}` : 'Žádné vrstvy';
-  $('categoryPrev').disabled = state.cats.length < 2 || busy;
-  $('categoryNext').disabled = !state.cats.length || (state.cats.length === 1 && !!c) || busy;
+  const categoryIndex = categories.indexOf(c);
+  $('categoryPosition').textContent = c ? `Vrstva ${categoryIndex + 1} / ${categories.length}` : 'Žádné vrstvy';
+  $('categoryPrev').disabled = categories.length < 2 || busy;
+  $('categoryNext').disabled = categories.length < 2 || busy;
   $('addTrait').disabled = !c || busy;
   $('manageEmpty').hidden = !!c;
+  $('manageEmpty').textContent = wipFilter && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
   const addFolder = $('manageAddFolder');
   addFolder.disabled = !c || busy;
   addFolder.dataset.category = c?.id || '';
@@ -819,12 +924,15 @@ function renderTraitSearch() {
   return searching;
 }
 function revealTrait({ cat, trait }) {
-  const { folders, assignments } = organizerFolders(cat.id);
+  if (wipFilter && !matchesWipFilter(M.workInProgress(state, cat).traits.has(trait.id))) wipFilter = 0;
+  revealLayerRow(cat, 'traits', trait.id, organizerFolders(cat.id).assignments[trait.id]);
+}
+function revealLayerRow(cat, kind, id, parentId) {
+  const { folders } = organizerFolders(cat.id);
   const parents = new Map(folders.map(folder => [folder.id, folder.parentId]));
   const expanded = organizerExpanded[cat.id] ||= new Set();
-  for (let folder = assignments[trait.id]; folder; folder = parents.get(folder)) expanded.add(folder);
-  if (wipFilter && !matchesWipFilter(M.workInProgress(state, cat).traits.has(trait.id))) wipFilter = 0;
-  const index = mixedLayerRows(cat).findIndex(row => row.kind === 'traits' && row.item.id === trait.id);
+  for (let folder = parentId; folder; folder = parents.get(folder)) expanded.add(folder);
+  const index = mixedLayerRows(cat).findIndex(row => row.kind === kind && row.item.id === id);
   if (index < 0) return;
   $('traitSearch').blur();
   active = cat.id;
@@ -832,29 +940,31 @@ function revealTrait({ cat, trait }) {
   layerLimit = Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH;
   showPanel('layers');
   render(true);
-  const row = Array.from($('layerTree').querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === trait.id);
+  const row = Array.from($('layerTree').querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === id);
   if (!row) return;
   const target = row.closest('.layer-tree-row');
   target?.classList.add('layer-review-target');
   row.addEventListener('blur', () => target?.classList.remove('layer-review-target'), { once: true });
   row.focus({ preventScroll: true });
   row.scrollIntoView({ block: 'center', inline: 'nearest' });
+  resetWorkspaceScroll();
 }
 function renderSnapshotLayerLibrary() {
   const container = $('snapshotLayerLibrary');
   const searching = renderTraitSearch();
   const canShow = !safeMode && !searching && mobilePanel === 'snapshots';
   const shownTraits = new Map();
-  const markup = state.cats.length ? state.cats.map((c, i) => {
+  const categories = state.cats.filter(categoryPassesWip);
+  const markup = categories.length ? categories.map((c, i) => {
     const traits = canShow ? listedTraits(c) : c.traits;
     if (canShow) shownTraits.set(c.id, traits);
     const cover = canShow && (traits.find(t => t.id === state.selected[c.id]) || traits[0]);
     return `<details class="library-category" data-category="${esc(c.id)}">
-      <summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${cover ? layerThumbnail(c, cover, 'library-current') : ''}<span class="library-count">${traits.length} traitů</span></summary>
+      <summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${layerMarkBadges(c)}${cover ? layerThumbnail(c, cover, 'library-current') : ''}<span class="library-count">${traits.length} traitů</span></summary>
       <button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="${esc(c.id)}" aria-label="Přidat PNG do ${esc(c.name)}">${icon('plus')}</button>
       <div class="library-traits"></div>
     </details>`;
-  }).join('') : '<p class="empty-list">Nejdřív přidej kategorii a nahraj její traity.</p>';
+  }).join('') : `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív přidej kategorii a nahraj její traity.'}</p>`;
   if (libraryHeaderMarkup !== markup) {
     libraryHeaderMarkup = markup;
     container.innerHTML = markup;
@@ -1095,9 +1205,14 @@ function render(keepPreview = false) {
   }
   // Avoid rebuilding hundreds of DOM nodes and decoding previews while importing PSD.
   if (busy) return;
-  fillSelect($('layerCategory'), state.cats.map(c => [c.id, c.name]), 'Vyber kategorii');
-  if (active) $('layerCategory').value = active;
-  renderCategories(hidden); renderTraits(); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
+  const categories = state.cats.filter(categoryPassesWip);
+  if (categories.length && !categories.some(c => c.id === active)) {
+    active = categories[0].id;
+    layerLimit = LAYER_BATCH;
+  }
+  fillSelect($('layerCategory'), categories.map(c => [c.id, c.name + (c.wip ? ' · WIP' : '')]), state.cats.length ? 'Žádné kategorie' : 'Vyber kategorii');
+  if (categories.length) $('layerCategory').value = active;
+  renderCategories(hidden, categories); renderTraits(categories); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
 function download(blob, name) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -1387,15 +1502,50 @@ function chooseControlAccent(accent) {
   applyControlAccent(accent);
   saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
 }
-function toggleWorkspaceTabs() {
-  const collapsed = document.body.toggleAttribute('data-workspace-tabs-collapsed');
+const portraitWorkspaceScroll = window.matchMedia('(max-width:900px) and (orientation:portrait)');
+const landscapeWorkspaceScroll = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)');
+const workspaceScrollPanels = [$('catsPanel'), document.querySelector('.inspector')];
+const workspaceScrollTop = new Map();
+let workspaceScrollSource, workspaceScrollDistance = 0;
+function resetWorkspaceScroll() {
+  workspaceScrollTop.set(document, Math.max(0, window.scrollY || 0));
+  for (const panel of workspaceScrollPanels) workspaceScrollTop.set(panel, Math.max(0, panel.scrollTop));
+  workspaceScrollDistance = 0;
+  workspaceScrollSource = null;
+}
+function setWorkspaceTabsCollapsed(collapsed, focus = false) {
+  document.body.toggleAttribute('data-workspace-tabs-collapsed', collapsed);
   $('workspaceTabs').hidden = collapsed;
   $('workspaceTabsHandle').hidden = !collapsed;
   $('workspaceTabsToggle').setAttribute('aria-expanded', String(!collapsed));
   $('workspaceTabsToggle').querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
-  if (collapsed) $('workspaceTabsHandle').focus();
-  else ($('workspaceTabs').querySelector('[aria-pressed=true]') || $('layersTab')).focus();
+  resetWorkspaceScroll();
+  if (focus) {
+    const control = collapsed ? $('workspaceTabsHandle') : ($('workspaceTabs').querySelector('[aria-pressed=true]') || $('layersTab'));
+    control.focus({ preventScroll: true });
+  }
 }
+function toggleWorkspaceTabs() {
+  setWorkspaceTabsCollapsed(!$('workspaceTabs').hidden, true);
+}
+window.addEventListener('scroll', event => {
+  const source = event.target === window ? document : event.target;
+  if (source === document ? !portraitWorkspaceScroll.matches : !landscapeWorkspaceScroll.matches || !workspaceScrollPanels.includes(source)) return;
+  const top = Math.max(0, source === document ? window.scrollY || 0 : source.scrollTop);
+  const delta = top - (workspaceScrollTop.get(source) ?? top);
+  workspaceScrollTop.set(source, top);
+  if (workspaceScrollSource !== source || delta < 0) workspaceScrollDistance = 0;
+  workspaceScrollSource = source;
+  if (!ready || busy || !$('layerContext').hidden || document.body.classList.contains('is-dragging-layer')) {
+    workspaceScrollDistance = 0;
+    return;
+  }
+  if (delta > 0) workspaceScrollDistance += delta;
+  if (workspaceScrollDistance >= 24 && !$('workspaceTabs').hidden) {
+    setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(document.activeElement));
+  }
+}, { capture: true, passive: true });
+window.addEventListener('resize', resetWorkspaceScroll);
 $('accentGlow').addEventListener('input', event => {
   accentGlow = Number(event.target.value);
   applyAccentGlow();
@@ -1432,6 +1582,24 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'reveal-trait': if (located) revealTrait(located); break;
+    case 'reveal-flagged-group': {
+      const category = M.category(state, element.dataset.category);
+      if (!category || !categoryPassesWip(category)) break;
+      if (element.dataset.kind === 'folder') {
+        const folder = organizerFolders(category.id).folders.find(item => item.id === id);
+        if (folder) revealLayerRow(category, 'folders', id, folder.parentId);
+      } else {
+        active = category.id;
+        layerOverview = true;
+        showPanel('layers');
+        render(true);
+        const row = $('cats').querySelector(`[data-action="select-category"][data-id="${id}"]`);
+        row?.focus({ preventScroll: true });
+        row?.scrollIntoView({ block: 'nearest' });
+        resetWorkspaceScroll();
+      }
+      break;
+    }
     case 'toggle-layer-review':
       layerReviewOpen = !layerReviewOpen;
       renderLayerReview();
@@ -1440,16 +1608,31 @@ async function handleAction(action, id, element) {
     case 'cycle-wip-filter':
       wipFilter = (wipFilter + 1) % wipFilters.length;
       layerLimit = LAYER_BATCH;
-      renderLayerTree();
-      renderSnapshotLayerLibrary();
+      render(true);
       break;
     case 'layer-review-section':
       if (!['matches', 'notes', 'flags'].includes(id)) break;
       layerReviewSection = layerReviewSection === id ? '' : id;
       layerReviewLimit = PAGE_SIZE;
+      openReviewMatch = '';
       renderLayerReview();
       mountThumbnails();
       break;
+    case 'toggle-layer-review-match':
+      openReviewMatch = openReviewMatch === id ? '' : id;
+      layerReviewCopiesLimit = PAGE_SIZE;
+      renderLayerReview();
+      mountThumbnails();
+      $('layerReviewDetail').querySelector(`[data-action="toggle-layer-review-match"][data-id="${id}"]`)?.focus({ preventScroll: true });
+      break;
+    case 'layer-review-more-copies': {
+      const offset = layerReviewCopiesLimit;
+      layerReviewCopiesLimit += PAGE_SIZE;
+      renderLayerReview();
+      mountThumbnails();
+      $('match-copies-' + id)?.querySelectorAll('.layer-review-link')[offset]?.focus();
+      break;
+    }
     case 'layer-review-more': {
       const offset = layerReviewLimit;
       layerReviewLimit += PAGE_SIZE;
@@ -1458,25 +1641,22 @@ async function handleAction(action, id, element) {
       $('layerReviewDetail').querySelectorAll('.layer-review-link')[offset]?.focus();
       break;
     }
-    case 'set-layer-flag': {
-      const color = element.dataset.flag;
-      if (!located || (color && !M.isFlagColor(color))) break;
-      if ((located.trait.flag || '') !== color) {
-        change(() => {
-          if (color) located.trait.flag = color;
-          else delete located.trait.flag;
-        }, color ? 'Vlajka nastavena' : 'Vlajka odebrána', true);
-      }
-      document.querySelector(`[data-action="open-layer-menu"][data-id="${id}"]`)?.focus();
-      break;
-    }
+    case 'set-layer-flag':
     case 'toggle-layer-wip': {
-      const item = element.dataset.kind === 'folder' ?
-        organizerFolders(element.dataset.category).folders.find(folder => folder.id === id) : located?.trait;
+      const { category, kind, flag } = element.dataset;
+      const item = kind === 'category' ? c : kind === 'folder'
+        ? organizerFolders(category).folders.find(folder => folder.id === id) : located?.trait;
       if (!item) break;
-      const marked = !item.wip;
-      change(() => { if (marked) item.wip = true; else delete item.wip; }, marked ? 'Označeno jako WIP' : 'Označení WIP odebráno', true);
-      (document.querySelector(`[data-action="open-layer-menu"][data-id="${id}"]`) || $('layerReviewFilter')).focus();
+      if (action === 'set-layer-flag') {
+        if ((flag && !M.isFlagColor(flag)) || flag === (item.flag || '')) break;
+        change(() => { if (flag) item.flag = flag; else delete item.flag; }, flag ? 'Vlajka nastavena' : 'Vlajka odebrána', true);
+      } else {
+        const marked = !item.wip;
+        change(() => { if (marked) item.wip = true; else delete item.wip; }, marked ? 'Označeno jako WIP' : 'Označení WIP odebráno', true);
+      }
+      const menu = Array.from(document.querySelectorAll(`[data-action="open-layer-menu"][data-id="${id}"]`))
+        .find(button => !button.closest('[hidden]'));
+      (menu || $('layerReviewFilter')).focus();
       break;
     }
     case 'more-trait-results': {
@@ -1507,19 +1687,21 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'cycle-trait': {
-      if (!c || !c.traits.length) break;
-      const current = c.traits.findIndex(t => t.id === state.selected[c.id]);
+      const traits = c && listedTraits(c);
+      if (!traits?.length) break;
+      const current = traits.findIndex(t => t.id === state.selected[c.id]);
       const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
-      const next = current < 0 ? (direction < 0 ? c.traits.length - 1 : 0) : (current + direction + c.traits.length) % c.traits.length;
-      if (state.selected[c.id] !== c.traits[next].id) change(() => M.choosePrimary(state, c.id, c.traits[next].id));
+      const next = current < 0 ? (direction < 0 ? traits.length - 1 : 0) : (current + direction + traits.length) % traits.length;
+      if (state.selected[c.id] !== traits[next].id) change(() => M.choosePrimary(state, c.id, traits[next].id));
       break;
     }
     case 'cycle-category': {
-      if (!state.cats.length) break;
-      const current = state.cats.findIndex(cat => cat.id === active);
+      const categories = state.cats.filter(categoryPassesWip);
+      if (!categories.length) break;
+      const current = categories.findIndex(cat => cat.id === active);
       const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
-      const next = current < 0 ? (direction < 0 ? state.cats.length - 1 : 0) : (current + direction + state.cats.length) % state.cats.length;
-      active = state.cats[next].id;
+      const next = current < 0 ? (direction < 0 ? categories.length - 1 : 0) : (current + direction + categories.length) % categories.length;
+      active = categories[next].id;
       organizerSelection[active] = null;
       organizerExpanded[active] = new Set(organizerFolders(active).folders.map(folder => folder.id));
       render();
@@ -1585,7 +1767,13 @@ async function handleAction(action, id, element) {
     }
     case 'add-category': {
       const name = await ask({ title: 'Nová kategorie', description: 'Například Pozadí, Tělo, Oči nebo Doplňky.', submit: 'Přidat kategorii' });
-      if (name) { const nextId = M.uid(); layerOverview = false; change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána'); showPanel('layers'); }
+      if (name) {
+        const nextId = M.uid();
+        layerOverview = false;
+        if (wipFilter === 1) wipFilter = 0;
+        change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána');
+        showPanel('layers');
+      }
       break;
     }
     case 'rename-category': {
@@ -1804,13 +1992,24 @@ $('layerCategory').addEventListener('change', event => {
   if (!ready || busy) { event.target.value = active || ''; return; }
   handleAction('select-category', event.target.value, event.target).catch(error => toast(error.message, true));
 });
-window.addEventListener('resize', () => closeLayerContext());
+window.addEventListener('resize', () => {
+  closeLayerContext();
+  $('layerPanelOverflow').open = false;
+});
 window.addEventListener('scroll', event => {
   if (!layerContextTrigger || !layerContextAnchor || (event.target instanceof Node && $('layerContext').contains(event.target))) return;
   const rect = layerContextTrigger.getBoundingClientRect();
   if (Math.abs(rect.top - layerContextAnchor.top) > 1 || Math.abs(rect.left - layerContextAnchor.left) > 1) closeLayerContext();
 }, true);
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && layerContextTrigger) closeLayerContext(true); });
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  if (layerContextTrigger) closeLayerContext(true);
+  const overflow = $('layerPanelOverflow');
+  if (overflow.open) {
+    overflow.open = false;
+    overflow.querySelector('summary').focus();
+  }
+});
 document.addEventListener('change', event => {
   if ($('layerContext').contains(event.target)) closeLayerContext(true);
   const moveTraitControl = event.target.closest('[data-action="move-trait-category"]');
@@ -1870,9 +2069,20 @@ $('traits').addEventListener('submit', async event => {
   $('trait-note-' + id)?.querySelector('summary')?.focus({ preventScroll: true });
 });
 document.addEventListener('click', event => {
+  const overflow = $('layerPanelOverflow');
+  if (overflow.open && !overflow.contains(event.target)) overflow.open = false;
   const target = event.target.closest('[data-action]');
   if (target?.dataset.action !== 'open-layer-menu' && (!$('layerContext').contains(event.target) || target?.tagName === 'BUTTON')) closeLayerContext();
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
+});
+for (const id of ['layerReviewCategory', 'layerReviewFolder', 'layerReviewOrder']) $(id).addEventListener('change', event => {
+  if (id === 'layerReviewCategory') { matchCategory = event.target.value; matchFolder = ''; }
+  else if (id === 'layerReviewFolder') matchFolder = event.target.value;
+  else matchOrder = event.target.value;
+  layerReviewLimit = PAGE_SIZE;
+  openReviewMatch = '';
+  renderLayerReview();
+  mountThumbnails();
 });
 $('traitSearch').addEventListener('input', () => {
   traitSearchLimit = PAGE_SIZE;
@@ -1988,6 +2198,7 @@ window.addEventListener('offline', () => {
   if ($('refreshApp').dataset.updateState === 'current') setUpdateState('idle');
 });
 async function init() {
+  resetWorkspaceScroll();
   restoreColorScheme();
   try { quickTraitsVisible = localStorage.getItem(quickTraitsPreference) !== 'true'; } catch { /* use the default */ }
   const finishLog = window.TraitDiagnostics?.start('startup');

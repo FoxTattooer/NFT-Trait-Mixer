@@ -14,16 +14,16 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0790">
-  <link rel="stylesheet" href="compact.css?build=0792">
-  <link rel="stylesheet" href="schemes.css?build=0792">
+  <link rel="stylesheet" href="compact.css?build=0793">
+  <link rel="stylesheet" href="schemes.css?build=0793">
   <link rel="stylesheet" href="showroom.css?build=0777">
-  <script src="project.js?build=0792" defer></script>
+  <script src="project.js?build=0793" defer></script>
   <script src="storage.js?build=0788" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=0792" defer></script>
+  <script src="diagnostics.js?build=0793" defer></script>
   <script src="showroom.js?build=0777" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <script src="app.js?build=0792" defer></script>
+  <script src="app.js?build=0793" defer></script>
   <script src="final-ui.js?build=0788" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
@@ -97,8 +97,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.92" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.92</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.93" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.93</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -126,18 +126,23 @@
     <aside id="catsPanel" class="panel layers-panel" aria-labelledby="layersHeading">
       <h2 id="layersHeading" class="sr-only">Vrstvy a složky</h2>
       <div id="layerPanelHeading" class="layer-panel-heading" hidden>
-        <label id="layerCategoryPicker"><select id="layerCategory" aria-label="Přepnout kategorii"></select></label>
-        <div class="layer-panel-actions">
-          <button id="compactToggle" type="button" data-action="toggle-compact" class="icon-button subtle" aria-label="Zobrazit kategorie" title="Zobrazit kategorie"><svg class="icon"><use href="#i-grid"/></svg></button>
-          <button id="addCat" type="button" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button>
-          <button type="button" id="catCount" class="icon-button subtle layer-sort-folder" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span id="catCountLabel" aria-hidden="true">0</span></button>
+        <label id="layerCategoryPicker"><svg class="icon layer-category-picker-icon" aria-hidden="true"><use href="#i-layers"/></svg><select id="layerCategory" aria-label="Přepnout kategorii"></select></label>
+        <div id="layerPanelActions" class="layer-panel-actions">
+          <details id="layerPanelOverflow" class="layer-panel-overflow">
+            <summary aria-label="Další akce vrstev" aria-controls="layerPanelUtility"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></summary>
+          </details>
+          <div id="layerPanelUtility" class="layer-panel-utility">
+            <button id="compactToggle" type="button" data-action="toggle-compact" class="icon-button subtle" aria-label="Zobrazit kategorie" title="Zobrazit kategorie"><svg class="icon"><use href="#i-grid"/></svg></button>
+            <button id="addCat" type="button" data-action="add-category" class="icon-button accent" aria-label="Přidat kategorii" title="Přidat kategorii"><svg class="icon"><use href="#i-plus"/></svg></button>
+            <button type="button" id="catCount" class="icon-button subtle layer-sort-folder" data-action="open-category-sort" aria-label="Rychlé seřazení kategorií" title="Seřadit kategorie"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span id="catCountLabel" aria-hidden="true">0</span></button>
+          </div>
         </div>
       </div>
       <div id="layerReviewLayers">
         <section id="layerReview" class="layer-review" aria-label="Kontrola vrstev" hidden>
-          <div class="layer-review-tools">
+          <div id="layerReviewTools" class="layer-review-tools">
             <button id="layerReviewToggle" type="button" class="icon-button" data-action="toggle-layer-review" aria-label="Kontrola vrstev" title="Kontrola vrstev" aria-expanded="false" aria-controls="layerReviewPanel"><svg class="icon" aria-hidden="true"><use href="#i-roadmap"/></svg></button>
-            <button id="layerReviewFilter" type="button" data-action="cycle-wip-filter" aria-label="Filtr WIP · Vše"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span>Vše</span></button>
+            <button id="layerReviewFilter" type="button" class="icon-button" data-action="cycle-wip-filter" aria-label="Filtr WIP · Vše"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span>Vše</span></button>
           </div>
           <div id="layerReviewPanel" class="layer-review-panel" hidden>
             <div class="layer-review-counts">
@@ -146,6 +151,14 @@
               <button type="button" data-action="layer-review-section" data-id="notes" aria-pressed="false"></button>
               <button type="button" data-action="layer-review-section" data-id="flags" aria-pressed="false"></button>
             </div>
+            <details id="layerReviewScope" class="layer-review-scope" hidden>
+              <summary id="layerReviewScopeLabel">Celý projekt</summary>
+              <div>
+                <label>Kategorie<select id="layerReviewCategory"></select></label>
+                <label id="layerReviewFolderField" hidden>Složka<select id="layerReviewFolder"></select></label>
+                <label>Řazení<select id="layerReviewOrder"><option value="tree">Podle stromu</option><option value="name">Podle názvu</option></select></label>
+              </div>
+            </details>
             <div id="layerReviewDetail" class="layer-review-detail" hidden></div>
           </div>
         </section>
@@ -175,12 +188,12 @@
       </button>
       <button data-action="show-panel" data-panel="traits" aria-pressed="false"><svg class="icon"><use href="#i-grid"/></svg>Správa</button>
       <button data-action="show-panel" data-panel="snapshots" aria-pressed="false"><svg class="icon"><use href="#i-bookmark"/></svg>Sestavy</button>
-      <span class="workspace-credit">
+      <button type="button" id="workspaceCredit" class="workspace-credit" data-action="toggle-workspace-tabs" aria-label="Created by Fox · Sbalit spodní lištu">
         <img src="art/fox-credit-drop.png" width="8" height="13" alt="">
         Created by Fox
-      </span>
+      </button>
     </nav>
-    <button id="workspaceTabsHandle" type="button" data-action="toggle-workspace-tabs" aria-label="Rozbalit spodní lištu" title="Rozbalit spodní lištu" aria-controls="workspaceTabs" hidden><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg></button>
+    <button id="workspaceTabsHandle" type="button" data-action="toggle-workspace-tabs" aria-label="Rozbalit spodní lištu" title="Rozbalit spodní lištu" aria-controls="workspaceTabs" hidden><img src="art/fox-credit-drop.png" alt="" width="17" height="22"></button>
     <aside class="panel inspector" aria-label="Editor vrstev a pravidel">
       <nav class="inspector-tabs" aria-label="Editor"><button data-action="show-panel" data-panel="traits" class="is-active" aria-pressed="true">Správa</button><button data-action="show-panel" data-panel="snapshots" aria-pressed="false">Sestavy</button></nav>
       <section id="traitsPanel" class="tab-panel is-active">
@@ -356,6 +369,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.93-compact-layer-tools" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.93 – Kompaktní ovládání vrstev</strong><small>Jeden řádek ikon, vlajky a WIP pro kategorie a složky, jednodušší shody a skleněná spodní lišta.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.92-layer-review" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.92 – Kontrola vrstev</strong><small>WIP filtr, barevné vlajky, miniatury poznámek a přepínač rychlého výběru.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.91-appearance" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.91 – Akcenty, ikony a sbalená lišta</strong><small>Tři rozsahy akcentu, samostatná svítivost, sbalení navigace a sjednocené ikony.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.90-roadmap-menu-icon" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.90 – Ikona Plánu rozvoje</strong><small>Rámeček, velikost a zarovnání podle ostatních položek nabídky.</small></span><span class="version-tag">Uloženo</span></a>

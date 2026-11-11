@@ -80,8 +80,8 @@ body.compact-workspace,
   --scheme-frame-shadow:0 0 0 1px #acb4c439,0 4px 14px #090a0e9a;
 }
 
-/* One shared silhouette and surface for all three layer toolbar controls. */
-body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button) {
+/* One shared silhouette and surface for the layer toolbar controls. */
+body.compact-workspace :is(.layer-panel-actions :is(.icon-button,.layer-panel-overflow > summary), .manage-panel-actions .icon-button) {
   display:inline-flex;align-items:center;justify-content:center;
   flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;
   padding:0!important;margin:0!important;border-radius:12px!important;
@@ -89,9 +89,15 @@ body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catC
   background:linear-gradient(145deg,var(--scheme-control),var(--scheme-panel))!important;
   box-shadow:inset 0 1px #ffffff09!important;
 }
-body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button):is(:active,:focus-visible,[aria-pressed=true]) {
+body.compact-workspace :is(.layer-panel-actions :is(.icon-button,.layer-panel-overflow > summary), .manage-panel-actions .icon-button):is(:active,:focus-visible,[aria-pressed=true]) {
   border-color:var(--scheme-accent)!important;background:var(--scheme-wash)!important;
   box-shadow:0 0 9px var(--scheme-glow)!important;
+}
+body.compact-workspace .layer-panel-actions #layerReviewToggle[aria-expanded=true] {
+  border-color:var(--control-accent,var(--scheme-accent))!important;
+}
+body.compact-workspace .layer-panel-actions #layerReviewFilter[data-filtered] {
+  border-color:#b7a16a!important;color:#f0ce88!important;
 }
 .layer-panel-actions #catCount .icon {width:27px;height:27px;stroke-width:1.55}
 .layer-panel-actions #catCountLabel {top:56%;font-size:9px}
@@ -308,7 +314,7 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
   outline:2px solid var(--scheme-hover)!important;
 }
 @media (hover:hover) and (pointer:fine) {
-  body.compact-workspace :is(.layer-panel-actions :is(#compactToggle,#addCat,#catCount), .manage-panel-actions .icon-button):hover:not(:disabled) {
+  body.compact-workspace :is(.layer-panel-actions :is(.icon-button,.layer-panel-overflow > summary), .manage-panel-actions .icon-button):hover:not(:disabled) {
     border-color:var(--scheme-accent)!important;background:var(--scheme-wash)!important;
     box-shadow:0 0 9px var(--scheme-glow)!important;
   }

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.93 | checkpoint/v0.7.93-compact-layer-tools | Jednořádkové ovládání vrstev, vlajky a WIP pro celý strom, kompaktní kontrola shod a skleněná spodní navigace |
 | 0.7.92 | checkpoint/v0.7.92-layer-review | Kontrola vrstev, WIP filtr, barevné vlajky, náhledy poznámek a volitelný rychlý výběr |
 | 0.7.91 | checkpoint/v0.7.91-appearance | Tři rozsahy akcentu, samostatná svítivost, sbalení lišty a sjednocené ikony |
 | 0.7.90 | checkpoint/v0.7.90-roadmap-menu-icon | Sjednocení ikony a rozložení položky Plán rozvoje s ostatními položkami nabídky |

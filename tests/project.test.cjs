@@ -25,7 +25,7 @@ test('review marks round-trip with the project and folder WIP reaches nested tra
     folders: [
       { id: 'root', name: 'Projekt', parentId: null },
       { id: 'drafts', name: 'Rozpracované', parentId: 'root', wip: true },
-      { id: 'detail', name: 'Detaily', parentId: 'drafts' },
+      { id: 'detail', name: 'Detaily', parentId: 'drafts', flag: 'purple' },
     ],
     assignments: { red: 'detail' },
   };
@@ -35,11 +35,25 @@ test('review marks round-trip with the project and folder WIP reaches nested tra
   assert.equal(marked.flag, 'blue');
   assert.equal(marked.wip, true);
   assert.equal(restored.organizer.a.folders[1].wip, true);
+  assert.equal(restored.organizer.a.folders[2].flag, 'purple');
   const membership = M.workInProgress(restored, restored.cats[0]);
   assert.deepEqual(membership.traits, new Set(['red', 'extra']));
   assert.deepEqual(membership.folders, new Set(['drafts', 'detail']));
   assert.deepEqual(membership.paths, new Set(['drafts', 'root', 'detail']));
   assert.equal(restored.selected.a, 'red');
+  restored.cats[0].wip = true;
+  restored.cats[0].flag = 'green';
+  restored.cats[0].traits.push({ id: 'loose', name: 'Volná vrstva', data: png });
+  restored.cats[1].flag = '__proto__';
+  const markedCategory = M.normalize(M.clone(restored));
+  assert.equal(markedCategory.cats[0].flag, 'green');
+  assert.equal(markedCategory.cats[1].flag, undefined);
+  assert.equal(markedCategory.cats[0].wip, true);
+  const all = M.workInProgress(markedCategory, markedCategory.cats[0]);
+  assert.deepEqual(all.traits, new Set(['red', 'extra', 'loose']));
+  assert.deepEqual(all.folders, new Set(['root', 'drafts', 'detail']));
+  delete markedCategory.cats[0].wip;
+  assert.deepEqual(M.workInProgress(markedCategory, markedCategory.cats[0]).traits, membership.traits);
 });
 test('trait deletion removes selection, both kinds of rule references and snapshot selections', () => {
   const p = project();
