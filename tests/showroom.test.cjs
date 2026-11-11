@@ -37,6 +37,9 @@ test('Showroom starts fresh, groups choices, and keeps editor state isolated', (
   session.pick(2, session.options(2)[1]);
   session.pick(3, session.options(3)[2]);
   assert.deepEqual(session.composition().selected, { bg2: 'b2', skin: 's2', eye: 'e1', hair: 'h2' });
+  session.clear(1);
+  assert.equal(session.picks[1], undefined);
+  assert.deepEqual(session.composition().selected, { bg2: 'b2', eye: 'e1', hair: 'h2' });
   session.pick(1, session.options(1)[0]);
   assert.deepEqual(session.options(2), [null]);
   assert.deepEqual(session.options(3).map(variant => variant?.traitId), [undefined, 'h1']);

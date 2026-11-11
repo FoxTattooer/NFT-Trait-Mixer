@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.99 | checkpoint/v0.7.99-showroom-controls | Větší šipky v Showroomu, nenápadný název varianty, vyčištění aktuálního kroku a samostatný restart |
 | 0.7.98 | checkpoint/v0.7.98-guide-and-diagnostics | PDF průvodce v horní nabídce, Diagnostika v Historii verzí a dva nové body Plánu rozvoje |
 | 0.7.97 | checkpoint/v0.7.97-layer-navigation-return | Návrat při listování do předchozího pohledu a na původní pozici seznamu |
 | 0.7.96 | checkpoint/v0.7.96-roadmap-checklist | Zarovnaná šipka kompaktní lišty, čitelný návrat z Plánu rozvoje a lokálně ukládaný checklist |

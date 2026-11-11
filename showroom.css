@@ -143,6 +143,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 #showroomDialog button:active:not(:disabled) { border-color: var(--showroom-accent); }
 #showroomDialog #showroomExit { flex: 0 0 auto; background: #161616; }
 #showroomDialog .showroom-choice {
+  --showroom-arrow-size: clamp(56px, 10vw, 72px);
   position: relative;
   display: grid;
   align-items: center;
@@ -153,19 +154,34 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   justify-content: space-between;
   position: absolute;
   inset: 0;
+  align-items: center;
   pointer-events: none;
 }
-#showroomCarousel button, #showroomDialog #showroomReset { padding-inline: 0; }
-#showroomCarousel button { pointer-events: auto; }
+#showroomDialog #showroomCarousel button {
+  display: grid;
+  place-items: center;
+  width: var(--showroom-arrow-size);
+  height: var(--showroom-arrow-size);
+  padding: 0;
+  border-radius: 16px;
+  pointer-events: auto;
+}
+#showroomDialog #showroomCarousel .icon { width: 30px; height: 30px; }
 .showroom-exit-short { display: none; }
 #showroomChoice {
   padding-block: 5px;
   color: var(--showroom-muted);
-  font-size: clamp(14px, 1.8vw, 18px);
+  font-size: clamp(13px, 1.5vw, 16px);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
-#showroomCarousel:not([hidden]) + #showroomChoice { padding-inline: 54px; text-align: center; }
+#showroomCarousel:not([hidden]) + #showroomChoice {
+  min-height: var(--showroom-arrow-size);
+  display: grid;
+  align-content: center;
+  padding-inline: calc(var(--showroom-arrow-size) + 10px);
+  text-align: center;
+}
 #showroomSwatches {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
@@ -181,6 +197,24 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   outline-offset: 2px;
 }
 #showroomDialog .showroom-actions { display: flex; gap: 8px; margin-top: 12px; }
+#showroomDialog .showroom-reset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 6px;
+}
+#showroomDialog .showroom-reset-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--showroom-muted);
+  font-size: 12px;
+}
+#showroomDialog .showroom-reset-actions button:disabled { opacity: .55; }
+#showroomDialog .showroom-reset-actions .icon { width: 15px; height: 15px; }
 #showroomDialog :is(#showroomAdvance, #showroomSave) {
   flex: 1;
   background: #222;
@@ -213,6 +247,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   #showroomDialog .showroom-header { padding-bottom: 8px; }
   #showroomDialog .showroom-stage { width: min(100%, calc(100vh - 96px)); }
   #showroomSwatches { max-height: 67px; }
+  #showroomDialog .showroom-choice { --showroom-arrow-size: 56px; }
 }
 
 #showroomTitle:focus, #showroomStep:focus { outline: none; }
@@ -326,7 +361,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   #showroomDialog .showroom-stage {
     grid-template-columns: minmax(0, 1fr);
     width: min(100%, 510px);
-    width: min(100%, 510px, max(144px, calc(100dvh - var(--showroom-top) - var(--showroom-bottom) - 268px)));
+    width: min(100%, 510px, max(144px, calc(100dvh - var(--showroom-top) - var(--showroom-bottom) - 310px)));
   }
   #showroomDialog .showroom-control { padding: 10px; }
   #showroomDialog .showroom-step-heading {

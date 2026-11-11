@@ -1,13 +1,13 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.98';
+const CACHE = PREFIX + 'v0.7.99';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SHELL = [
   './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0798', './compact.css?build=0798',
-  './schemes.css?build=0795', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=0798',
-  './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png',
+  './schemes.css?build=0795', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=0799',
+  './showroom.css?build=0799', './showroom.js?build=0799', SHOWROOM_ART, './art/fox-credit-drop.png',
   './app.js?build=0797', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',
   './psd-file.js', './psd-ui.js?build=0789', './psd-worker.js', './vendor/ag-psd.js',

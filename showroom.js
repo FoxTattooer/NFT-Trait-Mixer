@@ -69,7 +69,10 @@
         if (picks[i] && !options(i).includes(picks[i])) picks[i] = undefined;
       }
     }
-    return { steps, picks, composition, options, pick };
+    function clear(index) {
+      picks[index] = undefined;
+    }
+    return { steps, picks, composition, options, pick, clear };
   }
 
   function mount(dialog, dependencies) {
@@ -79,7 +82,7 @@
     const status = get('showroomStatus'), swatches = get('showroomSwatches');
     const previous = get('showroomPrevious'), next = get('showroomNext');
     const carousel = get('showroomCarousel'), back = get('showroomBack'), advance = get('showroomAdvance');
-    const save = get('showroomSave'), reset = get('showroomReset');
+    const save = get('showroomSave'), reset = get('showroomReset'), clearStep = get('showroomClearStep');
     const layout = dialog.querySelector('.showroom-layout');
     const choice = get('showroomChoice');
     let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false;
@@ -117,9 +120,9 @@
           for (const tile of swatches.children) tile.setAttribute('aria-pressed', String(tile === button));
           choice.textContent = variant.label;
           choice.parentElement.hidden = false;
-          reset.disabled = false;
           advance.disabled = false;
           advance.setAttribute('data-selected', '');
+          updateExport();
           requestPreview();
         });
         return button;
@@ -130,12 +133,14 @@
       advance.toggleAttribute('data-selected', current !== undefined);
       advance.textContent = index === steps.length - 1 ? 'Dokončit' : 'Pokračovat';
       save.hidden = !done;
+      clearStep.hidden = !step;
       reset.hidden = !steps.length;
       updateExport();
     }
 
     function updateExport() {
       back.disabled = exporting;
+      clearStep.disabled = exporting || session.builder.picks[session.index] === undefined;
       reset.disabled = exporting || (!session.index && !session.builder.picks.some(pick => pick !== undefined));
       save.disabled = save.hidden || session.safe || exporting || rendering ||
         !visibleLayers(session.builder.composition()).length;
@@ -202,6 +207,12 @@
     }
     back.addEventListener('click', () => navigate(-1));
     advance.addEventListener('click', () => navigate(1));
+    clearStep.addEventListener('click', () => {
+      session.builder.clear(session.index);
+      update();
+      get('showroomStep').focus({ preventScroll: true });
+      requestPreview();
+    });
     reset.addEventListener('click', () => {
       session.builder.picks.length = 0;
       navigate(-session.index);
