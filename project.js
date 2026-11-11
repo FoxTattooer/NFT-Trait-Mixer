@@ -79,6 +79,17 @@
   }
   const TRAIT_NOTE_LIMIT = 240;
   const normalizeTraitNote = value => typeof value === 'string' ? value.trim().slice(0, TRAIT_NOTE_LIMIT).trimEnd() : '';
+  function exactMatches(rows) {
+    const byAsset = new Map();
+    // Identical stored PNGs already share a SHA-256 asset key.
+    for (const row of rows) {
+      const key = row.trait.data;
+      if (!key) continue;
+      if (!byAsset.has(key)) byAsset.set(key, []);
+      byAsset.get(key).push(row);
+    }
+    return [...byAsset.values()].filter(group => group.length > 1);
+  }
   const FLAG_COLORS = Object.freeze({ red: 'Červená', yellow: 'Žlutá', green: 'Zelená', blue: 'Modrá', purple: 'Fialová' });
   const isFlagColor = value => typeof value === 'string' && Object.hasOwn(FLAG_COLORS, value);
   function workInProgress(p, category) {
@@ -133,7 +144,7 @@
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}), ...layerMarks(t) };
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}), ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t) };
       }) };
     });
     p.psdImports = {};
@@ -183,11 +194,11 @@
   function conflicts(p) {
     const hidden = new Set(p.cats.filter(c => c.visible === false).map(c => c.id)), warnings = [];
     if (!p.rulesEnabled) return { hidden, warnings };
-    const triggered = p.rules.filter(r => { const s = locate(p, r.source); return s && s.cat.visible !== false && isSelected(p, s.cat.id, r.source) && category(p, r.targetCat); });
+    const triggered = p.rules.filter(r => { const s = locate(p, r.source); return s && !s.trait.hidden && s.cat.visible !== false && isSelected(p, s.cat.id, r.source) && category(p, r.targetCat); });
     for (const r of triggered) if (r.action === 'hide') hidden.add(r.targetCat);
     for (const r of triggered) {
       const s = locate(p, r.source), t = locate(p, r.targetTrait);
-      if (r.action === 'block' && t && t.cat.id === r.targetCat && !hidden.has(s.cat.id) && !hidden.has(r.targetCat) && isSelected(p, r.targetCat, r.targetTrait)) warnings.push({ ruleId: r.id, targetCat: r.targetCat, message: `${s.trait.name} + ${t.trait.name}: zakázaná kombinace` });
+      if (r.action === 'block' && t && !t.trait.hidden && t.cat.id === r.targetCat && !hidden.has(s.cat.id) && !hidden.has(r.targetCat) && isSelected(p, r.targetCat, r.targetTrait)) warnings.push({ ruleId: r.id, targetCat: r.targetCat, message: `${s.trait.name} + ${t.trait.name}: zakázaná kombinace` });
     }
     return { hidden, warnings };
   }
@@ -235,8 +246,11 @@
   }
   function randomize(p, random = Math.random) {
     p.selectedExtras = {};
+    const pools = p.cats.map(cat => ({ id: cat.id, traits: cat.traits.filter(trait => !trait.hidden) }));
     for (let i = 0; i < 120; i++) {
-      for (const c of p.cats) p.selected[c.id] = c.traits.length ? c.traits[Math.min(c.traits.length - 1, Math.floor(random() * c.traits.length))].id : null;
+      for (const { id, traits } of pools) {
+        p.selected[id] = traits.length ? traits[Math.min(traits.length - 1, Math.floor(random() * traits.length))].id : null;
+      }
       if (!conflicts(p).warnings.length) return;
     }
     // If every full combination conflicts, leave the conflicting target empty.
@@ -311,7 +325,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, FLAG_COLORS, isFlagColor, workInProgress, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, exactMatches, FLAG_COLORS, isFlagColor, workInProgress, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

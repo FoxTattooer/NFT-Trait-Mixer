@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.102 | checkpoint/v0.7.102-compare-duplicates | Porovnání přesných duplicit v Sestavách, vodorovný posun karet a úpravy traitů přímo na kartách |
 | 0.7.101 | checkpoint/v0.7.101-pdf-info | Dva dokumenty v PDF info, čtení uvnitř aplikace a přímý návrat do editoru |
 | 0.7.100 | checkpoint/v0.7.100-unified-menu-accents | Jednotný akcent všech ikon v nabídce pod třemi tečkami podle palety a rozsahu akcentu |
 | 0.7.99 | checkpoint/v0.7.99-showroom-controls | Větší šipky v Showroomu, nenápadný název varianty, vyčištění aktuálního kroku a samostatný restart |

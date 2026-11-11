@@ -1,0 +1,65 @@
+.compare-traits { margin-top: 16px; border: 1px solid var(--scheme-stroke, #444046); border-radius: 12px; background: #19191c; }
+.compare-traits > summary { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 7px 10px; list-style: none; cursor: pointer; }
+.compare-traits > summary::-webkit-details-marker { display: none; }
+.compare-traits > summary strong { flex: 1; font-size: 13px; }
+.compare-traits > summary .icon { width: 16px; height: 16px; flex: 0 0 auto; }
+.compare-traits[open] .compare-chevron { transform: rotate(90deg); }
+#compareTraitContent { padding: 0 7px 8px; }
+.compare-traits-head { display: flex; justify-content: space-between; padding: 7px 3px; border-top: 1px solid #3c393e; }
+.compare-traits-head h3 { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.compare-traits-head p { margin: 2px 0 0; color: #bbb3b9; font-size: 11px; }
+.compare-position { align-self: center; color: var(--scheme-text, #c7a7ee); font-size: 11px; white-space: nowrap; }
+.compare-trait-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 10px) / 3);
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-feedback, #8e65bb) #29252e;
+  padding-bottom: 5px;
+}
+.compare-trait-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  scroll-snap-align: start;
+  min-width: 0;
+  border: 1px solid #48434a;
+  border-radius: 9px;
+  background: #242327;
+  overflow: hidden;
+}
+.compare-trait-card[data-hidden-trait] { border-color: var(--scheme-stroke, #6b5089); }
+.compare-trait-art {
+  aspect-ratio: 1;
+  background: repeating-conic-gradient(#2b2930 0 25%, #222126 0 50%) 50% / 12px 12px;
+}
+.compare-trait-card[data-hidden-trait] .compare-trait-art img { opacity: .35; }
+.compare-trait-info { padding: 5px; }
+.compare-trait-info h4, .compare-trait-info p { margin: 0; overflow-wrap: anywhere; }
+.compare-trait-info h4 { font-size: 11px; line-height: 1.2; }
+.compare-trait-info p { margin-top: 4px; color: #c4bbc3; font-size: 10px; line-height: 1.25; }
+.compare-trait-marks { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.compare-trait-actions { display: grid; min-width: 0; padding: 3px; gap: 3px; }
+.compare-trait-actions :is(button, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 3px 2px;
+  border: 1px solid #514b53;
+  border-radius: 6px;
+  color: #f3eef3;
+  background-color: #29282b;
+  font-size: 10px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.compare-trait-actions .icon { display: none; }
+.compare-trait-actions .danger { color: #ffadad; }
+.compare-traits-nav { margin-top: 6px; }
+.compare-traits-nav button { min-height: 40px; padding: 4px 7px; font-size: 11px; }
+.compare-traits-nav span { flex: 0 0 auto; font-size: 10px; color: #c4bbc3; }

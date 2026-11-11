@@ -332,6 +332,7 @@ function showPanel(panel) {
   renderLayerTree();
   document.querySelectorAll('.inspector-tabs button, .app-header [data-panel="rules"]').forEach(b => { const selected = b.dataset.panel === inspectorPanel; b.classList.toggle('is-active', selected); b.setAttribute('aria-pressed', selected); });
   for (const name of ['traits', 'rules', 'snapshots']) { $(name + 'Panel').hidden = name !== inspectorPanel; $(name + 'Panel').classList.toggle('is-active', name === inspectorPanel); }
+  if (inspectorPanel === 'snapshots') window.TraitComparison?.render();
   if (changed) resetWorkspaceScroll();
 }
 let layerOverview = false;
@@ -428,7 +429,8 @@ function flagIcon(color, label = false) {
   return `<span class="layer-flag" data-flag="${color}" ${label ? `role="img" aria-label="${M.FLAG_COLORS[color]} vlajka"` : 'aria-hidden="true"'}>${icon('flag')}</span>`;
 }
 function layerMarkBadges(item) {
-  return (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
+  return (item.hidden ? '<span class="layer-wip-mark">Skrytý</span>' : '') +
+    (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
@@ -515,18 +517,10 @@ function renderLayerReview() {
       .filter(folder => folder.flag && folderPassesWip(marksByCategory.get(cat.id), folder.id))
       .map(item => ({ cat, item, kind: 'folder' })),
   ]).concat(rows.filter(({ trait }) => trait.flag));
-  // Saved PNGs already share the same SHA-256 asset key when their bytes match.
-  const byAsset = new Map();
-  for (const row of rows) {
-    const key = row.trait.data;
-    if (!key) continue;
-    if (!byAsset.has(key)) byAsset.set(key, []);
-    byAsset.get(key).push(row);
-  }
   const scope = $('layerReviewScope');
   scope.hidden = layerReviewSection !== 'matches';
   const inScope = renderMatchScope(categories, marksByCategory);
-  const matches = [...byAsset.values()].filter(group => group.length > 1 && group.some(inScope));
+  const matches = M.exactMatches(rows).filter(group => group.some(inScope));
   const counts = {
     matches: counted(matches.length, 'shoda', 'shody', 'shod'),
     notes: counted(notes.length, 'poznámka', 'poznámky', 'poznámek'),
@@ -632,17 +626,19 @@ function renderLayerTree() {
   // Keep existing thumbnail elements and the focused row on selection changes.
   if (treeMarkup.get(tree) !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup.set(tree, markup); }
   const selected = new Set(M.selectedIds(state, c.id));
+  const hiddenTraits = new Set(c.traits.filter(trait => trait.hidden).map(trait => trait.id));
   const visible = !M.conflicts(state).hidden.has(c.id);
   for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
     const picked = selected.has(row.dataset.id);
-    const shown = picked && visible;
+    const enabled = picked && !hiddenTraits.has(row.dataset.id);
+    const shown = enabled && visible;
     row.setAttribute('aria-pressed', String(picked));
     row.querySelector('.layer-tree-check').hidden = !shown;
     const eye = row.nextElementSibling;
     eye.setAttribute('aria-pressed', String(shown));
-    const label = picked && c.visible !== false ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
+    const label = enabled && c.visible !== false ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
     eye.setAttribute('aria-label', `${label} · ${row.title}`);
-    eye.title = picked && c.visible !== false && !visible ? 'Vrstva je zapnutá, ale skrývá ji pravidlo' : label;
+    eye.title = enabled && c.visible !== false && !visible ? 'Vrstva je zapnutá, ale skrývá ji pravidlo' : label;
     eye.querySelector('use').setAttribute('href', shown ? '#i-eye' : '#i-eye-off');
   }
   mountThumbnails();
@@ -707,6 +703,7 @@ function openLayerContext(trigger, id) {
       (folders.length ? `<label>Přesunout do složky<select data-action="assign-trait-folder" ${attributes} data-trait-id="${esc(id)}"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` : '') +
       (state.cats.length > 1 ? `<label>Přesunout do kategorie${traitCategorySelect(trait, c.id)}</label>` : '') +
       layerMarkActions(trait, markAttributes) +
+      button('toggle-hidden-trait', trait.hidden ? 'Zobrazit trait' : 'Skrýt trait', id, trait.hidden ? 'eye' : 'eye-off') +
       button('delete-trait', 'Smazat', id, 'trash', 'class="danger"');
   }
   layerContextTrigger = trigger;
@@ -1232,7 +1229,10 @@ function visibleLayers(project) {
   for (const c of [...project.cats].reverse()) {
     if (hidden.has(c.id)) continue;
     const selected = new Set(M.selectedIds(project, c.id));
-    for (let i = c.traits.length - 1; i >= 0; i--) if (selected.has(c.traits[i].id)) layers.push(c.traits[i]);
+    for (let i = c.traits.length - 1; i >= 0; i--) {
+      const trait = c.traits[i];
+      if (!trait.hidden && selected.has(trait.id)) layers.push(trait);
+    }
   }
   return layers;
 }
@@ -1313,7 +1313,7 @@ function render(keepPreview = false) {
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
-  $('random').disabled = !state.cats.some(c => c.traits.length) || busy;
+  $('random').disabled = !state.cats.some(c => c.traits.some(trait => !trait.hidden)) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
   syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
@@ -1548,8 +1548,15 @@ async function refreshApp() {
 }
 
 function toggleTraitInPreview(category, id, keepQuickScroll = false) {
+  const trait = category.traits.find(item => item.id === id);
   change(() => {
-    M.toggleTrait(state, category.id, id);
+    if (trait?.hidden) {
+      delete trait.hidden;
+      if (!M.isSelected(state, category.id, id)) M.toggleTrait(state, category.id, id);
+      category.visible = true;
+    } else {
+      M.toggleTrait(state, category.id, id);
+    }
     if (keepQuickScroll) quickSelectedId = state.selected[category.id];
   });
   if (M.isSelected(state, category.id, id) && M.conflicts(state).hidden.has(category.id)) {
@@ -1812,6 +1819,10 @@ async function handleAction(action, id, element) {
         const marked = !item.wip;
         change(() => { if (marked) item.wip = true; else delete item.wip; }, marked ? 'Označeno jako WIP' : 'Označení WIP odebráno', true);
       }
+      if (element.dataset.compareMark) {
+        $('compareTraitContent').querySelector(`[data-compare-mark="${id}"]`)?.focus({ preventScroll: true });
+        break;
+      }
       const menu = Array.from(document.querySelectorAll(`[data-action="open-layer-menu"][data-id="${id}"]`))
         .find(button => !button.closest('[hidden]'));
       (menu || $('layerReviewFilter')).focus();
@@ -1965,6 +1976,14 @@ async function handleAction(action, id, element) {
     case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { $('traitFiles').click(); } break;
     case 'toggle-trait-visibility': {
       if (located) toggleTraitInPreview(located.cat, id);
+      break;
+    }
+    case 'toggle-hidden-trait': {
+      if (!located) break;
+      const { trait } = located;
+      const hidden = !trait.hidden;
+      change(() => { if (hidden) trait.hidden = true; else delete trait.hidden; },
+        hidden ? 'Trait skrytý v náhledu a losování' : 'Trait znovu dostupný');
       break;
     }
     case 'choose-trait': {
@@ -2148,9 +2167,7 @@ async function handleAction(action, id, element) {
     case 'refresh-app': case 'update-app': await refreshApp(); break;
   }
 }
-async function moveTraitFromControl(control) {
-  const targetId = control.value, traitId = control.dataset.traitId;
-  control.value = '';
+async function moveTraitToCategory(traitId, targetId) {
   if (!targetId || !ready || busy) return;
   const found = M.locate(state, traitId), target = M.category(state, targetId);
   if (!found || !target || found.cat.id === targetId) return;
@@ -2168,6 +2185,18 @@ async function moveTraitFromControl(control) {
     M.moveTrait(state, traitId, targetId);
     organizerSelection[targetId] = null;
   }, `Trait přesunut do ${target.name} · Zpět vrátí přesun`);
+}
+function assignTraitToFolder(traitId, categoryId, folderId) {
+  if (!ready || busy) return;
+  const category = M.category(state, categoryId), org = organizerFolders(categoryId);
+  if (!category?.traits.some(t => t.id === traitId) || (folderId && !org.folders.some(f => f.id === folderId))) return;
+  if ((org.assignments[traitId] || '') === folderId) return;
+  change(() => {
+    state.organizer ||= {};
+    const nextOrg = state.organizer[categoryId] ||= { folders: [], assignments: {} };
+    if (folderId) nextOrg.assignments[traitId] = folderId;
+    else delete nextOrg.assignments[traitId];
+  }, folderId ? 'Trait zařazen do organizační složky' : 'Trait odebrán z organizační složky');
 }
 $('layerCategory').addEventListener('change', event => {
   if (!ready || busy) { event.target.value = active || ''; return; }
@@ -2190,7 +2219,12 @@ document.addEventListener('keydown', event => {
 document.addEventListener('change', event => {
   if ($('layerContext').contains(event.target)) closeLayerContext(true);
   const moveTraitControl = event.target.closest('[data-action="move-trait-category"]');
-  if (moveTraitControl) { moveTraitFromControl(moveTraitControl).catch(error => toast(error.message, true)); return; }
+  if (moveTraitControl) {
+    const targetId = moveTraitControl.value;
+    moveTraitControl.value = '';
+    moveTraitToCategory(moveTraitControl.dataset.traitId, targetId).catch(error => toast(error.message, true));
+    return;
+  }
   const moveFolder = event.target.closest('[data-action="move-organizer-folder"]');
   if (moveFolder) {
     if (!ready || busy) { renderTraits(); return; }
@@ -2205,16 +2239,7 @@ document.addEventListener('change', event => {
     return;
   }
   const select = event.target.closest('[data-action="assign-trait-folder"]');
-  if (!select || !ready || busy) return;
-  const categoryId = select.dataset.category, traitId = select.dataset.traitId, folderId = select.value;
-  const category = M.category(state, categoryId), org = organizerFolders(categoryId);
-  if (!category?.traits.some(t => t.id === traitId) || (folderId && !org.folders.some(f => f.id === folderId))) return;
-  change(() => {
-    state.organizer ||= {};
-    const nextOrg = state.organizer[categoryId] ||= { folders: [], assignments: {} };
-    if (folderId) nextOrg.assignments[traitId] = folderId;
-    else delete nextOrg.assignments[traitId];
-  }, folderId ? 'Trait zařazen do organizační složky' : 'Trait odebrán z organizační složky');
+  if (select) assignTraitToFolder(select.dataset.traitId, select.dataset.category, select.value);
 });
 $('traits').addEventListener('input', event => {
   const field = event.target;

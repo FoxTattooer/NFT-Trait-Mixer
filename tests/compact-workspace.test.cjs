@@ -35,10 +35,11 @@ w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get
 w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
-w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js','trait-comparison.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
+globalThis.useTestProject=project=>change(()=>{state=project;active=project.cats[0]?.id;});
 globalThis.runAction=(name,id)=>handleAction(name,id,document.body);
 globalThis.waitSave=flushSave;
 globalThis.reloadColorScheme=restoreColorScheme;
@@ -574,6 +575,64 @@ click('#layersTab');
 assert(!get('categoryOverview').hidden, 'a second back returns to the category overview');
 assert.equal(windowTop, 371);
 assert.equal(JSON.stringify(w.inspectState()), beforeSearch);
+// The comparison keeps all cards in one scrollable row and edits the active project.
+const [{ data: matchingImage }, { data: otherImage }] = w.inspectState().cats[0].traits;
+const comparisonProject = M.empty();
+comparisonProject.cats = [
+  { id: 'compare', name: 'Clothes', visible: true, traits: Array.from({length: 5}, (_, index) => ({
+    id: 'compare-' + index, name: 'Kopie ' + (index + 1), data: matchingImage,
+  })) },
+  { id: 'other', name: 'Doplňky', visible: true, traits: [
+    { id: 'other-1', name: 'Doplňky 1', data: otherImage },
+    { id: 'other-2', name: 'Doplňky 2', data: otherImage },
+  ] },
+];
+comparisonProject.selected.compare = 'compare-0';
+comparisonProject.organizer.compare = { folders: [{ id: 'archive', name: 'Archiv', parentId: null }], assignments: {} };
+w.useTestProject(comparisonProject);
+click('#workspaceTabs [data-panel="snapshots"]');
+const compare = get('compareTraits');
+compare.open = true;
+compare.dispatchEvent(new w.Event('toggle'));
+assert.equal(compare.querySelectorAll('article').length, 5);
+assert.equal(compare.querySelector('.compare-position').textContent, '1–3 z 5 ›');
+const rail = compare.querySelector('.compare-trait-cards');
+[...rail.children].forEach((card, index) => Object.defineProperty(card, 'offsetLeft', { value: 114 * index }));
+rail.scrollLeft = 228;
+rail.dispatchEvent(new w.Event('scroll'));
+assert.equal(compare.querySelector('.compare-position').textContent, '‹ 3–5 z 5');
+const changeControl = (selector, value) => {
+  const control = find(selector);
+  control.value = value;
+  control.dispatchEvent(new w.Event('change', { bubbles: true }));
+};
+const copy = () => M.locate(w.inspectState(), 'compare-4');
+click('#compareTraits [data-action="toggle-hidden-trait"][data-id="compare-4"]');
+assert(copy().trait.hidden);
+assert.equal(compare.querySelector('.compare-trait-cards').scrollLeft, 228, 'edits preserve horizontal position');
+changeControl('[data-compare-mark="compare-4"]', 'green');
+assert.equal(copy().trait.flag, 'green');
+changeControl('[data-compare-move="compare-4"]', 'folder:archive');
+assert.equal(w.inspectState().organizer.compare.assignments['compare-4'], 'archive');
+changeControl('[data-compare-move="compare-4"]', 'category:other');
+await waitFor(() => copy().cat.id === 'other');
+click('#compareTraits [data-action="rename-trait"][data-id="compare-4"]');
+get('dialogInput').value = 'Přejmenovaná kopie';
+get('dialogForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
+await waitFor(() => copy().trait.name === 'Přejmenovaná kopie');
+click('#compareTraits [data-action="delete-trait"][data-id="compare-4"]');
+get('dialogForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
+await waitFor(() => !copy());
+await w.runAction('undo');
+assert.equal(copy().trait.name, 'Přejmenovaná kopie');
+await w.runAction('save-project');
+const backup = M.normalize(JSON.parse(await w.__downloads.at(-1).blob.text()));
+assert.equal(M.locate(backup, 'compare-4').trait.hidden, true);
+click('#compareTraits [data-compare-nav="next-group"]');
+assert.equal(compare.querySelectorAll('article').length, 2);
+click('#compareTraits [data-compare-nav="prev-group"]');
+assert.equal(compare.querySelectorAll('article').length, 5);
+compare.open = false;
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

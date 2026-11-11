@@ -18,14 +18,16 @@
   <link rel="stylesheet" href="schemes.css?build=07100">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
-  <script src="project.js?build=0793" defer></script>
+  <link rel="stylesheet" href="trait-comparison.css?build=07102">
+  <script src="project.js?build=07102" defer></script>
   <script src="storage.js?build=0794" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=07101" defer></script>
+  <script src="diagnostics.js?build=07102" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
-  <script src="showroom.js?build=0799" defer></script>
+  <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <script src="app.js?build=0797" defer></script>
+  <script src="app.js?build=07102" defer></script>
+  <script src="trait-comparison.js?build=07102" defer></script>
   <script src="final-ui.js?build=0788" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
@@ -102,8 +104,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.101" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.101</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.102" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.102</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -256,6 +258,10 @@
           <p id="recentFilesEmpty" class="helper">Zatím žádné otevřené soubory.</p>
           <ul id="recentFiles" class="recent-files-grid" aria-labelledby="recentFilesHeading" hidden></ul>
         </section>
+        <details id="compareTraits" class="compare-traits">
+          <summary><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><strong>Porovnat duplicity</strong><svg class="icon compare-chevron" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <div id="compareTraitContent"></div>
+        </details>
       </section>
     </aside>
   </main>
@@ -426,6 +432,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.102-compare-duplicates" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.102 – Porovnání duplicit</strong><small>Tři karty vedle sebe v Sestavách, posun do strany a akce pro každý trait.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.101-pdf-info" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.101 – PDF info</strong><small>Popis aplikace a mobilní design v prohlížeči PDF s návratem do editoru.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.100-unified-menu-accents" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.100 – Sjednocené akcenty nabídky</strong><small>Všechny ikony v nabídce pod třemi tečkami používají vybranou paletu a rozsah akcentu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.99-showroom-controls" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.99 – Ovládání Showroomu</strong><small>Větší šipky, jemnější název varianty a samostatné vyčištění kroku a celé postavy.</small></span><span class="version-tag">Uloženo</span></a>

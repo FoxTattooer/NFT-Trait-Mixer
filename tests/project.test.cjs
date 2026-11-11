@@ -16,6 +16,18 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('hidden duplicates retain their identity and are skipped by rules and shuffle', () => {
+  const p = project();
+  p.cats[0].traits[0].hidden = true;
+  p.cats[0].traits.push({ id: 'copy', name: 'Kopie', data: png });
+  const restored = M.normalize(M.clone(p));
+  assert.equal(restored.cats[0].traits[0].hidden, true);
+  assert.equal(M.conflicts(restored).warnings.length, 0);
+  const rows = restored.cats.flatMap(cat => cat.traits.map(trait => ({ cat, trait })));
+  assert.deepEqual(M.exactMatches(rows)[0].map(row => row.trait.id), ['red', 'copy', 'blue']);
+  M.randomize(restored, () => 0);
+  assert.equal(restored.selected.a, 'copy');
+});
 test('review marks round-trip with the project and folder WIP reaches nested traits', () => {
   const p = project();
   const category = p.cats[0];

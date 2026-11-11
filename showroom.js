@@ -26,8 +26,9 @@
 
   function create(project, model) {
     // Working visibility in the editor does not curate the public catalogue.
-    const cats = project.cats.filter(cat => cat.traits.length && normalize(cat.name.trim()) !== 'trash')
-      .map(cat => ({ ...cat, visible: true }));
+    const cats = project.cats.filter(cat => normalize(cat.name.trim()) !== 'trash')
+      .map(cat => ({ ...cat, visible: true, traits: cat.traits.filter(trait => !trait.hidden) }))
+      .filter(cat => cat.traits.length);
     const remaining = new Set(cats);
     const steps = [];
     function add(label, categories, swatches = false, required = false) {
