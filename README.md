@@ -11,6 +11,7 @@ Samostatná webová aplikace pro skládání PNG vrstev. Bez účtu, serverové 
 - Přenášet kompletní projekt přes JSON. Otevírá i projekty z původní mobilní verze.
 - Skrýt kategorii podle vybraného traitu nebo zakázat kombinaci. Konfliktní kombinaci nelze exportovat; náhodný výběr pravidla respektuje.
 - Uložit pojmenované sestavy a exportovat průhledné PNG 1024 × 1024.
+- Ve **Finálu** uložit zamčenou kopii projektu. Zámek ve Vrstvách uloží kategorii a **Uložit do Finálu** v nabídce složky uloží její větev stromu. Kopie jsou v místním úložišti aplikace a při práci s jiným projektem zůstávají dostupné. ZIP z Finálu obsahuje pojmenované složky, původní PNG a `project.json` pro obnovu přes **Otevřít projekt**.
 - Instalace na plochu telefonu jako PWA a práce offline po prvním úspěšném načtení.
 
 ## Spuštění pro vývoj

@@ -1,6 +1,8 @@
 """Exercise native import with an actual Worker, canvas, service worker and IndexedDB."""
 import argparse
 import json
+import re
+import zipfile
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -21,7 +23,8 @@ class QuietServer(SimpleHTTPRequestHandler):
 def check_update(page, context, server, url, old_root, root):
     server.active_release = old_root
     page.goto(url)
-    expect(page.locator('#appVersion')).to_have_text('v0.7.85')
+    old_version = re.search(r'id="appVersion"[^>]*>([^<]+)', (old_root / 'index.html').read_text()).group(1)
+    expect(page.locator('#appVersion')).to_have_text(old_version)
     expect(page.locator('#refreshApp')).to_have_attribute('data-update-state', 'current', timeout=20000)
     saved = page.evaluate('''async () => {
       const png = document.createElement('canvas').toDataURL('image/png');
@@ -35,17 +38,17 @@ def check_update(page, context, server, url, old_root, root):
     assert saved
     server.active_release = root
     page.locator('#refreshApp').click()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.87', timeout=30000)
+    expect(page.locator('#appVersion')).to_have_text('v0.7.88', timeout=30000)
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
     page.locator('.file-menu summary').click()
     expect(page.get_by_role('button', name='Import z Procreate')).to_be_visible()
     context.set_offline(True)
     page.reload()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.87')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.88')
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
-    print('upgrade from v0.7.85, retained IndexedDB project, new import entry and offline reload passed', flush=True)
+    print(f'upgrade from {old_version}, retained IndexedDB project, new import entry and offline reload passed', flush=True)
 
 
 def run(page, context, url, stress, mask):
@@ -54,7 +57,7 @@ def run(page, context, url, stress, mask):
     page.on('crash', lambda: errors.append('Page crashed'))
     page.goto(url)
     page.wait_for_function("document.querySelector('#appLayout').getAttribute('aria-busy') === 'false' && navigator.serviceWorker.controller")
-    expect(page.locator('#appVersion')).to_have_text('v0.7.87')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.88')
     panel = page.locator('#catsPanel').bounding_box()
     canvas = page.locator('.stage').bounding_box()
     assert canvas['x'] < panel['x'] and .59 < canvas['width'] / (canvas['width'] + panel['width']) < .61, (panel, canvas)
@@ -144,6 +147,18 @@ def run(page, context, url, stress, mask):
     completed = attempts()[-1]
     assert (completed['stage'], completed['saved'], completed['alreadySaved']) == ('complete', 602, 8)
     print('610 layers, cancel after 8, reload, quota rollback, resume and real IndexedDB passed', flush=True)
+    page.locator('.file-menu summary').click()
+    page.get_by_role('button', name='Finál', exact=True).click()
+    page.get_by_role('button', name='Uložit projekt do Finálu').click()
+    expect(page.locator('#finalStatus')).to_contain_text('uložená v tomto zařízení', timeout=30000)
+    page.get_by_role('button', name='Připravit ZIP').click()
+    with page.expect_download() as zipped:
+        page.get_by_role('link', name='Stáhnout ZIP').click(timeout=30000)
+    with zipfile.ZipFile(zipped.value.path()) as archive:
+        assert sum(name.endswith('.png') for name in archive.namelist()) == 610
+        assert archive.testzip() is None
+    page.get_by_role('button', name='Zavřít Finál').click()
+    print('610-layer project archived in Final and all 610 PNG entries verified in ZIP', flush=True)
     choose(stress)
     expect(page.locator('#psdTree input[data-imported=true]')).to_have_count(610)
     expect(page.locator('#psdConfirm')).to_be_disabled()

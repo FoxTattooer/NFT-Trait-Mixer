@@ -268,39 +268,7 @@ function layerThumbnail(category, trait, className = '') {
   return `<img${className ? ` class="${className}"` : ''} data-layer-thumbnail data-category="${esc(category.id)}" data-trait="${esc(trait.id)}" draggable="false" alt="" decoding="async" loading="lazy">`;
 }
 function mixedLayerRows(category) {
-  const { folders, assignments } = organizerFolders(category.id);
-  const siblings = new Map();
-  const add = (parent, kind, item) => {
-    if (!siblings.has(parent)) siblings.set(parent, { folders: [], traits: [] });
-    const origin = /^([a-f0-9]{64}):(?:psd|procreate)-(\d+)$/.exec(item.psdSource || '');
-    siblings.get(parent)[kind].push({ item, kind, source: origin?.[1], order: Number(origin?.[2]) });
-  };
-  folders.forEach(folder => add(folder.parentId || null, 'folders', folder));
-  category.traits.forEach(trait => add(assignments[trait.id] || null, 'traits', trait));
-  function merge(parent) {
-    const group = siblings.get(parent);
-    if (!group) return [];
-    const rows = [];
-    // A reordered trait occupies another trait's PSD slot. This keeps adjacent
-    // folders between the same slots even after their sibling traits are swapped.
-    const ranks = new Map();
-    for (const trait of group.traits) if (trait.source) {
-      if (!ranks.has(trait.source)) ranks.set(trait.source, []);
-      ranks.get(trait.source).push(trait.order);
-    }
-    for (const values of ranks.values()) values.sort((a, b) => b - a);
-    const slots = group.traits.map(trait => ranks.get(trait.source)?.pop());
-    let f = 0, t = 0;
-    while (f < group.folders.length || t < group.traits.length) {
-      const folder = group.folders[f], trait = group.traits[t];
-      // The stored folder and trait sequences retain explicit edits. The original
-      // PSD positions recover interleaving when both siblings come from one file.
-      const traitFirst = trait && (!folder || (trait.source && (!folder.source ||
-        (trait.source === folder.source && slots[t] < folder.order))));
-      rows.push(traitFirst ? group.traits[t++] : group.folders[f++]);
-    }
-    return rows;
-  }
+  const merge = M.layerChildren(state, category);
   const visible = [];
   const stack = merge(null).reverse().map(row => ({ ...row, depth: 0 }));
   const expanded = organizerExpanded[category.id];
@@ -357,7 +325,7 @@ function renderLayerTree() {
   }).join('');
   const more = rows.length > layerLimit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', 'class="outline full-width"') : '';
   const empty = rows.length ? '' : '<p class="empty-list">Tato kategorie je zatím prázdná.</p>';
-  const tools = `<div class="layer-tree-tools">${button('add-traits', 'Přidat PNG', '', 'upload')}${button('add-organizer-folder', 'Přidat složku', '', 'folder')}</div>`;
+  const tools = `<div class="layer-tree-tools">${button('add-traits', 'Přidat PNG', '', 'upload')}${button('add-organizer-folder', 'Přidat složku', '', 'folder')}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
   const markup = entries + more + empty + (manage ? '' : tools);
   // Keep existing thumbnail elements and the focused row on selection changes.
   if (treeMarkup.get(tree) !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup.set(tree, markup); }
@@ -398,7 +366,8 @@ function openLayerContext(trigger, id) {
     const folder = folders.find(item => item.id === id);
     if (!folder) return;
     const excluded = organizerDescendants(folders, id);
-    menu.innerHTML = button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
+    menu.innerHTML = button('save-folder-final', 'Uložit do Finálu', id, 'lock', attributes) +
+      button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
       button('rename-organizer-folder', 'Přejmenovat', id, 'edit', attributes) +
       `<label>Přesunout složku<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(f => !excluded.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` +
       button('delete-organizer-folder', 'Smazat složku', id, 'trash', `${attributes} class="danger"`);
@@ -972,7 +941,7 @@ function render(keepPreview = false) {
   $('snapshot').disabled = !state.cats.length || busy;
   syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
-  $('exportPackage').disabled = !layers.length || !!warnings.length || busy;
+  $('exportPackage').disabled = !state.cats.length || busy || exporting;
   $('warnings').innerHTML = warnings.map(w => `<p class="conflict-warning">${esc(w.message)}. Uprav výběr před exportem.</p>`).join('');
   $('canvasEmpty').hidden = !!layers.length;
   if (!state.cats.length) {
@@ -1011,65 +980,34 @@ async function exportPNG(project = M.clone(state)) {
   finally { finishLog?.(); canvas.width = canvas.height = 1; exporting = false; render(true); }
 }
 
-function crc32(bytes) {
-  let crc = 0xffffffff;
-  for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0); }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-function zipStored(entries) {
-  const encoder = new TextEncoder(), localParts = [], centralParts = [];
-  let offset = 0;
-  for (const entry of entries) {
-    const name = encoder.encode(entry.name), data = entry.data, crc = crc32(data);
-    const local = new Uint8Array(30 + name.length), lv = new DataView(local.buffer);
-    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true); lv.setUint16(8, 0, true);
-    lv.setUint16(10, 0, true); lv.setUint16(12, 0x21, true); lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true);
-    lv.setUint32(22, data.length, true); lv.setUint16(26, name.length, true); lv.setUint16(28, 0, true); local.set(name, 30);
-    localParts.push(local, data);
-    const central = new Uint8Array(46 + name.length), cv = new DataView(central.buffer);
-    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true);
-    cv.setUint16(10, 0, true); cv.setUint16(12, 0, true); cv.setUint16(14, 0x21, true); cv.setUint32(16, crc, true);
-    cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true); cv.setUint16(28, name.length, true);
-    cv.setUint16(30, 0, true); cv.setUint16(32, 0, true); cv.setUint16(34, 0, true); cv.setUint16(36, 0, true);
-    cv.setUint32(38, 0, true); cv.setUint32(42, offset, true); central.set(name, 46); centralParts.push(central);
-    offset += local.length + data.length;
-  }
-  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0), centralOffset = offset;
-  const end = new Uint8Array(22), ev = new DataView(end.buffer);
-  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
-  ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true); ev.setUint32(12, centralSize, true);
-  ev.setUint32(16, centralOffset, true); ev.setUint16(20, 0, true);
-  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
-}
-function pngBytes(dataUrl) {
-  const encoded = dataUrl.slice(dataUrl.indexOf(',') + 1), binary = atob(encoded), bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
 async function exportPackage() {
-  const project = M.clone(state), layers = visibleLayers(project);
-  if (!layers.length) throw new Error('Nejdřív vyber alespoň jeden viditelný trait.');
-  if (M.conflicts(project).warnings.length) throw new Error('Nejdřív uprav zakázanou kombinaci traitů.');
+  const project = M.clone(state);
+  if (!project.cats.length) return;
   const finishLog = window.TraitDiagnostics?.start('zip-export');
-  busy = true; render();
+  busy = true; render(true);
+  let canvas;
   try {
-    const root = filename(project.name), entries = [], canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1024; await paintLayers(canvas, layers);
-    const finalBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (!finalBlob) throw new Error('Finální PNG se nepodařilo vytvořit.');
-    for (const [categoryIndex, category] of project.cats.entries()) {
-      const folder = String(categoryIndex + 1).padStart(2, '0') + ' ' + filename(category.name);
-      entries.push({ name: root + '/' + folder + '/', data: new Uint8Array(0) });
-      for (const [traitIndex, trait] of category.traits.entries()) {
-        const traitName = String(traitIndex + 1).padStart(3, '0') + ' ' + filename(trait.name);
-        entries.push({ name: root + '/' + folder + '/' + traitName + '.png', data: new Uint8Array(await (await TraitStorage.imageBlob(db,trait.data)).arrayBuffer()) });
-      }
+    const layers = visibleLayers(project);
+    let composite;
+    if (layers.length && !M.conflicts(project).warnings.length) {
+      canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1024;
+      await paintLayers(canvas, layers);
+      composite = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!composite) throw new Error('Finální PNG se nepodařilo vytvořit.');
     }
-    entries.push({ name: root + '/project.json', data: new Uint8Array(await (await TraitStorage.backup(db,project)).arrayBuffer()) });
-    entries.push({ name: root + '/final.png', data: new Uint8Array(await finalBlob.arrayBuffer()) });
-    download(zipStored(entries), root + '.zip'); toast('ZIP balíček projektu je připravený ke stažení');
+    const blob = await TraitFinal.zipProject(M, {
+      project, title: project.name, composite,
+      readImage: trait => TraitStorage.imageBlob(db, trait.data),
+      backup: () => TraitStorage.backup(db, project),
+    });
+    download(blob, TraitFinal.fileName(project.name) + '.zip');
+    toast('Stromová záloha je připravená ke stažení');
   } catch (error) { window.TraitDiagnostics?.error('zip-export', error); throw error; }
-  finally { finishLog?.(); busy = false; render(); }
+  finally {
+    if (canvas) canvas.width = canvas.height = 1;
+    finishLog?.(); busy = false; render(true);
+  }
 }
 function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Soubor nelze přečíst.')); reader.onabort = () => reject(new Error('Načítání bylo přerušeno.')); reader.readAsDataURL(new Blob([file], { type: 'image/png' })); });
@@ -1314,6 +1252,9 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'open-layer-menu': openLayerContext(element, id); break;
+    case 'open-final': await openFinalDialog(); break;
+    case 'save-category-final': await saveToFinal(id); break;
+    case 'save-folder-final': await saveToFinal(element.dataset.category, id); break;
     case 'reorder-trait-up': case 'reorder-trait-down': {
       if (!located) break;
       const siblings = M.traitSiblings(state, located.cat.id, id);

@@ -234,7 +234,43 @@
     }
     return sourceCatId !== targetCatId || before !== JSON.stringify([source.folders, next.folders]);
   }
-  const api = { TRAIT_NOTE_LIMIT, normalizeTraitNote, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  function layerChildren(p, category) {
+    const { folders, assignments } = p.organizer?.[category.id] || { folders: [], assignments: {} };
+    const siblings = new Map();
+    const add = (parent, kind, item) => {
+      if (!siblings.has(parent)) siblings.set(parent, { folders: [], traits: [] });
+      const origin = /^([a-f0-9]{64}):(?:psd|procreate)-(\d+)$/.exec(item.psdSource || '');
+      siblings.get(parent)[kind].push({ item, kind, source: origin?.[1], order: Number(origin?.[2]) });
+    };
+    folders.forEach(folder => add(folder.parentId || null, 'folders', folder));
+    category.traits.forEach(trait => add(assignments[trait.id] || null, 'traits', trait));
+    function merge(parent) {
+      const group = siblings.get(parent);
+      if (!group) return [];
+      const rows = [];
+      // A reordered trait occupies another trait's PSD slot. This keeps adjacent
+      // folders between the same slots even after their sibling traits are swapped.
+      const ranks = new Map();
+      for (const trait of group.traits) if (trait.source) {
+        if (!ranks.has(trait.source)) ranks.set(trait.source, []);
+        ranks.get(trait.source).push(trait.order);
+      }
+      for (const values of ranks.values()) values.sort((a, b) => b - a);
+      const slots = group.traits.map(trait => ranks.get(trait.source)?.pop());
+      let f = 0, t = 0;
+      while (f < group.folders.length || t < group.traits.length) {
+        const folder = group.folders[f], trait = group.traits[t];
+        // The stored folder and trait sequences retain explicit edits. The original
+        // PSD positions recover interleaving when both siblings come from one file.
+        const traitFirst = trait && (!folder || (trait.source && (!folder.source ||
+          (trait.source === folder.source && slots[t] < folder.order))));
+        rows.push(traitFirst ? group.traits[t++] : group.folders[f++]);
+      }
+      return rows;
+    }
+    return merge;
+  }
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

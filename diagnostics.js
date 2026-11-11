@@ -3,13 +3,13 @@
   'use strict';
   const key = 'trait-mixer:diagnostics:v1';
   const importKey = 'trait-mixer:diagnostic-imports:v1';
-  const version = '0.7.87';
+  const version = '0.7.88';
   const maxEntries = 48;
   const maxImports = 6;
   const phases = new Set([
     'startup', 'runtime', 'storage', 'preview', 'psd-open', 'psd-import',
     'psd-worker', 'procreate-open', 'procreate-import', 'procreate-worker', 'layer-preview',
-    'png-import', 'json-open', 'json-backup', 'png-export', 'zip-export'
+    'png-import', 'json-open', 'json-backup', 'png-export', 'zip-export', 'final-open', 'final-save', 'final-export'
   ]);
   const events = new Set(['start', 'end', 'error', 'saved']);
   const errorTypes = new Set([

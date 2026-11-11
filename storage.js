@@ -141,13 +141,16 @@
     if(!blob || typeof blob.arrayBuffer!=='function')throw new Error('Uložený obrázek nelze načíst.');
     return blob;
   }
-  async function backup(db,project) {
+  async function backup(db,project,readImage) {
     // Encode one image at a time; never stringify a project-sized Base64 string.
     const {cats,...metadata}=project, parts=[JSON.stringify(metadata).slice(0,-1)+',"cats":['];
     for(let ci=0;ci<cats.length;ci++) {
       const {traits,...category}=cats[ci];parts.push((ci?',':'')+JSON.stringify(category).slice(0,-1)+',"traits":[');
       for(let ti=0;ti<traits.length;ti++) {
-        const trait=traits[ti],data=isAsset(trait.data)?await dataURL(await imageBlob(db,trait.data)):trait.data;
+        const trait=traits[ti];
+        let data = trait.data;
+        if (readImage) data = await dataURL(await readImage(trait));
+        else if (isAsset(data)) data = await dataURL(await imageBlob(db, data));
         parts.push(new Blob([(ti?',':'')+JSON.stringify({...trait,data})]));
         if(ti%16===0)await breathe();
       }
