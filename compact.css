@@ -71,7 +71,7 @@ body.compact-workspace .app-header .header-menu-content {
   width:240px!important;max-width:calc(100vw - 16px)!important;box-sizing:border-box;
   overflow-y:auto;overscroll-behavior:contain;z-index:100;
 }
-body.compact-workspace .app-header .header-menu-content :is(button, a:where(.roadmap-menu-item)) {
+body.compact-workspace .app-header .header-menu-content :is(button, a:where(.header-menu-link)) {
   width:100%!important;min-width:0!important;height:auto!important;min-height:44px!important;
   justify-content:flex-start!important;padding:9px 10px!important;
 }
@@ -244,7 +244,7 @@ body.compact-workspace #categoryOverview .layer-folder-tree {display:none!import
 .layer-context button .icon {color:#efb0d4;width:18px;height:18px}
 .layer-context label {display:grid;gap:3px;padding:2px 5px;color:#e3bed6;font-size:12px}
 .layer-context select {width:100%;min-height:44px;font-size:16px}
-body.compact-workspace .app-header .header-menu-content :is(button, a:where(.roadmap-menu-item)) .icon {
+body.compact-workspace .app-header .header-menu-content :is(button, a:where(.header-menu-link)) .icon {
   width:30px!important;height:30px!important;padding:5px;flex:0 0 30px;
   border:1px solid #65415a;border-radius:8px;background:#302131;color:#f4b5d7;
   box-shadow:0 2px 4px #0a070c8a;

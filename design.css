@@ -318,10 +318,10 @@ button.accent,button.outline{background:linear-gradient(180deg,#211923,#121117)}
 .header-menu>summary::-webkit-details-marker{display:none}
 .header-menu[open]>summary{border-color:#ff459b;background:#431b34;box-shadow:0 0 0 1px #ff459b55}
 .header-menu-content{position:absolute;right:0;top:calc(100% + 9px);z-index:200;width:190px;padding:7px;background:#18151e;border:1px solid #6b405a;border-radius:14px;box-shadow:0 12px 30px #000b;display:flex;flex-direction:column;gap:3px}
-.header-menu-content :is(button,a:where(.roadmap-menu-item)){width:100%;min-height:39px;justify-content:flex-start;text-align:left;font-size:12px!important;padding:8px 10px!important;color:#f1e6ee!important;background:transparent!important;border:0!important;border-radius:8px!important;box-shadow:none!important}
-.header-menu-content .roadmap-menu-item{font:inherit;font-weight:550;text-decoration:none;touch-action:manipulation}
-.header-menu-content .roadmap-menu-item:focus-visible{outline-color:#ff65b2;outline-offset:2px}
-@media(hover:hover) and (pointer:fine){.header-menu-content :is(button,a:where(.roadmap-menu-item)):hover{background:var(--ui-feedback-wash,#382031)!important}}
+.header-menu-content :is(button,a:where(.header-menu-link)){width:100%;min-height:39px;justify-content:flex-start;text-align:left;font-size:12px!important;padding:8px 10px!important;color:#f1e6ee!important;background:transparent!important;border:0!important;border-radius:8px!important;box-shadow:none!important}
+.header-menu-content .header-menu-link{font:inherit;font-weight:550;text-decoration:none;touch-action:manipulation}
+.header-menu-content .header-menu-link:focus-visible{outline-color:#ff65b2;outline-offset:2px}
+@media(hover:hover) and (pointer:fine){.header-menu-content :is(button,a:where(.header-menu-link)):hover{background:var(--ui-feedback-wash,#382031)!important}}
 .header-menu-content .icon{width:17px;height:17px}
 @media(max-width:900px){
  .app-header.compact-header{padding-top:max(8px,env(safe-area-inset-top))!important}
@@ -392,7 +392,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
 .compact-header .compact-header-end{grid-column:3;justify-self:end}
 .compact-header .compact-tool{flex:0 0 38px!important}
 .header-menu-content button:disabled{opacity:.4;cursor:not-allowed}
-.header-menu-content :is(button,a:where(.roadmap-menu-item)){display:flex!important;align-items:center!important;gap:10px!important}
+.header-menu-content :is(button,a:where(.header-menu-link)){display:flex!important;align-items:center!important;gap:10px!important}
 .project-bar{align-items:center!important}
 .project-bar .project-heading{min-width:0!important}
 .project-bar .history-actions{align-self:center!important;margin-left:auto!important}
