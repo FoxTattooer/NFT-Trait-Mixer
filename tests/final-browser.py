@@ -41,7 +41,7 @@ def run(context, url):
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(url)
-    expect(page.locator('#appVersion')).to_have_text('v0.7.90')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.91')
     page.wait_for_function("document.querySelector('#appLayout').getAttribute('aria-busy') === 'false' && navigator.serviceWorker.controller")
     assert seed(page, 'Projekt A')
 

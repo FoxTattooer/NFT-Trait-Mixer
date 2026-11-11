@@ -200,7 +200,7 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu[open]>sum
   background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;box-shadow:0 0 8px var(--scheme-glow)!important;
 }
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(dialog,.header-menu-content,.layer-context) {background:var(--scheme-panel)!important;border-color:var(--scheme-stroke)!important}
-body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button,.app-header .header-menu-content :is(button,a:where(.roadmap-menu-item)) .icon,.library-category>summary) {
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button:where(:not(.danger)),.app-header .header-menu-content :is(button,a:where(.roadmap-menu-item)) .icon,.library-category>summary) {
   background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
 }
 body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp {
@@ -242,7 +242,7 @@ body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) 
   border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
   box-shadow:inset 0 1px var(--scheme-sheen)!important;
 }
-body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.app-header summary .icon,.layer-context .icon,#quickUploadPng .icon) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.app-header summary .icon,.layer-context :where(button:not(.danger)) .icon,#quickUploadPng .icon) {
   color:var(--scheme-text)!important;
 }
 body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea) {
@@ -454,6 +454,84 @@ body.compact-workspace[data-control-accent^="neon-"] #layersTab[data-back].is-ac
 }
 .accent-picker [data-control-accent^="neon-"] .accent-chip {
   box-shadow: 0 0 8px var(--control-accent-glow);
+}
+
+.accent-adjustments {
+  display: grid;
+  gap: 8px;
+  padding: 12px 9px;
+  border-top: 1px solid var(--scheme-stroke);
+}
+.accent-adjustments h3 { margin: 0; font-size: 12px; }
+.accent-coverage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.accent-coverage button {
+  min-height: 44px;
+  min-width: 0;
+  padding: 5px;
+  font-size: 12px;
+  border-color: var(--scheme-stroke);
+  background: var(--scheme-control);
+  color: var(--scheme-text);
+}
+.accent-coverage button[aria-pressed=true] { border-color: var(--control-accent); }
+.accent-glow { display: grid; grid-template-columns: 1fr auto; align-items: center; font-size: 12px; }
+.accent-glow input { grid-column: 1 / -1; width: 100%; min-height: 44px; margin: 0; accent-color: var(--control-accent); }
+.accent-glow output { color: var(--scheme-text); font-variant-numeric: tabular-nums; }
+
+body.compact-workspace:is([data-accent-glow-adjusted], [data-accent-coverage=less]) {
+  --accent-adjusted-glow: color-mix(in srgb, var(--control-accent-glow, color-mix(in srgb, var(--control-accent) 45%, transparent)) var(--accent-glow-opacity), transparent);
+}
+body.compact-workspace[data-accent-glow-adjusted] :is(
+  #layersTab[data-back] .layer-tab-arrow,
+  .layer-tree-main[aria-expanded=true] .icon:first-child,
+  :is(.layer-tree-eye, [data-action=toggle-category])[aria-pressed=true] .icon,
+  .quick-traits :is([data-action=quick-prev], [data-action=quick-next]):enabled
+) {
+  filter: drop-shadow(0 0 calc(4px * var(--accent-glow-scale)) var(--accent-adjusted-glow));
+}
+body.compact-workspace[data-accent-glow-adjusted] #layersTab[data-back].is-active {
+  box-shadow: inset 0 0 calc(8px * var(--accent-glow-scale)) var(--accent-adjusted-glow),
+    0 0 calc(12px * var(--accent-glow-scale)) var(--accent-adjusted-glow) !important;
+}
+body.compact-workspace[data-accent-coverage=less] :is(
+  #layersTab[data-back] .layer-tab-arrow,
+  .layer-tree-main[aria-expanded=true] .icon:first-child,
+  :is(.layer-tree-eye, [data-action=toggle-category])[aria-pressed=true] .icon,
+  #quickTraits :is([data-action=quick-prev], [data-action=quick-next]):enabled
+) {
+  color: var(--scheme-text);
+  filter: none;
+}
+body.compact-workspace[data-accent-coverage=less] #layersTab[data-back].is-active {
+  box-shadow: inset 0 1px var(--scheme-sheen), 0 0 calc(4px * var(--accent-glow-scale)) var(--accent-adjusted-glow) !important;
+}
+body.compact-workspace[data-accent-coverage=strong] :is(
+  #appLayout .workspace-tabs button[aria-pressed=true],
+  .quick-traits .quick-trait.is-selected,
+  .quick-traits :is([data-action=quick-prev], [data-action=quick-next]):enabled
+) {
+  border-color: var(--control-accent) !important;
+}
+body.compact-workspace[data-accent-coverage=strong] .quick-traits :is([data-action=quick-prev], [data-action=quick-next]):enabled {
+  color: var(--control-accent) !important;
+}
+body.compact-workspace[data-accent-coverage=strong] :is(
+  .layer-tree-main[aria-pressed=true], .layer-tree-more[aria-expanded=true]
+) {
+  box-shadow: inset 0 0 0 1px var(--control-accent) !important;
+}
+body.compact-workspace[data-accent-coverage=strong] button:enabled:active:not(.danger, .danger-icon, [data-action^="delete-"]) {
+  border-color: var(--control-accent) !important;
+}
+body.compact-workspace[data-accent-coverage=strong] :is(button, summary):focus-visible {
+  outline: 2px solid var(--control-accent) !important;
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  body.compact-workspace[data-accent-coverage=strong] :is(button:enabled, summary):hover:not(.danger, .danger-icon, [data-action^="delete-"]) {
+    border-color: var(--control-accent) !important;
+    box-shadow: inset 0 0 0 1px var(--control-accent);
+  }
 }
 
 /* Destructive controls keep a semantic red even in monochrome colorways. */

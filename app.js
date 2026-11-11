@@ -231,8 +231,9 @@ function ask({ title, description = '', value = '', confirm = false, submit = 'U
   $('dialogInput').value = value;
   $('dialogInput').setCustomValidity('');
   $('dialogLabel').hidden = confirm;
-  $('dialogSubmit').textContent = submit;
-  $('dialogSubmit').className = danger ? 'danger' : 'primary';
+  const submitButton = $('dialogSubmit');
+  submitButton.innerHTML = `${danger ? icon('trash') : ''}${esc(submit)}`;
+  submitButton.className = danger ? 'danger' : 'primary';
   $('editDialog').showModal();
   if (confirm) $(danger ? 'dialogCancel' : 'dialogSubmit').focus();
   else { $('dialogInput').focus(); $('dialogInput').select(); }
@@ -1180,12 +1181,31 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 const colorSchemeKey = 'nft-color-scheme';
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
 const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint', 'neon-red', 'neon-lime', 'neon-uv']);
+const accentCoverageKey = 'nft-accent-coverage', accentGlowKey = 'nft-accent-glow';
+const accentCoverages = new Set(['less', 'normal', 'strong']);
+let accentGlow = null;
+function applyAccentCoverage(value) {
+  const coverage = accentCoverages.has(value) ? value : 'normal';
+  document.body.dataset.accentCoverage = coverage;
+  for (const choice of $('accentCoverageChoices').querySelectorAll('button')) {
+    choice.setAttribute('aria-pressed', String(choice.dataset.coverage === coverage));
+  }
+}
+function applyAccentGlow() {
+  const level = accentGlow ?? (document.body.dataset.controlAccent.startsWith('neon-') ? 50 : 0);
+  $('accentGlow').value = String(level);
+  $('accentGlowValue').value = `${level} %`;
+  document.body.toggleAttribute('data-accent-glow-adjusted', accentGlow !== null);
+  document.body.style.setProperty('--accent-glow-scale', String(level / 50));
+  document.body.style.setProperty('--accent-glow-opacity', `${Math.min(100, level * 2)}%`);
+}
 function applyControlAccent(value) {
   const accent = controlAccents.has(value) ? value : 'auto';
   document.body.dataset.controlAccent = accent;
   for (const choice of $('accentChoices').querySelectorAll('[data-control-accent]')) {
     choice.setAttribute('aria-pressed', String(choice.dataset.controlAccent === accent));
   }
+  applyAccentGlow();
 }
 const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']);
 function applyColorScheme(value) {
@@ -1201,15 +1221,21 @@ function applyColorScheme(value) {
   }
 }
 function restoreColorScheme() {
-  let saved;
-  try { saved = localStorage.getItem(colorSchemeKey); } catch { /* use the default */ }
+  let saved, coverage;
+  accentGlow = null;
+  try {
+    saved = localStorage.getItem(colorSchemeKey);
+    coverage = localStorage.getItem(accentCoverageKey);
+    const glow = localStorage.getItem(accentGlowKey);
+    if (glow !== null && /^\d{1,3}$/.test(glow) && Number(glow) <= 100) accentGlow = Number(glow);
+  } catch { /* use the defaults */ }
+  applyAccentCoverage(coverage);
   applyColorScheme(saved === 'drip' ? 'graphite-grey' : saved);
   if (saved === 'drip') {
     try { localStorage.setItem(colorSchemeKey, 'graphite-grey'); } catch { /* preference is read-only */ }
   }
 }
-function saveAppearancePreference(key, value) {
-  const status = $('schemeStatus');
+function saveAppearancePreference(key, value, status = $('schemeStatus')) {
   status.hidden = true;
   try { localStorage.setItem(key, value); }
   catch {
@@ -1227,6 +1253,20 @@ function chooseControlAccent(accent) {
   applyControlAccent(accent);
   saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
 }
+function toggleWorkspaceTabs() {
+  const collapsed = document.body.toggleAttribute('data-workspace-tabs-collapsed');
+  $('workspaceTabs').hidden = collapsed;
+  $('workspaceTabsHandle').hidden = !collapsed;
+  $('workspaceTabsToggle').setAttribute('aria-expanded', String(!collapsed));
+  $('workspaceTabsToggle').querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
+  if (collapsed) $('workspaceTabsHandle').focus();
+  else ($('workspaceTabs').querySelector('[aria-pressed=true]') || $('layersTab')).focus();
+}
+$('accentGlow').addEventListener('input', event => {
+  accentGlow = Number(event.target.value);
+  applyAccentGlow();
+});
+$('accentGlow').addEventListener('change', () => saveAppearancePreference(accentGlowKey, String(accentGlow), $('accentAppearanceStatus')));
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
 let openShowroom, diagnosticsFromHistory = false;
@@ -1456,6 +1496,13 @@ async function handleAction(action, id, element) {
     case 'close-settings': $('settingsDialog').close(); break;
     case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
     case 'set-control-accent': chooseControlAccent(element?.dataset.controlAccent); break;
+    case 'set-accent-coverage':
+      if (accentCoverages.has(element?.dataset.coverage)) {
+        applyAccentCoverage(element.dataset.coverage);
+        saveAppearancePreference(accentCoverageKey, element.dataset.coverage, $('accentAppearanceStatus'));
+      }
+      break;
+    case 'toggle-workspace-tabs': toggleWorkspaceTabs(); break;
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-diagnostics':
