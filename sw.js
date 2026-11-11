@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.104';
+const CACHE = PREFIX + 'v0.7.105';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const PDF_DOCUMENTS = new Set([
@@ -13,7 +13,7 @@ const SHELL = [
   './trait-comparison.css?build=07104', './trait-comparison.js?build=07104',
   './lookbook.css?build=07104', './lookbook.js?build=07104',
   './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0798', './compact.css?build=0798',
-  './schemes.css?build=07100', './drag.js?build=0760', './project.js?build=07103', './diagnostics.js?build=07104',
+  './schemes.css?build=07100', './drag.js?build=0760', './project.js?build=07103', './diagnostics.js?build=07105',
   './showroom.css?build=0799', './showroom.js?build=07102', SHOWROOM_ART, './art/fox-credit-drop.png',
   './app.js?build=07104', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',

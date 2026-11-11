@@ -35,7 +35,7 @@ w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get
 w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
-w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js','trait-comparison.js','lookbook.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','final.js','diagnostics.js','showroom.js','app.js','trait-comparison.js','lookbook.js','final-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -96,10 +96,24 @@ assert.equal(M.normalize(JSON.parse(await w.__downloads[0].blob.text())).cats[0]
 const get = id => w.document.getElementById(id);
 const find = selector => w.document.querySelector(selector);
 const click = selector => find(selector).click();
-const showroom = find('.header-end .header-menu-content .showroom-menu-item');
+const showroom = find('[data-action="open-showroom"]');
+const finalEntry = find('[data-action="open-final"]');
+assert.equal(get('openLookbook').nextElementSibling, showroom);
+assert.equal(showroom.nextElementSibling, finalEntry);
+assert.equal(w.document.querySelectorAll('[data-action="open-showroom"]').length, 1);
+assert.equal(w.document.querySelectorAll('[data-action="open-final"]').length, 1);
 assert.equal(showroom.textContent.replace(/\s+/g,' ').trim(),'Showroom (beta)');
 const beforeShowroom = JSON.stringify(w.inspectState());
 const showroomMenu = showroom.closest('details');
+assert.equal(showroomMenu, menus[1]);
+showroomMenu.open = true;
+finalEntry.click();
+assert(!showroomMenu.open);
+assert(get('finalDialog').open);
+await waitFor(() => !get('finalDialog').hasAttribute('aria-busy'));
+assert.equal(get('finalStatus').textContent, '');
+click('#finalDialog [data-final-action="close"]');
+assert(!get('finalDialog').open);
 showroomMenu.open = true;
 showroom.click();
 assert(!showroomMenu.open);
