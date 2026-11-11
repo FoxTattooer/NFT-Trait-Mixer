@@ -79,7 +79,7 @@
   }
   const TRAIT_NOTE_LIMIT = 240;
   const normalizeTraitNote = value => typeof value === 'string' ? value.trim().slice(0, TRAIT_NOTE_LIMIT).trimEnd() : '';
-  const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?psd-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
+  const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !raw.selected || typeof raw.selected !== 'object' || Array.isArray(raw.selected) || !Array.isArray(raw.rules)) fail('Soubor není platný projekt Trait Workshop.');

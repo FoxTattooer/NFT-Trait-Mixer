@@ -82,11 +82,13 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
     --workspace-left:max(8px,env(safe-area-inset-left));
     --workspace-right:max(8px,env(safe-area-inset-right));
     --workspace-height:calc(100dvh - var(--workspace-top) - var(--workspace-bottom));
-    --workspace-column:calc((100vw - var(--workspace-left) - var(--workspace-right) - 10px)/2);
+    --workspace-width:calc(100vw - var(--workspace-left) - var(--workspace-right) - 10px);
+    --workspace-column:max(min(268px,51vw),calc(var(--workspace-width)*.4));
+    --workspace-preview:calc(var(--workspace-width) - var(--workspace-column));
     padding:0!important;
   }
   body.compact-workspace .app-header {
-    position:fixed!important;top:var(--workspace-top)!important;left:var(--workspace-left)!important;
+    position:fixed!important;top:var(--workspace-top)!important;left:auto!important;right:var(--workspace-right)!important;
     width:var(--workspace-column)!important;max-width:none!important;margin:0!important;
     box-sizing:border-box;padding:0!important;gap:6px!important;background:none!important;
     border:0!important;box-shadow:none!important;backdrop-filter:none!important;
@@ -98,9 +100,9 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
   body.compact-workspace .app-header #refreshApp {width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important}
   body.compact-workspace .app-layout {
     position:fixed!important;inset:var(--workspace-top) var(--workspace-right) var(--workspace-bottom) var(--workspace-left)!important;
-    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    display:grid!important;grid-template-columns:minmax(0,1fr) var(--workspace-column)!important;
     grid-template-rows:40px 38px minmax(0,1fr)!important;
-    grid-template-areas:"toolbar stage" "tabs stage" "settings stage"!important;
+    grid-template-areas:"stage toolbar" "stage tabs" "stage settings"!important;
     width:auto!important;height:var(--workspace-height)!important;min-height:0!important;max-height:none!important;
     margin:0!important;padding:0!important;gap:6px 10px!important;overflow:visible!important;
   }
@@ -115,15 +117,23 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
     border:0!important;background:none!important;box-shadow:none!important;overflow:hidden!important;
   }
   body.compact-workspace.landscape-editor-mode .stage>.canvas-wrap {
-    width:min(var(--workspace-column),var(--workspace-height))!important;
-    height:min(var(--workspace-column),var(--workspace-height))!important;
-    inline-size:min(var(--workspace-column),var(--workspace-height))!important;
-    block-size:min(var(--workspace-column),var(--workspace-height))!important;
+    width:min(var(--workspace-preview),var(--workspace-height))!important;
+    height:min(var(--workspace-preview),var(--workspace-height))!important;
+    inline-size:min(var(--workspace-preview),var(--workspace-height))!important;
+    block-size:min(var(--workspace-preview),var(--workspace-height))!important;
     max-height:none!important;max-width:none!important;aspect-ratio:1!important;
     margin:0 auto!important;flex:none!important;align-self:flex-start!important;
   }
   body.compact-workspace .app-footer {display:none!important}
-  body.compact-workspace>.notice:not([hidden]) {position:fixed;top:calc(var(--workspace-top) + 44px);left:var(--workspace-left);width:var(--workspace-column);box-sizing:border-box;z-index:35;max-height:50dvh;overflow:auto;margin:0}
+  body.compact-workspace>.notice:not([hidden]) {position:fixed;top:calc(var(--workspace-top) + 44px);right:var(--workspace-right);width:var(--workspace-column);box-sizing:border-box;z-index:35;max-height:50dvh;overflow:auto;margin:0}
+}
+@media (orientation:landscape) and (max-width:580px) {
+  body.compact-workspace .app-header,
+  body.compact-workspace .app-header>.history-actions,
+  body.compact-workspace .app-header>.header-end {gap:3px!important}
+  body.compact-workspace .app-header summary,
+  body.compact-workspace .app-header .history-actions>button,
+  body.compact-workspace .app-header #refreshApp {width:36px!important;min-width:36px!important}
 }
 
 /* Vrstvy: folders and traits share a compact, ordered list. */

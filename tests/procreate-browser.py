@@ -1,0 +1,133 @@
+"""Exercise native import with an actual Worker, canvas, service worker and IndexedDB."""
+import argparse
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from threading import Thread
+
+from playwright.sync_api import expect, sync_playwright
+
+
+class QuietServer(SimpleHTTPRequestHandler):
+    def log_message(self, *_args):
+        pass
+
+
+def run(page, context, url, stress, mask):
+    errors = []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    page.on('crash', lambda: errors.append('Page crashed'))
+    page.goto(url)
+    page.wait_for_function("document.querySelector('#appLayout').getAttribute('aria-busy') === 'false' && navigator.serviceWorker.controller")
+    expect(page.locator('#appVersion')).to_have_text('v0.7.86')
+    panel = page.locator('#catsPanel').bounding_box()
+    canvas = page.locator('.stage').bounding_box()
+    assert canvas['x'] < panel['x'] and .59 < canvas['width'] / (canvas['width'] + panel['width']) < .61, (panel, canvas)
+    page.set_viewport_size({'width': 393, 'height': 780})
+    expect(page.locator('.workspace-credit')).to_be_visible()
+    assert page.locator('.workspace-credit').evaluate('el => getComputedStyle(el).opacity') == '0.35'
+    page.set_viewport_size({'width': 852, 'height': 393})
+
+    def pick(path):
+        page.locator('.file-menu summary').click()
+        with page.expect_file_chooser() as event:
+            page.get_by_role('button', name='Import z Procreate').click()
+        event.value.set_files(path)
+        expect(page.locator('#psdTitle')).to_have_text('Vrstvy z Procreate')
+
+    def choose(path):
+        pick(path)
+        expect(page.locator('#psdBody')).to_be_visible(timeout=30000)
+
+    def durable_count():
+        return page.evaluate('async () => (await TraitStorage.read(db, undefined, {lazy: true})).cats.flatMap(c => c.traits).length')
+
+    choose(stress)
+    expect(page.locator('#psdTree input[data-node]')).to_have_count(610)
+    page.get_by_role('button', name='Náhled Trait 0001').click()
+    expect(page.locator('#psdPreviewName')).to_have_text('Trait 0001')
+    assert page.locator('#psdPreview').evaluate('img => img.decode().then(() => img.naturalWidth)') == 1024
+    page.locator('#psdConfirm').click()
+    page.wait_for_function("document.getElementById('psdImportReason').textContent.includes('Průběžně uloženo 8 z')")
+    page.locator('#psdCancel').click()
+    expect(page.locator('#psdDialog')).not_to_be_visible()
+    assert durable_count() == 8
+    page.reload()
+    expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
+    choose(stress)
+    expect(page.locator('#psdTree input[data-imported=true]')).to_have_count(8)
+    expect(page.locator('#psdTree input:checked')).to_have_count(602)
+    # Fail the next manifest write after staging images, then verify rollback.
+    page.evaluate('''() => {
+      const put = IDBObjectStore.prototype.put;
+      window.restoreManifestWrites = () => { IDBObjectStore.prototype.put = put; };
+      IDBObjectStore.prototype.put = function (value, key) {
+        if (key === 'current') throw new DOMException('Simulated full disk', 'QuotaExceededError');
+        return put.call(this, value, key);
+      };
+    }''')
+    page.locator('#psdConfirm').click()
+    expect(page.locator('#psdStatus')).to_contain_text('nedostatku místa', timeout=25000)
+    assert durable_count() == 8
+    page.evaluate('restoreManifestWrites()')
+    page.locator('#psdCancel').click()
+    choose(stress)
+    expect(page.locator('#psdTree input[data-imported=true]')).to_have_count(8)
+    page.locator('#psdConfirm').click()
+    expect(page.locator('#psdDialog')).not_to_be_visible(timeout=180000)
+    assert durable_count() == 610
+    print('610 layers, cancel after 8, reload, quota rollback, resume and real IndexedDB passed', flush=True)
+    choose(stress)
+    expect(page.locator('#psdTree input[data-imported=true]')).to_have_count(610)
+    expect(page.locator('#psdConfirm')).to_be_disabled()
+    page.locator('#psdCancel').click()
+
+    context.set_offline(True)
+    page.reload()
+    expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
+    choose(mask)
+    expect(page.locator('#psdTree input[data-node]')).to_have_count(1)
+    page.get_by_role('button', name='Náhled Layer 1').click()
+    expect(page.locator('#psdPreviewName')).to_have_text('Layer 1')
+    page.locator('#psdConfirm').click()
+    expect(page.locator('#psdDialog')).not_to_be_visible(timeout=30000)
+    assert durable_count() == 611
+    page.locator('#undo').click()
+    page.wait_for_function("(async () => (await TraitStorage.read(db, undefined, {lazy: true})).cats.flatMap(c => c.traits).length === 610)()")
+
+    pick({'name': 'broken.procreate', 'mimeType': 'application/zip', 'buffer': b'Broken ZIP'})
+    expect(page.locator('#psdStatus')).to_contain_text('nepodařilo otevřít')
+    expect(page.locator('#psdConfirm')).to_be_disabled()
+    page.locator('#psdCancel').click()
+    choose(mask)
+    page.evaluate('''() => {
+      const original = Worker.prototype.postMessage;
+      Worker.prototype.postMessage = function (message, ...args) {
+        if (message.type !== 'render') return original.call(this, message, ...args);
+        Worker.prototype.postMessage = original;
+        queueMicrotask(() => this.dispatchEvent(new ErrorEvent('error', { message: 'Simulated worker failure' })));
+      };
+    }''')
+    page.get_by_role('button', name='Náhled Layer 1').click()
+    expect(page.locator('#psdStatus')).to_contain_text('zpracování vrstev se přerušilo', ignore_case=True)
+    expect(page.locator('#psdConfirm')).to_be_disabled()
+    page.locator('#psdCancel').click()
+    assert durable_count() == 610
+    assert not errors, errors
+    print('native sample import, offline shell and decoders, duplicate guard, undo, invalid ZIP, worker interruption, landscape and portrait passed', flush=True)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('stress', type=Path)
+    parser.add_argument('mask', type=Path)
+    parser.add_argument('--chromium', type=Path)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    with ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietServer, directory=root)) as server:
+        Thread(target=server.serve_forever, daemon=True).start()
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(executable_path=args.chromium, args=['--disable-gpu', '--disable-dev-shm-usage'])
+            context = browser.new_context(viewport={'width': 852, 'height': 393}, is_mobile=True, has_touch=True)
+            run(context.new_page(), context, f'http://127.0.0.1:{server.server_port}/', args.stress.resolve(), args.mask.resolve())
+            browser.close()

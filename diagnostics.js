@@ -2,11 +2,12 @@
 (() => {
   'use strict';
   const key = 'trait-mixer:diagnostics:v1';
-  const version = '0.7.85';
+  const version = '0.7.86';
   const maxEntries = 48;
   const phases = new Set([
     'startup', 'runtime', 'storage', 'preview', 'psd-open', 'psd-import',
-    'psd-worker', 'png-import', 'json-open', 'json-backup', 'png-export', 'zip-export'
+    'psd-worker', 'procreate-open', 'procreate-import', 'procreate-worker',
+    'png-import', 'json-open', 'json-backup', 'png-export', 'zip-export'
   ]);
   const events = new Set(['start', 'end', 'error', 'saved']);
   const errorTypes = new Set([
@@ -14,7 +15,7 @@
     'QuotaExceededError', 'InvalidStateError', 'UnknownError', 'NotFoundError',
     'DataError', 'SecurityError', 'NetworkError', 'EncodingError'
   ]);
-  const appLocation = /(?:^|\/)((?:app|project|storage|drag|diagnostics|psd-(?:core|file|ui|worker))\.js)(?:\?[^\s:]+)?:(\d{1,6}):(\d{1,6})/;
+  const appLocation = /(?:^|\/)((?:app|project|storage|drag|diagnostics|psd-(?:core|file|ui|worker)|procreate-(?:file|plist|tiles|worker))\.js)(?:\?[^\s:]+)?:(\d{1,6}):(\d{1,6})/;
   let memory = [];
   let storageUnavailable = false;
 

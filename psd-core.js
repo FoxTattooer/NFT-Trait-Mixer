@@ -202,10 +202,11 @@
     }
     for (const c of plan.cats) if (!project.selected[c.id]) project.selected[c.id] = plan.jobs.find(j => j.categoryId === c.id && !j.hidden)?.traitId || null;
   }
-  function applyBatch(project, plan, jobs, mode, targetId) {
+  function applyBatch(project, plan, jobs, mode, targetId, allowStagedImages = false) {
     const wanted = new Set(jobs.map(j => j.traitId));
     const readyCats = plan.cats.map(c => ({ ...c, traits: c.traits.filter(t => wanted.has(t.id)) })).filter(c => c.traits.length);
-    if (readyCats.some(c => c.traits.some(t => !t.data.startsWith('data:image/png;base64,')))) throw new Error('Dávka není dokončená.');
+    const ready = data => data.startsWith('data:image/png;base64,') || (allowStagedImages && /^asset:image:[a-f0-9]{64}$/.test(data));
+    if (readyCats.some(c => c.traits.some(t => !ready(t.data)))) throw new Error('Dávka není dokončená.');
     if (mode === 'category' && !project.cats.some(c => c.id === targetId)) throw new Error('Cílová kategorie neexistuje.');
     if (plan.source && jobs.length) project.psdImports = { ...project.psdImports, [plan.source]: { mode, targetId: mode === 'category' ? targetId : null } };
     project.organizer ||= {};

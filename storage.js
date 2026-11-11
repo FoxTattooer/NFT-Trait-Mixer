@@ -44,6 +44,15 @@
   function dataURL(blob) {
     return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error || new Error('Obrázek nelze načíst z úložiště.'));r.readAsDataURL(blob);});
   }
+  async function imageKey(bytes) {
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    return 'image:' + Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  async function stagePng(bytes, stagedImages) {
+    const key = await imageKey(bytes);
+    if (!stagedImages.has(key)) stagedImages.set(key, new Blob([bytes], { type: 'image/png' }));
+    return 'asset:' + key;
+  }
   const references = p => new Set((p?.storageFormat===2 ? p.cats : []).flatMap(c=>c.traits.map(t=>t.assetKey)));
   async function readUnlocked(db,progress=()=>{},options={}) {
     const project=await request(db,'current');
@@ -78,7 +87,7 @@
     }
     delete project.storageFormat;return project;
   }
-  async function saveUnlocked(db,project,progress=()=>{}) {
+  async function saveUnlocked(db,project,progress=()=>{},stagedImages) {
     const cache=context(db),nextCache=new Map(),written=new Set();
     const manifest={...project,storageFormat:2,cats:project.cats.map(c=>({...c,traits:[]}))};
     const total=project.cats.reduce((n,c)=>n+c.traits.length,0);let done=0;
@@ -89,17 +98,16 @@
       for(let i=0;i<project.cats.length;i++)for(const trait of project.cats[i].traits) {
         let entry=cache.get(trait.id);
         if(!entry || entry.data!==trait.data || !existingKeys.has(entry.key)) {
-          if(isAsset(trait.data)) {
-            const key=trait.data.slice(6);
-            if(!existingKeys.has(key))throw new Error('Chybí uložený obrázek: '+trait.name);
-            entry={data:trait.data,key};
-          } else {
-          const blob=await imageBytes(trait.data);
-          const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),b=>b.toString(16).padStart(2,'0')).join('');
-          const key='image:'+hash;
-          if(!existingKeys.has(key)) {await transaction(db,store=>store.put(blob,key));written.add(key);existingKeys.add(key);}
-          entry={data:trait.data,key};
+          const stored = isAsset(trait.data);
+          const inline = stored ? null : await imageBytes(trait.data);
+          const key = stored ? trait.data.slice(6) : await imageKey(await inline.arrayBuffer());
+          if(!existingKeys.has(key)) {
+            const blob = inline || stagedImages?.get(key);
+            if (!blob) throw new Error('Chybí uložený obrázek: '+trait.name);
+            await transaction(db,store=>store.put(blob,key));
+            written.add(key);existingKeys.add(key);
           }
+          entry={data:trait.data,key};
         }
         nextCache.set(trait.id,entry);
         const {data,assetKey,...metadata}=trait;
@@ -110,11 +118,8 @@
       // Publish only after every image is durable. On failure the previous project survives.
       const keep=references(manifest);
       await transaction(db,store=>{
-        const r=store.get('current');
-        r.onsuccess=()=>{
-          for(const key of existingKeys)if(typeof key==='string' && key.startsWith('image:') && !keep.has(key) && !pins.get(db)?.has(key))store.delete(key);
-          store.put(manifest,'current');
-        };
+        for(const key of existingKeys)if(typeof key==='string' && key.startsWith('image:') && !keep.has(key) && !pins.get(db)?.has(key))store.delete(key);
+        store.put(manifest,'current');
       });
       contexts.set(db,nextCache);
     } catch(error) {
@@ -129,7 +134,7 @@
     return root.navigator?.locks?.request ? root.navigator.locks.request('nft-trait-storage',fn) : fn();
   }
   const read = (db,progress,options) => locked(()=>readUnlocked(db,progress,options));
-  const save = (db,project,progress) => locked(()=>saveUnlocked(db,project,progress));
+  const save = (db,project,progress,stagedImages) => locked(()=>saveUnlocked(db,project,progress,stagedImages));
   async function imageBlob(db,data) {
     if(!isAsset(data))return imageBytes(data);
     const blob=await request(db,data.slice(6));
@@ -163,6 +168,6 @@
     const keys=new Set();for(const project of projects)for(const c of project.cats)for(const t of c.traits)if(isAsset(t.data))keys.add(t.data.slice(6));
     pins.set(db,keys);
   }
-  const api={open,read,save,isAsset,imageBlob,backup,retain,compact};
+  const api={open,read,save,isAsset,imageBlob,backup,retain,compact,stagePng};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.TraitStorage=api;
 })(globalThis);

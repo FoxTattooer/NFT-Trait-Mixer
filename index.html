@@ -14,18 +14,18 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0779">
-  <link rel="stylesheet" href="compact.css?build=0785">
+  <link rel="stylesheet" href="compact.css?build=0786">
   <link rel="stylesheet" href="schemes.css?build=0781">
   <link rel="stylesheet" href="showroom.css?build=0777">
-  <script src="project.js?build=0778" defer></script>
-  <script src="storage.js" defer></script>
-  <script src="diagnostics.js?build=0785" defer></script>
+  <script src="project.js?build=0786" defer></script>
+  <script src="storage.js?build=0786" defer></script>
+  <script src="diagnostics.js?build=0786" defer></script>
   <script src="showroom.js?build=0777" defer></script>
-  <script src="app.js?build=0782" defer></script>
+  <script src="app.js?build=0786" defer></script>
   <script src="drag.js?build=0760" defer></script>
-  <script src="psd-core.js" defer></script>
+  <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
-  <script src="psd-ui.js" defer></script>
+  <script src="psd-ui.js?build=0786" defer></script>
 </head>
 <body class="compact-workspace" data-color-scheme="pink" data-control-accent="auto">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -71,9 +71,11 @@
         <button id="load" data-action="open-project"><svg class="icon"><use href="#i-folder"/></svg>Otevřít projekt</button>
         <button id="save" data-action="save-project"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button>
         <button id="importPsd" type="button"><svg class="icon"><use href="#i-psd"/></svg>Import PSD</button>
+        <button id="importProcreate" type="button"><svg class="icon"><use href="#i-layers"/></svg>Import z Procreate</button>
       </div>
     </details>
     <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
+    <input id="procreateFile" type="file" accept=".procreate" hidden>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
     <details class="header-menu preview-menu"><summary aria-label="Akce náhledu" title="Akce náhledu"><svg class="icon"><use href="#i-image"/></svg></summary>
       <div class="header-menu-content" id="landscapePreviewActions">
@@ -85,8 +87,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.85" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.85</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.86" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.86</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -348,15 +350,15 @@
   <dialog id="editDialog" aria-labelledby="dialogTitle" aria-describedby="dialogDescription"><form id="dialogForm"><span class="eyebrow">TRAIT WORKSHOP</span><h2 id="dialogTitle"></h2><p id="dialogDescription" class="helper"></p><label id="dialogLabel" for="dialogInput">Název</label><input id="dialogInput" type="text" maxlength="120" autocomplete="off" required><div class="dialog-actions"><button type="button" id="dialogCancel" data-action="cancel-dialog" class="subtle">Zrušit</button><button id="dialogSubmit" type="submit" class="primary">Uložit</button></div></form></dialog>
   <dialog id="installDialog" aria-labelledby="installTitle"><img src="icons/icon.svg" width="64" height="64" alt=""><h2 id="installTitle">Tvůj ateliér. I v telefonu.</h2><p class="helper">Aplikaci můžeš mít na ploše a po prvním načtení ji používat i bez internetu.</p><ol class="install-steps"><li><strong>iPhone / iPad</strong><br>Otevři odkaz v Safari → Sdílet → Přidat na plochu.</li><li><strong>Android</strong><br>V nabídce prohlížeče vyber Nainstalovat aplikaci nebo Přidat na plochu.</li></ol><p id="installNote" class="helper"></p><button data-action="close-install" class="primary full-width">Rozumím</button></dialog>
   <dialog id="psdDialog" aria-labelledby="psdTitle" aria-describedby="psdStatus">
-    <div class="psd-dialog-heading"><div><span class="eyebrow">PHOTOSHOP / IMPORT</span><h2 id="psdTitle">Vrstvy z PSD</h2><p id="psdFileName" class="helper"></p></div><button id="psdCancel" type="button" class="subtle">Zrušit</button></div>
+    <div class="psd-dialog-heading"><div><span id="importFormatLabel" class="eyebrow">PHOTOSHOP / IMPORT</span><h2 id="psdTitle">Vrstvy z PSD</h2><p id="psdFileName" class="helper"></p></div><button id="psdCancel" type="button" class="subtle">Zrušit</button></div>
     <p id="psdStatus" role="status" aria-live="polite"></p>
     <div id="psdBody" hidden>
       <p id="psdDimensions" class="helper"></p>
       <div class="psd-options"><label>Způsob rozdělení<select id="psdMode"><option value="structure">Skupiny → kategorie, podsložky → přehled</option><option value="layers">Každá vrstva → samostatná kategorie</option><option value="category">Vybrané vrstvy → existující kategorie</option></select></label><label id="psdTargetRow" hidden>Cílová kategorie<select id="psdTarget"></select></label></div>
-      <p class="helper">V jedné kategorii se vybírá jeden trait. Pro části kresby, které mají být vidět společně, zvol každou vrstvu jako samostatnou kategorii. Pořadí z PSD zůstane zachované.</p>
+      <p class="helper">V jedné kategorii se vybírá jeden trait. Pro části kresby, které mají být vidět společně, zvol každou vrstvu jako samostatnou kategorii. Pořadí vrstev zůstane zachované.</p>
       <div class="psd-selection-actions"><button id="psdAll" type="button">Všechny</button><button id="psdVisible" type="button">Jen viditelné</button><button id="psdNone" type="button">Žádné</button><span id="psdSelection"></span></div>
       <div class="psd-layout"><div id="psdTree" class="psd-tree" aria-label="Vrstvy a skupiny PSD"></div><figure class="psd-preview"><img id="psdPreview" alt="Náhled vybrané vrstvy po převodu"><figcaption id="psdPreviewName">Klepni na Náhled u vrstvy.</figcaption></figure></div>
-      <label class="switch-row"><input id="psdLegacy" type="checkbox"><span>Přeskočit i starší importy podle shodného názvu a složky. Použij jen pro stejné PSD; starší verze neukládaly původ vrstev.</span></label>
+      <label id="psdLegacyRow" class="switch-row"><input id="psdLegacy" type="checkbox"><span>Přeskočit i starší importy podle shodného názvu a složky. Použij jen pro stejné PSD; starší verze neukládaly původ vrstev.</span></label>
       <label id="psdAckRow" class="switch-row" hidden><input id="psdAck" type="checkbox"><span>Importovat i označené vrstvy s uvedenými omezeními vzhledu.</span></label>
     </div>
     <p id="psdImportReason" class="helper" role="status" aria-live="polite"></p><div class="dialog-actions"><button id="psdConfirm" type="button" class="primary" disabled>Importovat vybrané vrstvy</button></div>

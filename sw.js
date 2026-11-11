@@ -1,9 +1,19 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.85';
+const CACHE = PREFIX + 'v0.7.86';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
-const SHELL = ['./', './index.html', './styles.css?build=0768', './design.css?build=0779', './compact.css?build=0785', './schemes.css?build=0781', './drag.js?build=0760', './project.js?build=0778', './diagnostics.js?build=0785', './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png', './app.js?build=0782', './storage.js', './psd-core.js', './psd-file.js', './psd-ui.js', './psd-worker.js', './vendor/ag-psd.js', './manifest.webmanifest', './icons/icon-192-v073.png', './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
+const SHELL = [
+  './', './index.html', './styles.css?build=0768', './design.css?build=0779', './compact.css?build=0786',
+  './schemes.css?build=0781', './drag.js?build=0760', './project.js?build=0786', './diagnostics.js?build=0786',
+  './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png',
+  './app.js?build=0786', './storage.js?build=0786', './psd-core.js?build=0786', './psd-core.js',
+  './psd-file.js', './psd-ui.js?build=0786', './psd-worker.js', './vendor/ag-psd.js',
+  './procreate-worker.js', './procreate-file.js', './procreate-plist.js', './procreate-tiles.js',
+  './vendor/procreate-zip.js', './vendor/procreate-lzo.js', './manifest.webmanifest', './icons/icon-192-v073.png',
+  './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png',
+  './icons/icon-192.png', './icons/icon-512.png',
+];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);

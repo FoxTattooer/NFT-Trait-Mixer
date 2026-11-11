@@ -52,7 +52,7 @@ function storageFailure(error = lastStorageError) {
 }
 function openStorage() { return TraitStorage.open(); }
 function storedProject() { return TraitStorage.read(db, (done,total) => storageStatus(`Obnovuji vrstvy ${done} / ${total}…`), { lazy: true }); }
-function flushSave() {
+function flushSave(stagedImages) {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
@@ -62,7 +62,7 @@ function flushSave() {
     TraitStorage.retain(db, [state, project, ...undoStack, ...redoStack]);
     return TraitStorage.save(db, project, (done,total) => {
     if (revision === savingRevision && (done === 1 || done === total || done % 16 === 0)) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
-    });
+    }, stagedImages);
   }).then(() => {
     TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
     persistedRevision = savingRevision;
@@ -272,7 +272,7 @@ function mixedLayerRows(category) {
   const siblings = new Map();
   const add = (parent, kind, item) => {
     if (!siblings.has(parent)) siblings.set(parent, { folders: [], traits: [] });
-    const origin = /^([a-f0-9]{64}):psd-(\d+)$/.exec(item.psdSource || '');
+    const origin = /^([a-f0-9]{64}):(?:psd|procreate)-(\d+)$/.exec(item.psdSource || '');
     siblings.get(parent)[kind].push({ item, kind, source: origin?.[1], order: Number(origin?.[2]) });
   };
   folders.forEach(folder => add(folder.parentId || null, 'folders', folder));
@@ -1713,7 +1713,7 @@ document.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); restoreHistory(event.shiftKey); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
-window.addEventListener('pagehide', flushSave);
+window.addEventListener('pagehide', () => flushSave());
 window.addEventListener('beforeunload', event => { if (revision > persistedRevision) { flushSave(); event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; });
 window.addEventListener('appinstalled', () => { installPrompt = null; $('install').hidden = true; toast('Aplikace je přidaná na plochu'); });

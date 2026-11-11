@@ -1,8 +1,9 @@
 /* Local PSD import with durable batches of eight layers. */
 (() => {
   'use strict';
-  const dialog = $('psdDialog'), fileInput = $('psdFile');
+  const dialog = $('psdDialog'), fileInput = $('psdFile'), procreateInput = $('procreateFile');
   let worker, localSession, metadata, epoch = 0, request = 0, previewURL, working = false;
+  let nativeImport = false, workerError = null;
   let savingBatch = false, cancelRequested = false;
   const pending = new Map();
   // Progress is created locally so existing installations retain their markup.
@@ -11,7 +12,7 @@
   progressBox.setAttribute('role', 'group');
   progressBox.setAttribute('aria-label', 'Průběh importu PSD');
   progressBox.style.cssText = 'margin:16px 0;padding:14px;border:1px solid #45495c;border-radius:14px';
-  progressBox.innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px"><strong>Import PSD</strong><strong data-percent>0 %</strong></div><progress data-bar max="100" value="0" style="display:block;width:100%;height:14px;margin:12px 0;accent-color:#55e6bd"></progress><div data-counts style="font-size:13px;opacity:.85">Připraveno</div>';
+  progressBox.innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px"><strong data-format>Import PSD</strong><strong data-percent>0 %</strong></div><progress data-bar max="100" value="0" style="display:block;width:100%;height:14px;margin:12px 0;accent-color:#55e6bd"></progress><div data-counts style="font-size:13px;opacity:.85">Připraveno</div>';
   $('psdStatus').after(progressBox);
   function progress(converted, saved, total, detail = '') {
     progressBox.hidden = false;
@@ -27,10 +28,10 @@
   const allNodes = nodes => nodes.flatMap(n => [n, ...allNodes(n.children || [])]);
   const status = message => { $('psdStatus').textContent = message; };
   function dispose() {
-    progressBox.hidden = true; epoch++; worker?.terminate(); worker = null; localSession = null; metadata = null; working = false;
+    progressBox.hidden = true; epoch++; worker?.terminate(); worker = null; workerError = null; localSession = null; metadata = null; working = false;
     for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error('Import zrušen.')); } pending.clear();
     if (previewURL) URL.revokeObjectURL(previewURL); previewURL = null;
-    $('psdPreview').removeAttribute('src'); $('psdTree').replaceChildren(); fileInput.value = '';
+    $('psdPreview').removeAttribute('src'); $('psdTree').replaceChildren(); fileInput.value = ''; procreateInput.value = '';
     busy = false; render();
   }
   function close() { if (savingBatch) { cancelRequested = true; status('Dokončuji probíhající zápis. Pak import zastavím.'); return; } cancelRequested = false; dialog.close(); dispose(); }
@@ -39,15 +40,18 @@
     return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = './vendor/ag-psd.js'; script.onload = resolve; script.onerror = () => { script.remove(); reject(new Error('Podporu PSD nelze načíst. Připoj se a aktualizuj aplikaci.')); }; document.head.append(script); });
   }
   function failWorker(message) {
-    for (const p of pending.values()) { clearTimeout(p.timer); p.reject(new Error(message)); } pending.clear();
+    workerError = new Error(message);
+    for (const p of pending.values()) { clearTimeout(p.timer); p.reject(workerError); } pending.clear();
     worker?.terminate(); worker = null;
   }
   async function call(type, args = {}) {
+    if (workerError) throw workerError;
     if (worker) return new Promise((resolve, reject) => {
       const requestId = ++request;
-      const timer = setTimeout(() => failWorker('Zpracování PSD trvalo příliš dlouho. Zkus menší soubor nebo méně vrstev.'), 90000);
+      const timer = setTimeout(() => failWorker('Zpracování vrstvy trvalo příliš dlouho. Otevři soubor znovu.'), 90000);
       pending.set(requestId, { resolve, reject, timer });
-      worker.postMessage({ type, requestId, ...args }, args.buffer ? [args.buffer] : []);
+      try { worker.postMessage({ type, requestId, ...args }, args.buffer ? [args.buffer] : []); }
+      catch { failWorker('Zpracování vrstev se přerušilo. Otevři soubor znovu.'); }
     });
     await new Promise(resolve => setTimeout(resolve, 0));
     if (type === 'parse') { localSession = args.file ? await TraitPSDFile.parse(args.file, window.agPsd, TraitPSD) : TraitPSD.parse(args.buffer, window.agPsd); return localSession.metadata; }
@@ -74,7 +78,12 @@
     $('psdSelection').textContent = `${ids.size} vybraných vrstev · ${skipped.size} již v projektu${warned ? ' · ' + warned + ' s upozorněním' : ''}`;
     $('psdAckRow').hidden = !warned;
     $('psdTargetRow').hidden = $('psdMode').value !== 'category';
-    const reason = working ? 'Právě se zpracovává vrstva. Počkej na dokončení.' : !ids.size ? (skipped.size ? 'Všechny zbývající podporované vrstvy už jsou v projektu nebo nejsou vybrané.' : 'Vyber alespoň jednu vrstvu.') : (warned && !$('psdAck').checked) ? 'Potvrď import vrstev s omezeními vzhledu.' : ($('psdMode').value === 'category' && !$('psdTarget').value) ? 'Vyber cílovou kategorii v nabídce nahoře.' : '';
+    let reason = '';
+    if (workerError) reason = workerError.message;
+    else if (working) reason = 'Právě se zpracovává vrstva. Počkej na dokončení.';
+    else if (!ids.size) reason = skipped.size ? 'Všechny zbývající podporované vrstvy už jsou v projektu nebo nejsou vybrané.' : 'Vyber alespoň jednu vrstvu.';
+    else if (warned && !$('psdAck').checked) reason = 'Potvrď import vrstev s omezeními vzhledu.';
+    else if ($('psdMode').value === 'category' && !$('psdTarget').value) reason = 'Vyber cílovou kategorii v nabídce nahoře.';
     $('psdConfirm').disabled = !!reason;
     $('psdImportReason').textContent = reason || ('Připraveno k importu: ' + ids.size + ' vrstev.');
     $('psdConfirm').title = reason;
@@ -88,28 +97,47 @@
       ? `<details open class="psd-group"><summary>${esc(n.name)}${n.hidden ? ' · skryté' : ''}</summary><div>${treeHTML(n.children)}</div></details>`
       : `<div class="psd-layer"><label><input type="checkbox" data-node="${esc(n.id)}" ${n.supported ? 'checked' : 'disabled data-unsupported="true"'}><span><strong>${esc(n.name)}</strong><small data-import-note></small>${n.hidden ? '<small>Skrytá vrstva · lze importovat</small>' : ''}${n.problem ? `<small class="psd-warning">${esc(n.problem)}</small>` : ''}${n.warnings.length ? `<small class="psd-warning">${esc(n.warnings.join('; '))}</small>` : ''}</span></label>${n.supported ? `<button type="button" data-preview="${esc(n.id)}" aria-label="Náhled ${esc(n.name)}">Náhled</button>` : ''}</div>`).join('');
   }
-  async function open(file) {
+  async function open(file, procreate = false) {
     if (!file || !ready || busy) return;
-    const finishLog = window.TraitDiagnostics?.start('psd-open');
+    const phase = procreate ? 'procreate-open' : 'psd-open';
+    const format = procreate ? 'Procreate' : 'PSD';
+    const finishLog = window.TraitDiagnostics?.start(phase);
     dispose(); const current = epoch;
+    nativeImport = procreate;
     $('psdCancel').textContent = 'Zrušit';
     busy = true; working = true; render();
     $('psdBody').hidden = true; $('psdConfirm').disabled = true; $('psdAck').checked = false; $('psdLegacy').checked = false;
-    $('psdFileName').textContent = file.name; status('Čtu strukturu PSD…'); dialog.showModal();
+    $('importFormatLabel').textContent = procreate ? 'PROCREATE / IMPORT' : 'PHOTOSHOP / IMPORT';
+    $('psdTitle').textContent = 'Vrstvy z ' + format;
+    $('psdLegacyRow').hidden = procreate;
+    progressBox.setAttribute('aria-label', 'Průběh importu ' + format);
+    progressBox.querySelector('[data-format]').textContent = 'Import ' + format;
+    $('psdFileName').textContent = file.name; status('Čtu strukturu ' + format + '…'); dialog.showModal();
     try {
-      const header = await file.slice(0, 26).arrayBuffer(); TraitPSD.validateHeader(header);
+      let source;
+      if (!procreate) {
+        const header = await file.slice(0, 26).arrayBuffer(); TraitPSD.validateHeader(header);
+        if (current !== epoch) return;
+        status('Kontroluji totožnost PSD po částech…');
+        source = await TraitPSD.fingerprint(file, () => current !== epoch);
+      }
       if (current !== epoch) return;
       if (typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
-        worker = new Worker('./psd-worker.js');
+        worker = new Worker(procreate ? './procreate-worker.js' : './psd-worker.js');
         worker.onmessage = ({ data }) => { const p = pending.get(data.requestId); if (!p) return; clearTimeout(p.timer); pending.delete(data.requestId); data.error ? p.reject(new Error(data.error)) : p.resolve(data.result); };
-        worker.onerror = event => { window.TraitDiagnostics?.error('psd-worker', event.error); failWorker('Zpracování PSD se přerušilo. Zkus menší soubor a ověř, že má aplikace aktuální verzi.'); };
-      } else await loadLibrary();
+        worker.onerror = worker.onmessageerror = event => {
+          if (current !== epoch) return;
+          window.TraitDiagnostics?.error(procreate ? 'procreate-worker' : 'psd-worker', event.error);
+          failWorker('Zpracování vrstev se přerušilo. Otevři soubor znovu.');
+          if (!working) { status(workerError.message); update(); }
+        };
+      } else if (procreate) throw new Error('Tento prohlížeč nepodporuje zpracování Procreate na pozadí.');
+      else await loadLibrary();
       if (current !== epoch) return;
-      status('Kontroluji totožnost PSD po částech…');
-      const source = await TraitPSD.fingerprint(file, () => current !== epoch);
-      if (current !== epoch) return;
-      status('Čtu strukturu PSD…');
-      const result = await call('parse', { file }); if (current !== epoch) return; metadata = { ...result, source };
+      status('Čtu strukturu ' + format + '…');
+      const result = await call('parse', { file }); if (current !== epoch) return;
+      metadata = { ...result, source: source ?? result.source };
+      source = metadata.source;
       $('psdTree').innerHTML = treeHTML(metadata.tree);
       $('psdDimensions').textContent = `${metadata.width} × ${metadata.height} px → PNG 1024 × 1024. Poměr stran a pozice zůstanou zachované; obdélník se doplní průhlednými okraji.`;
       $('psdTarget').replaceChildren(new Option('Vyber kategorii…', ''), ...state.cats.map(c => new Option(c.name, c.id)));
@@ -121,8 +149,8 @@
       status('Vyber vrstvy a způsob rozdělení. Projekt se změní až po potvrzení.');
     } catch (error) {
       if (current !== epoch) return;
-      window.TraitDiagnostics?.error('psd-open', error);
-      working = false; $('psdConfirm').disabled = true; status('PSD se nepodařilo otevřít: ' + error.message);
+      window.TraitDiagnostics?.error(phase, error);
+      working = false; $('psdConfirm').disabled = true; status(format + ' se nepodařilo otevřít: ' + error.message);
     } finally { finishLog?.(); }
   }
   async function preview(nodeId) {
@@ -142,7 +170,8 @@
   }
   async function confirm() {
     if (working || $('psdConfirm').disabled) return;
-    const finishLog = window.TraitDiagnostics?.start('psd-import');
+    const phase = nativeImport ? 'procreate-import' : 'psd-import';
+    const finishLog = window.TraitDiagnostics?.start(phase);
     let lastLoggedSave = 0;
     const current = epoch, mode = $('psdMode').value, targetId = $('psdTarget').value;
     working = true; update();
@@ -165,11 +194,11 @@
       progress(0, 0, total);
       // Adaptive persistence: try eight, then four, two and finally one layer.
       // Each successful transaction is a durable checkpoint.
-      async function persistJobs(jobs) {
+      async function persistJobs(jobs, stagedImages) {
         if (current !== epoch) return false;
         const before = M.clone(state);
         const previousActive = active;
-        TraitPSD.applyBatch(state, plan, jobs, mode, targetId);
+        TraitPSD.applyBatch(state, plan, jobs, mode, targetId, !!stagedImages);
         revision++;
         let stored = false;
         savingBatch = true;
@@ -177,7 +206,7 @@
           if (current !== epoch) break;
           progress(completed, savedCount, total, 'Ukládám ' + jobs.length + ' vrstev · pokus ' + attempt + '/3');
           savingBatch = true;
-          stored = await flushSave();
+          stored = await flushSave(stagedImages);
           if (cancelRequested) {
             savingBatch = false;
             if (!stored) { state = before; active = previousActive; revision++; }
@@ -195,14 +224,14 @@
           if (jobs.length === 1) throw new Error('Vrstva ' + jobs[0].nodeId + ' se nedá uložit ani samostatně. Zkontroluj dostupné místo. Již uložené vrstvy zůstávají zachované.');
           if (lastStorageError?.name === 'QuotaExceededError') throw new Error('Úložiště odmítlo zápis kvůli nedostatku místa. Opakování stejného zápisu nepomůže; uložené dávky zůstaly zachované.');
           const middle = Math.ceil(jobs.length / 2);
-          if (!await persistJobs(jobs.slice(0, middle))) return false;
-          if (!await persistJobs(jobs.slice(middle))) return false;
+          if (!await persistJobs(jobs.slice(0, middle), stagedImages)) return false;
+          if (!await persistJobs(jobs.slice(middle), stagedImages)) return false;
           return true;
         }
         completed += jobs.length;
         savedCount = completed;
         if (savedCount === total || Date.now() - lastLoggedSave >= 5000) {
-          window.TraitDiagnostics?.saved('psd-import', savedCount);
+          window.TraitDiagnostics?.saved(phase, savedCount);
           lastLoggedSave = Date.now();
         }
         active = mode === 'category' ? targetId : plan.cats[0].id;
@@ -213,13 +242,14 @@
       }
       for (let offset = 0; offset < total; offset += 8) {
         const jobs = plan.jobs.slice(offset, offset + 8);
+        const stagedImages = nativeImport ? new Map() : null;
         for (const [index, job] of jobs.entries()) {
           if (current !== epoch) return;
           const trait = plan.cats.find(c => c.id === job.categoryId).traits.find(t => t.id === job.traitId);
           status('Uloženo ' + savedCount + ' / ' + total + ' · převádím ' + (offset + index + 1) + ': ' + trait.name);
           let buffer = await call('render', { nodeId: job.nodeId });
           if (current !== epoch) return;
-          trait.data = await dataURL(buffer);
+          trait.data = stagedImages ? await TraitStorage.stagePng(buffer, stagedImages) : await dataURL(buffer);
           buffer = null;
           if (current !== epoch) return;
           progress(offset + index + 1, savedCount, total, 'Převádím vrstvy');
@@ -232,7 +262,8 @@
           historyAdded = true;
         }
         status('Ukládám dávku ' + (offset + 1) + '–' + Math.min(total, offset + jobs.length) + ' / ' + total + '…');
-        if (!await persistJobs(jobs)) return;
+        if (!await persistJobs(jobs, stagedImages)) return;
+        stagedImages?.clear();
         if (current !== epoch) return;
         status('Uloženo ' + savedCount + ' / ' + total + ' · pokračuji…');
         await pause(150);
@@ -242,16 +273,18 @@
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {
-        window.TraitDiagnostics?.error('psd-import', error);
+        window.TraitDiagnostics?.error(phase, error);
         working = false; update(); $('psdConfirm').disabled = true;
         progress(completed, savedCount, totalForFailure, 'Import zastaven');
-        status(`Import zastaven. Uloženo ${savedCount} vrstev, v projektu je ${completed}. ${error.message}`);
+        status(`Import zastaven. V tomto pokusu uloženo ${savedCount} vrstev. ${error.message}`);
         $('psdImportReason').textContent = 'Dokončené dávky zůstávají v projektu. Zavři toto okno.';
       }
     } finally { finishLog?.(); }
   }
   $('importPsd').addEventListener('click', () => { if (ready && !busy) { fileInput.value = ''; fileInput.click(); } });
   fileInput.addEventListener('change', () => open(fileInput.files[0]));
+  $('importProcreate').addEventListener('click', () => { if (ready && !busy) { procreateInput.value = ''; procreateInput.click(); } });
+  procreateInput.addEventListener('change', () => open(procreateInput.files[0], true));
   $('psdCancel').addEventListener('click', close);
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   $('psdConfirm').addEventListener('click', confirm);
