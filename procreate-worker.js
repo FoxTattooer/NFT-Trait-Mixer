@@ -1,5 +1,5 @@
 'use strict';
-importScripts('./vendor/procreate-zip.js', './vendor/procreate-lzo.js', './procreate-plist.js', './procreate-tiles.js', './procreate-file.js');
+importScripts('./vendor/procreate-zip.js', './vendor/procreate-lzo.js', './procreate-plist.js', './procreate-tiles.js', './procreate-file.js?build=0787');
 
 let session;
 let queue = Promise.resolve();
@@ -17,7 +17,8 @@ self.onmessage = ({ data }) => {
         self.postMessage({ requestId: data.requestId, result: buffer }, [buffer]);
       }
     } catch (error) {
-      self.postMessage({ requestId: data.requestId, error: error.message || 'Soubor Procreate nelze načíst.' });
+      const code = data.type === 'parse' ? (error.code === 'PROCREATE_DOCUMENT' ? error.code : 'PROCREATE_OPEN') : 'PROCREATE_TILE';
+      self.postMessage({ requestId: data.requestId, code, error: error.message || 'Soubor Procreate nelze načíst.' });
     }
   });
 };

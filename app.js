@@ -1277,12 +1277,12 @@ function chooseControlAccent(accent) {
 }
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
-let openShowroom;
+let openShowroom, diagnosticsFromHistory = false;
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
   if (!ready) return;
-  if (busy && !['show-panel', 'select-category', 'install'].includes(action)) { toast('Počkej prosím na dokončení načítání.'); return; }
+  if (busy && !['show-panel', 'select-category', 'install', 'download-diagnostics'].includes(action)) { toast('Počkej prosím na dokončení načítání.'); return; }
   const c = M.category(state, id || active), located = M.locate(state, id);
   switch (action) {
     case 'open-showroom': {
@@ -1504,11 +1504,16 @@ async function handleAction(action, id, element) {
     case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-diagnostics':
+      diagnosticsFromHistory = $('versionHistoryDialog').open;
       $('diagnosticsReport').textContent = window.TraitDiagnostics?.report() || 'Záznam není k dispozici.';
-      $('versionHistoryDialog').close();
+      $('diagnosticsClose').setAttribute('aria-label', diagnosticsFromHistory ? 'Zpět do historie verzí' : 'Zavřít diagnostiku');
+      if (diagnosticsFromHistory) $('versionHistoryDialog').close();
       $('diagnosticsDialog').showModal();
       break;
-    case 'close-diagnostics': $('diagnosticsDialog').close(); $('versionHistoryDialog').showModal(); break;
+    case 'close-diagnostics':
+      $('diagnosticsDialog').close();
+      if (diagnosticsFromHistory) $('versionHistoryDialog').showModal();
+      break;
     case 'download-diagnostics':
       if (window.TraitDiagnostics) download(new Blob([window.TraitDiagnostics.report()], { type: 'text/plain;charset=utf-8' }), 'trait-mixer-crash-log.txt');
       break;

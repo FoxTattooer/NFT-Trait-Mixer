@@ -14,18 +14,18 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0779">
-  <link rel="stylesheet" href="compact.css?build=0786">
+  <link rel="stylesheet" href="compact.css?build=0787">
   <link rel="stylesheet" href="schemes.css?build=0781">
   <link rel="stylesheet" href="showroom.css?build=0777">
   <script src="project.js?build=0786" defer></script>
   <script src="storage.js?build=0786" defer></script>
-  <script src="diagnostics.js?build=0786" defer></script>
+  <script src="diagnostics.js?build=0787" defer></script>
   <script src="showroom.js?build=0777" defer></script>
-  <script src="app.js?build=0786" defer></script>
+  <script src="app.js?build=0787" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
-  <script src="psd-ui.js?build=0786" defer></script>
+  <script src="psd-ui.js?build=0787" defer></script>
 </head>
 <body class="compact-workspace" data-color-scheme="pink" data-control-accent="auto">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -87,8 +87,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.86" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.86</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.87" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.87</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -99,6 +99,7 @@
           </button>
           <button data-action="show-panel" data-panel="rules" class="subtle"><svg class="icon"><use href="#i-sliders"/></svg>Pravidla</button><button id="export" data-action="export" class="subtle" disabled><svg class="icon"><use href="#i-download"/></svg>Export PNG</button>
           <button type="button" data-action="open-history" class="subtle"><svg class="icon"><use href="#i-undo"/></svg><span>Historie kroků</span></button><button type="button" data-action="open-version-history" class="subtle"><svg class="icon"><use href="#i-bookmark"/></svg><span>Historie verzí</span></button>
+          <button type="button" data-action="open-diagnostics" class="subtle"><svg class="icon"><use href="#i-info"/></svg>Diagnostika</button>
         </div>
       </details>
     </div>
@@ -304,6 +305,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.87-procreate-import" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.87 – Přímý import Procreate</strong><small>Vrstvy z .procreate, průběh ukládání a diagnostika importu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.85-fox-credit-35" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.85 – Podpis s krytím 35 %</strong><small>Text Created by Fox i kapka mají pod navigací krytí 35 %.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.84-soft-fox-credit" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.84 – Jemnější podpis</strong><small>Podpis Created by Fox má pod navigací krytí 75 %.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.83-fox-credit" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.83 – Created by Fox</strong><small>Drobný podpis s kapkou pod navigací editoru na výšku.</small></span><span class="version-tag">Uloženo</span></a>
@@ -342,7 +344,7 @@
     <button type="button" class="version-diagnostics subtle" data-action="open-diagnostics"><svg class="icon"><use href="#i-info"/></svg>Crash log</button>
   </dialog>
   <dialog id="diagnosticsDialog" class="version-history-dialog" aria-labelledby="diagnosticsTitle">
-    <div class="version-history-heading"><div><h2 id="diagnosticsTitle">Crash log</h2><p>Poslední operace a chyby uložené v tomto zařízení.</p></div><button type="button" class="icon-button subtle" data-action="close-diagnostics" aria-label="Zpět do historie verzí">✕</button></div>
+    <div class="version-history-heading"><div><h2 id="diagnosticsTitle">Diagnostika</h2><p>Průběh importů a chyby uložené v tomto zařízení.</p></div><button id="diagnosticsClose" type="button" class="icon-button subtle" data-action="close-diagnostics" aria-label="Zavřít diagnostiku">✕</button></div>
     <pre id="diagnosticsReport" aria-label="Diagnostický záznam"></pre>
     <button type="button" class="outline full-width" data-action="download-diagnostics"><svg class="icon"><use href="#i-download"/></svg>Stáhnout záznam</button>
   </dialog>
@@ -352,6 +354,12 @@
   <dialog id="psdDialog" aria-labelledby="psdTitle" aria-describedby="psdStatus">
     <div class="psd-dialog-heading"><div><span id="importFormatLabel" class="eyebrow">PHOTOSHOP / IMPORT</span><h2 id="psdTitle">Vrstvy z PSD</h2><p id="psdFileName" class="helper"></p></div><button id="psdCancel" type="button" class="subtle">Zrušit</button></div>
     <p id="psdStatus" role="status" aria-live="polite"></p>
+    <div id="layerImportProgress" class="import-progress" role="group" aria-labelledby="layerImportProgressLabel" hidden>
+      <div class="import-progress-heading"><strong id="layerImportProgressLabel">Import PSD</strong><strong id="layerImportPercent"></strong></div>
+      <progress id="layerImportBar" max="100" aria-labelledby="layerImportProgressLabel" aria-describedby="layerImportCounts"></progress>
+      <p id="layerImportCounts" class="helper"></p>
+    </div>
+    <button id="importDiagnostics" type="button" class="outline" data-action="download-diagnostics" hidden><svg class="icon"><use href="#i-download"/></svg>Stáhnout diagnostiku</button>
     <div id="psdBody" hidden>
       <p id="psdDimensions" class="helper"></p>
       <div class="psd-options"><label>Způsob rozdělení<select id="psdMode"><option value="structure">Skupiny → kategorie, podsložky → přehled</option><option value="layers">Každá vrstva → samostatná kategorie</option><option value="category">Vybrané vrstvy → existující kategorie</option></select></label><label id="psdTargetRow" hidden>Cílová kategorie<select id="psdTarget"></select></label></div>

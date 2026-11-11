@@ -11,7 +11,7 @@
   const utf8 = new TextEncoder();
   const rotations = [0, 0, Math.PI, -Math.PI / 2, Math.PI / 2];
   const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-  const documentError = () => new Error('Soubor neobsahuje podporovaný dokument Procreate.');
+  const documentError = () => Object.assign(new Error('Soubor neobsahuje podporovaný dokument Procreate.'), { code: 'PROCREATE_DOCUMENT' });
 
   async function readEntry(entry, limit) {
     if (entry.encrypted || !Number.isSafeInteger(entry.uncompressedSize) || !Number.isSafeInteger(entry.compressedSize) ||

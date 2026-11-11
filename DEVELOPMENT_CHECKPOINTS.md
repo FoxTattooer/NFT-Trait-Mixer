@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.87 | checkpoint/v0.7.87-procreate-import | Přímý import `.procreate`, procenta podle uložených vrstev a export diagnostiky |
 | 0.7.85 | checkpoint/v0.7.85-fox-credit-35 | Podpis Created by Fox včetně kapky s krytím 35 % |
 | 0.7.84 | checkpoint/v0.7.84-soft-fox-credit | Jemnější podpis Created by Fox se 75% krytím |
 | 0.7.83 | checkpoint/v0.7.83-fox-credit | Drobný podpis Created by Fox s původní kapkou pod navigací editoru na výšku |

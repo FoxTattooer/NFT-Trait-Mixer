@@ -5,6 +5,23 @@ body.compact-workspace .app-header {
   padding: max(10px,env(safe-area-inset-top)) 12px 10px!important;
   min-height:0!important; height:auto!important; position:relative!important; z-index:40;
 }
+
+.import-progress {
+  margin-block: 12px;
+  padding: 12px;
+  border: 1px solid var(--line, #45495c);
+  border-radius: 14px;
+}
+.import-progress-heading { display:flex; justify-content:space-between; gap:12px; }
+.import-progress progress {
+  display:block;
+  width:100%;
+  height:14px;
+  margin-block:9px;
+  accent-color:var(--control-accent, var(--scheme-accent, #a68dff));
+}
+.import-progress .helper { margin:0; }
+#layerImportPercent, #layerImportCounts { font-variant-numeric:tabular-nums; }
 body.compact-workspace .app-header>.history-actions,
 body.compact-workspace .app-header>.header-end {display:flex!important;gap:8px!important;margin:0!important;flex:0 0 auto!important}
 body.compact-workspace .app-header summary,

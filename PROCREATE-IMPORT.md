@@ -1,10 +1,16 @@
-# Nativní import Procreate · v0.7.86
+# Nativní import Procreate · v0.7.87
 
 Nabídka **Projekt a soubory → Import z Procreate** otevře `.procreate`, ukáže strom, dovolí zvolit vrstvy a vykreslí náhled vybrané vrstvy. Import je lokální a po prvním načtení funguje offline. Do projektu se ukládají rastrové vrstvy jako PNG 1024 × 1024 včetně průhlednosti a pozic. Skupiny, názvy, pořadí, viditelnost a výběr kategorií se zpracují stejným postupem jako při importu PSD.
 
 Čtečka otevírá `Document.archive` a čte obrazové dlaždice vybraných vrstev a jejich masek po částech. Časosběr, náhled galerie, sloučený obraz a vestavěná barva pozadí se vynechají. Worker používá výstupní plátno 1024 × 1024 a malé plátno na jednu dlaždici. Dokončená PNG se průběžně ukládají do IndexedDB po nejvýše osmi vrstvách. Opětovné otevření stejného souboru vynechá potvrzené vrstvy.
 
 Obrazové vrstvy jsou samostatné traity. Dialog označuje vrstvy s režimy prolnutí, ořezem nebo 3D materiálem, jejichž vzhled závisí na ostatních vrstvách. Prázdné vrstvy bez uložených pixelů se zobrazí bez možnosti importu. Čtečka ověřuje strukturu archivu, rozsahy a velikosti jednotlivých položek. Verze vyžaduje Worker a OffscreenCanvas.
+
+## Průběh a diagnostika
+
+PSD a Procreate používají stejný ukazatel. Při otevření souboru ukazuje načítání bez procent. Po potvrzení výběru procenta vycházejí z počtu vrstev potvrzených úložištěm a vedle je počet už převedených PNG. Při zastavení během ukládání se dokončí právě probíhající zápis. Další otevření stejného souboru nabídne zbývající vrstvy.
+
+**Další možnosti → Diagnostika → Stáhnout záznam** stáhne `trait-mixer-crash-log.txt`. Při chybě je stažení dostupné také přímo v importu. Záznam obsahuje šest posledních pokusů, velikost souboru, poslední zaznamenanou fázi, počty vrstev a případný kód chyby. Probíhající fáze může zůstat v záznamu po zavření nebo pádu aplikace. Záznam zůstává na zařízení a neobsahuje název souboru, názvy vrstev ani obrázky.
 
 ## Ověření
 
@@ -13,6 +19,7 @@ Obrazové vrstvy jsou samostatné traity. Dialog označuje vrstvy s režimy prol
 - Jeden plně pokreslený obraz 8192 × 8192, 1024 dlaždic, 268 623 262 bajtů. Celý výstup je neprůhledný a na hranách dlaždic nevznikly mezery.
 - Čtyři veřejné `.procreate` soubory ze [Silicate](https://github.com/axaril/silicate/tree/d12dfc5a62184e99fe24de8982dafc79fb6d447f/demo_files). Celkem 162 vykreslených vrstev s LZO, LZ4 i oběma typy v jednom souboru. U souboru s maskou jsou ověřené hranice vrstvy po otočení.
 - Původní `npm test` pro PSD/PSB, projekty, správu, exporty a úložiště.
+- Přechod instalace z v0.7.85 na v0.7.87 přes **Aktualizace** se zachovaným projektem a načtením offline. Prohlížeč ověřil ukazatel při otevírání, po první dávce, při chybě úložiště i při 100 %. Stažený záznam obsahoval kód a počty vrstev bez soukromého názvu souboru a zprávy výjimky.
 
 Měření na fyzickém iPhonu a soubor uživatele zatím čekají na ověření.
 
