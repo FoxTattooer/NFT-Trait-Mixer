@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.90 | checkpoint/v0.7.90-roadmap-menu-icon | Sjednocení ikony a rozložení položky Plán rozvoje s ostatními položkami nabídky |
 | 0.7.89 | checkpoint/v0.7.89-recent-files | Historie otevření v Sestavách, s lokálními miniaturami a názvy včetně přípon |
 | 0.7.88 | checkpoint/v0.7.88-final | Lokální zamčené kopie projektů a složek, stromový ZIP s PNG a `project.json` |
 | 0.7.87 | checkpoint/v0.7.87-procreate-import | Přímý import `.procreate`, procenta podle uložených vrstev a export diagnostiky |

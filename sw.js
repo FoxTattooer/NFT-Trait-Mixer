@@ -1,11 +1,11 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.89';
+const CACHE = PREFIX + 'v0.7.90';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SHELL = [
-  './', './index.html', './styles.css?build=0768', './design.css?build=0779', './compact.css?build=0789',
-  './schemes.css?build=0781', './drag.js?build=0760', './project.js?build=0788', './diagnostics.js?build=0789',
+  './', './index.html', './styles.css?build=0768', './design.css?build=0790', './compact.css?build=0790',
+  './schemes.css?build=0790', './drag.js?build=0760', './project.js?build=0788', './diagnostics.js?build=0790',
   './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png',
   './app.js?build=0789', './recent.js?build=0789', './storage.js?build=0788', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',

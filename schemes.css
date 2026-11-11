@@ -200,7 +200,7 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu[open]>sum
   background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;box-shadow:0 0 8px var(--scheme-glow)!important;
 }
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(dialog,.header-menu-content,.layer-context) {background:var(--scheme-panel)!important;border-color:var(--scheme-stroke)!important}
-body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button,.app-header .header-menu-content button .icon,.library-category>summary) {
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button,.app-header .header-menu-content :is(button,a:where(.roadmap-menu-item)) .icon,.library-category>summary) {
   background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
 }
 body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp {
@@ -276,7 +276,7 @@ body[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.trait-card.is
 body.compact-workspace[data-color-scheme=mono] {
   --text:#f2f2f2;--muted:#aaa;
 }
-body[data-color-scheme=mono] :is(.layer-tree-row .layer-tree-main,.header-menu-content button,.layer-tree-more,.version-diagnostics,.preview-info,.category-sort-hint) {
+body[data-color-scheme=mono] :is(.layer-tree-row .layer-tree-main,.header-menu-content :is(button,a:where(.roadmap-menu-item)),.layer-tree-more,.version-diagnostics,.preview-info,.category-sort-hint) {
   color:var(--scheme-text);
 }
 body[data-color-scheme=mono] :is(.file-menu-project,.category-card,.layer-folder-tree,.version-history-entry,.layer-thumb) {
@@ -316,14 +316,14 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
     background:var(--scheme-card-bg);border-color:var(--scheme-accent);
     box-shadow:0 4px 10px #0006,0 0 8px var(--scheme-glow);
   }
-  body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu-content button,.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
+  body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu-content :is(button,a:where(.roadmap-menu-item)),.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
     background:var(--scheme-wash)!important;color:var(--scheme-text);
   }
-  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(button,summary,select):hover:not(:disabled):not(:focus-visible) {
+  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(button,summary,select,a:where(.roadmap-menu-item)):hover:not(:disabled):not(:focus-visible) {
     outline:1px solid var(--scheme-hover,var(--scheme-accent))!important;
     outline-offset:-1px;
   }
-  body.compact-workspace[data-color-scheme=mono] :is(button,summary,select):hover:not(:disabled):not(:focus-visible) {
+  body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,a:where(.roadmap-menu-item)):hover:not(:disabled):not(:focus-visible) {
     outline-width:2px!important;outline-offset:-2px;background-color:var(--scheme-wash);
     box-shadow:inset 0 0 16px #ffe13d40,0 0 13px #ffe13d62!important;
   }
