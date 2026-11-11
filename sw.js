@@ -1,11 +1,12 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.95';
+const CACHE = PREFIX + 'v0.7.96';
+const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SHELL = [
-  './', './index.html', './styles.css?build=0768', './design.css?build=0795', './compact.css?build=0795',
-  './schemes.css?build=0795', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=0795',
+  './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0795', './compact.css?build=0796',
+  './schemes.css?build=0795', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=0796',
   './showroom.css?build=0777', './showroom.js?build=0777', SHOWROOM_ART, './art/fox-credit-drop.png',
   './app.js?build=0795', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',
@@ -48,7 +49,10 @@ self.addEventListener('fetch', event => {
       const artwork = await cache.match(event.request);
       if (artwork) return artwork;
     }
-    const key = event.request.mode === 'navigate' ? new URL('./index.html', self.registration.scope).href : event.request;
+    const roadmapURL = new URL(ROADMAP, self.registration.scope);
+    const key = event.request.mode === 'navigate'
+      ? (url.pathname === roadmapURL.pathname ? roadmapURL.href : new URL('./index.html', self.registration.scope).href)
+      : event.request;
     // Prefer deployed files when online; retain cached shell for offline usage.
     try {
       const response = await fetch(event.request, { cache: 'no-store' });

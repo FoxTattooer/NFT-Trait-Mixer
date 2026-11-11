@@ -14,13 +14,13 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0795">
-  <link rel="stylesheet" href="compact.css?build=0795">
+  <link rel="stylesheet" href="compact.css?build=0796">
   <link rel="stylesheet" href="schemes.css?build=0795">
   <link rel="stylesheet" href="showroom.css?build=0777">
   <script src="project.js?build=0793" defer></script>
   <script src="storage.js?build=0794" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=0795" defer></script>
+  <script src="diagnostics.js?build=0796" defer></script>
   <script src="showroom.js?build=0777" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <script src="app.js?build=0795" defer></script>
@@ -98,8 +98,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.95" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.95</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.96" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.96</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -192,7 +192,7 @@
         <svg class="icon layer-tab-icon" aria-hidden="true"><use id="layersTabIcon" href="#i-layers"/></svg>
         <span class="layer-tab-label">Vrstvy</span>
         <span class="layer-tab-back" aria-hidden="true">
-          <svg class="icon layer-tab-arrow"><path d="M20 12H4m0 0 7-7m-7 7 7 7"/></svg>
+          <svg class="icon layer-tab-arrow" viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
           <svg class="icon"><use href="#i-layers"/></svg>
         </span>
       </button>
@@ -387,6 +387,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.96-roadmap-checklist" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.96 – Checklist plánu rozvoje</strong><small>Zarovnaná šipka kompaktní lišty, návrat do editoru a ukládané body plánu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.95-workspace-navigation" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.95 – Panely a spodní lišta</strong><small>Tři polohy na výšku, stálá navigace na šířku a sjednocené akcenty panelů.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.94-project-recovery" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.94 – Obnovení posledního projektu</strong><small>Automatická záloha v zařízení a návrat k práci po pádu i offline.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.93-compact-layer-tools" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.93 – Kompaktní ovládání vrstev</strong><small>Jeden řádek ikon, vlajky a WIP pro kategorie a složky, jednodušší shody a skleněná spodní lišta.</small></span><span class="version-tag">Uloženo</span></a>

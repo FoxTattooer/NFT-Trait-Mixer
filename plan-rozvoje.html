@@ -1,1 +1,315 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111215"><title>Plán rozvoje – NFT Trait Mixer</title><style>body{margin:0;background:#111215;color:#e8ebf0;font:15px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;padding:20px;max-width:850px;margin:auto}a{color:#b9dcea}header{display:flex;align-items:center;gap:20px}h1{font-size:27px}h2{font-size:19px;color:#dce6ef}section{background:#191b20;border:1px solid #343944;border-radius:16px;padding:18px;margin:16px 0}li{margin:9px 0}small{color:#bac1cc}</style></head><body><header><a href="./index.html">← Zpět do aplikace</a><small>NFT Trait Mixer by Fox Tattooer</small></header><h1>Plán rozvoje</h1><p>Nahrávat více projektů, porovnat vrstvy a zjistit, co chybí, co se opakuje a co potřebuje překreslit.</p><h2>Pořadí práce</h2><section><h2>1. Projekty a kontrola vrstev</h2><ul><li>Více pracovních projektů s vlastními stromy, pravidly, sestavami a poznámkami.</li><li>Panel Kontrola: počty vrstev, skryté položky, duplicity, vlajky, WIP a chybějící varianty.</li><li>Porovnání duplicit: přesné shody i vizuálně podobné vrstvy, A/B a překrytí.</li><li>Hledání podle názvu, cesty, projektu, kategorie, typu, barvy a poznámek.</li><li>Vlajky a WIP, filtr Vše / Jen označené / Bez označených.</li><li>Poznámky navázané na projekt, kategorii, složku nebo trait, s možností screenshotu.</li></ul></section><section><h2>2. Import, výběr, export a Finál</h2><ul><li>Import včetně skrytých vrstev a zachování původního pořadí a hierarchie.</li><li>Hromadný výběr, přesouvání, přejmenování a export.</li><li>PNG jednotlivých traitů, ZIP struktury a složený PNG.</li><li>PSD export aktuální sestavy i celého projektu včetně skrytých.</li><li>Editovatelné pracovní kopie Finálu a zamčené verze.</li><li>Uložení na iPhonu a bezpečný export do Souborů.</li></ul></section><section><h2>3. Pravidla, generování a Showroom</h2><ul><li>Tabulka pravidel Když / Pak / Výjimka / Stav.</li><li>Test pravidel s kontrolou konfliktů a prázdných výsledků.</li><li>Průběh generování se zobrazením kroků a důvodů vyřazení.</li><li>Kompatibilita skinů a traitů ve Showroomu.</li><li>Větší šipky Showroomu, název traitu pod náhledem, vyčištění kroku a reset.</li></ul></section><section><h2>4. Akcenty, ikony a kompaktní lišta</h2><ul><li>Rozsah akcentu Méně / Normál / Výrazné a samostatná svítivost.</li><li>Sbalitelná spodní lišta Vrstvy / Správa / Sestavy.</li><li>Vlastní ikona Procreate; jednotné ikony vlajky, WIP, oka a zámku; červené mazání.</li></ul></section><section><h2>5. Chytré návrhy a volitelná AI</h2><ul><li>Nejprve offline kontrola počtů, shod a očekávaných variant.</li><li>Volitelně AI souhrny poznámek a doporučení priorit, vždy s potvrzením změn.</li></ul></section><p><small>Stručný přehled podle dodaného plánu rozvoje. Detailní vizuální návrhy a schvalování zůstávají v původním dokumentu.</small></p></body></html>
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111215">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Plán rozvoje – NFT Trait Mixer</title>
+  <style>
+    :root {color-scheme:dark;background:#111215;color:#e8ebf0;font:16px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+    * {box-sizing:border-box}
+    body {margin:0}
+    .content {
+      max-width:850px;
+      margin-inline:auto;
+      padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));
+    }
+    .roadmap-header {
+      position:sticky;
+      top:0;
+      z-index:1;
+      padding-block:calc(8px + env(safe-area-inset-top,0px)) 8px;
+      border-bottom:1px solid #343944;
+      background:#111215;
+    }
+    .back-link {
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      min-height:44px;
+      padding:0 11px;
+      border:1px solid #424751;
+      border-radius:10px;
+      background:#23262d;
+      color:#e8ebf0;
+      text-decoration:none;
+      font-weight:600;
+    }
+    .back-link svg {flex:none;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    main {padding-block:18px calc(24px + env(safe-area-inset-bottom,0px))}
+    h1 {margin:0;font-size:27px}
+    h2,h3 {color:#dce2eb;font-size:18px}
+    h2 {margin:0}
+    h3 {margin:0 0 8px}
+    .roadmap-heading {display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:22px}
+    #roadmap-progress,#roadmap-storage-status {color:#bac1cc;font-size:14px}
+    section {background:#191b20;border:1px solid #343944;border-radius:16px;padding:12px;margin:12px 0}
+    ul {list-style:none;margin:0;padding:0}
+    li + li {border-top:1px solid #2b2e36}
+    .task {
+      display:grid;
+      grid-template-columns:20px minmax(0,1fr);
+      align-items:start;
+      gap:10px;
+      min-height:44px;
+      padding:10px 4px;
+      cursor:pointer;
+    }
+    .task input {width:18px;height:18px;margin:3px 0 0;accent-color:#a6ccd9}
+    .task input:checked + span {color:#a5adba}
+    .task:has(input:checked) {background:#ffffff04;border-radius:6px}
+    :focus-visible {outline:2px solid #a6ccd9;outline-offset:2px}
+  </style>
+</head>
+<body>
+  <header class="roadmap-header">
+    <div class="content">
+      <a href="./index.html" class="back-link">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+        Zpět do editoru
+      </a>
+    </div>
+  </header>
+  <main class="content">
+    <h1>Plán rozvoje</h1>
+    <p>Nahrávat více projektů, porovnat vrstvy a zjistit, co chybí, co se opakuje a co potřebuje překreslit.</p>
+    <div class="roadmap-heading">
+      <h2>Pořadí práce</h2>
+      <span id="roadmap-progress" role="status"></span>
+    </div>
+    <p id="roadmap-storage-status" role="status" hidden>Změnu se nepodařilo uložit do zařízení.</p>
+    <section>
+      <h3>1. Projekty a kontrola vrstev</h3>
+      <ul>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="multi-projects">
+            <span>Více pracovních projektů s vlastními stromy, pravidly, sestavami a poznámkami.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="layer-review" checked>
+            <span>Panel Kontrola s počty vrstev, shod, poznámek a vlajek.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="missing-variants">
+            <span>Přehled chybějících variant.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="exact-matches" checked>
+            <span>Přehled přesných shod a akce pro jednotlivé vrstvy.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="visual-matches">
+            <span>Vizuálně podobné vrstvy, porovnání A/B a překrytí.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="trait-search" checked>
+            <span>Hledání traitů podle názvu s náhledy a skokem na výsledek.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="advanced-search">
+            <span>Hledání podle cesty, projektu, kategorie, typu, barvy a poznámek.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="flags-and-wip" checked>
+            <span>Barevné vlajky a WIP pro vrstvy i složky. Filtr Vše / Jen WIP / Bez WIP.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="trait-notes" checked>
+            <span>Poznámky s náhledem vrstvy a odkazem na trait.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="project-notes">
+            <span>Poznámky k projektu, kategorii či složce a přidávání screenshotů.</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h3>2. Import, výběr, export a Finál</h3>
+      <ul>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="hidden-psd-layers" checked>
+            <span>PSD import včetně skrytých vrstev, se zachováním pořadí a hierarchie.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="procreate-import" checked>
+            <span>Přímý import Procreate s průběhem a diagnostikou.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="bulk-tools">
+            <span>Hromadný výběr, přesouvání, přejmenování a export.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="png-and-zip" checked>
+            <span>Export PNG jednotlivých traitů, stromového ZIPu a složeného PNG.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="psd-export">
+            <span>PSD export aktuální sestavy i celého projektu včetně skrytých vrstev.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="locked-final" checked>
+            <span>Zamčené kopie Finálu v zařízení a export do Souborů.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="editable-final">
+            <span>Pracovní kopie Finálu, které se dají znovu otevřít k úpravám.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="project-recovery" checked>
+            <span>Lokální záloha a obnovení posledního projektu po pádu.</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h3>3. Pravidla, generování a Showroom</h3>
+      <ul>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="rules-table">
+            <span>Tabulka pravidel Když / Pak / Výjimka / Stav.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="rule-tests">
+            <span>Test pravidel s kontrolou konfliktů a prázdných výsledků.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="generation-trace">
+            <span>Průběh generování se zobrazením kroků a důvodů vyřazení.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="showroom-compatibility">
+            <span>Kompatibilita skinů a traitů ve Showroomu.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="showroom-controls">
+            <span>Větší šipky Showroomu, název traitu pod náhledem, vyčištění kroku a reset.</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h3>4. Akcenty, ikony a kompaktní lišta</h3>
+      <ul>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="accent-controls" checked>
+            <span>Rozsah akcentu Méně / Normál / Výrazné a samostatná svítivost.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="compact-navigation" checked>
+            <span>Sbalitelná spodní lišta Vrstvy / Správa / Sestavy.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="consistent-icons" checked>
+            <span>Vlastní ikona Procreate, jednotné ikony vlajky, WIP, oka a zámku a červené mazání.</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h3>5. Chytré návrhy a volitelná AI</h3>
+      <ul>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="offline-review">
+            <span>Offline kontrola počtů, shod a očekávaných variant.</span>
+          </label>
+        </li>
+        <li>
+          <label class="task">
+            <input type="checkbox" data-task="ai-suggestions">
+            <span>Volitelné AI souhrny poznámek a doporučení priorit s potvrzením změn.</span>
+          </label>
+        </li>
+      </ul>
+    </section>
+  </main>
+  <script>
+    const tasks = [...document.querySelectorAll('input[data-task]')];
+    const progress = document.getElementById('roadmap-progress');
+    const storageStatus = document.getElementById('roadmap-storage-status');
+    const taskKey = task => 'nft-roadmap-task:' + task.dataset.task;
+
+    function updateProgress() {
+      const completed = tasks.filter(task => task.checked).length;
+      progress.textContent = completed + ' / ' + tasks.length + ' splněno';
+    }
+
+    function restoreTasks() {
+      for (const task of tasks) {
+        const saved = localStorage.getItem(taskKey(task));
+        task.checked = saved === null ? task.defaultChecked : saved === 'true';
+      }
+      updateProgress();
+    }
+
+    try { restoreTasks(); }
+    catch { updateProgress(); }
+
+    for (const task of tasks) {
+      task.addEventListener('change', () => {
+        try {
+          localStorage.setItem(taskKey(task), String(task.checked));
+          storageStatus.hidden = true;
+        } catch {
+          storageStatus.hidden = false;
+        }
+        updateProgress();
+      });
+    }
+
+    window.addEventListener('storage', event => {
+      if (event.key === null || event.key.startsWith('nft-roadmap-task:')) restoreTasks();
+    });
+  </script>
+</body>
+</html>

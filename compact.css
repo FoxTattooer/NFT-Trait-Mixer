@@ -458,6 +458,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   #workspaceTabs[data-compact] #layersTab[data-back] .layer-tab-back {
     display:inline-flex!important;align-items:center;justify-content:center;gap:4px;
   }
+  #workspaceTabs[data-compact] .layer-tab-back .icon {display:block;flex:0 0 16px}
 }
 @media (max-width:900px) and (orientation:portrait) and (prefers-reduced-motion:no-preference) {
   #appLayout .workspace-tabs button {transition:min-height .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .14s ease}

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.96 | checkpoint/v0.7.96-roadmap-checklist | Zarovnaná šipka kompaktní lišty, čitelný návrat z Plánu rozvoje a lokálně ukládaný checklist |
 | 0.7.95 | checkpoint/v0.7.95-workspace-navigation | Tři polohy spodní lišty na výšku, stálá navigace na šířku, kompaktní ovládání panelů a akcenty podle palety |
 | 0.7.94 | checkpoint/v0.7.94-project-recovery | Automatická lokální záloha a obnovení posledního projektu po pádu i bez připojení |
 | 0.7.93 | checkpoint/v0.7.93-compact-layer-tools | Jednořádkové ovládání vrstev, vlajky a WIP pro celý strom, kompaktní kontrola shod a skleněná spodní navigace |
