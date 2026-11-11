@@ -54,8 +54,14 @@
     if (!stagedImages.has(key)) stagedImages.set(key, new Blob([bytes], { type: 'image/png' }));
     return 'asset:' + key;
   }
-  const references = p => new Set((p?.storageFormat === 2 && Array.isArray(p.cats) ? p.cats : [])
-    .flatMap(c => Array.isArray(c?.traits) ? c.traits.map(t => t?.assetKey) : []));
+  function* imageRecords(project) {
+    for (const category of project.cats) yield* category.traits;
+    for (const card of project.lookbookCards || []) {
+      for (const item of [card, ...card.variants]) if (item.data || item.assetKey) yield item;
+    }
+  }
+  const references = p => new Set(p?.storageFormat === 2 ? Array.from(imageRecords(p), item => item.assetKey) : []);
+  const hasContent = p => p?.cats?.length || p?.lookbookCards?.length;
   async function readProject(db,project,progress=()=>{},options={}) {
     if(!project)return project;
     // Accept the experimental v2 branch as well as the original inline records.
@@ -68,18 +74,19 @@
       }
       return project;
     }
-    const total=project.cats.reduce((n,c)=>n+c.traits.length,0);let done=0;
+    const records = [...imageRecords(project)], total = records.length;
+    let done=0;
     const cache=context(db);cache.clear();
     if (options.lazy) {
       const keys=await new Promise((resolve,reject)=>{const r=db.transaction('projects').objectStore('projects').getAllKeys();r.onsuccess=()=>resolve(new Set(r.result));r.onerror=()=>reject(r.error);});
       const retained=pins.get(db)||new Set();
-      for(const c of project.cats)for(const t of c.traits) {
+      for(const t of records) {
         if(!/^image:[a-f0-9]{64}$/.test(t.assetKey)||!keys.has(t.assetKey))throw new Error('V uloženém projektu chybí obrázek: '+t.name);
         retained.add(t.assetKey);t.data='asset:'+t.assetKey;cache.set(t.id,{data:t.data,key:t.assetKey});delete t.assetKey;
       }
       pins.set(db,retained);delete project.storageFormat;progress(total,total);return project;
     }
-    for(const c of project.cats)for(const t of c.traits) {
+    for(const t of records) {
       const key=t.assetKey;
       const blob=await request(db,key);
       if(!blob || typeof blob.arrayBuffer!=='function')throw new Error('V uloženém projektu chybí obrázek: '+t.name);
@@ -90,41 +97,46 @@
   }
   async function saveUnlocked(db,project,progress=()=>{},stagedImages,workspace) {
     const cache=context(db),nextCache=new Map(),written=new Set();
-    const manifest={...project,storageFormat:2,cats:project.cats.map(c=>({...c,traits:[]}))};
+    const manifest={
+      ...project, storageFormat:2,
+      cats:project.cats.map(c=>({...c,traits:c.traits.map(trait=>({...trait}))})),
+      lookbookCards:(project.lookbookCards || []).map(card=>({...card,variants:card.variants.map(variant=>({...variant}))})),
+    };
     if (workspace?.categoryId) manifest.workspaceCategoryId = workspace.categoryId;
-    const total=project.cats.reduce((n,c)=>n+c.traits.length,0);let done=0;
+    const records = [...imageRecords(manifest)], total = records.length;
+    let done=0;
     try {
       const existingKeys = await new Promise((resolve,reject)=>{
         const r=db.transaction('projects').objectStore('projects').getAllKeys();r.onsuccess=()=>resolve(new Set(r.result));r.onerror=()=>reject(r.error);
       });
-      for(let i=0;i<project.cats.length;i++)for(const trait of project.cats[i].traits) {
-        let entry=cache.get(trait.id);
-        if(!entry || entry.data!==trait.data || !existingKeys.has(entry.key)) {
-          const stored = isAsset(trait.data);
-          const inline = stored ? null : await imageBytes(trait.data);
-          const key = stored ? trait.data.slice(6) : await imageKey(await inline.arrayBuffer());
+      for(const item of records) {
+        let entry=cache.get(item.id);
+        if(!entry || entry.data!==item.data || !existingKeys.has(entry.key)) {
+          const stored = isAsset(item.data);
+          const inline = stored ? null : await imageBytes(item.data);
+          const key = stored ? item.data.slice(6) : await imageKey(await inline.arrayBuffer());
           if(!existingKeys.has(key)) {
             const blob = inline || stagedImages?.get(key);
-            if (!blob) throw new Error('Chybí uložený obrázek: '+trait.name);
+            if (!blob) throw new Error('Chybí uložený obrázek: '+item.name);
             await transaction(db,store=>store.put(blob,key));
             written.add(key);existingKeys.add(key);
           }
-          entry={data:trait.data,key};
+          entry={data:item.data,key};
         }
-        nextCache.set(trait.id,entry);
-        const {data,assetKey,...metadata}=trait;
-        manifest.cats[i].traits.push({...metadata,assetKey:entry.key});
+        nextCache.set(item.id,entry);
+        delete item.data;
+        item.assetKey=entry.key;
         progress(++done,total);
         if (done % 32 === 0) await breathe();
       }
       // Publish only after every image is durable. On failure the previous project survives.
       const keep=references(manifest);
-      let checkpoint = manifest.cats.length ? { savedAt: Date.now(), project: manifest } : null;
+      let checkpoint = hasContent(manifest) ? { savedAt: Date.now(), project: manifest } : null;
       if (!checkpoint) {
         const previous = await request(db, recoveryKey);
         // A project last saved by an older release can be the first recovery copy.
         const legacy = previous ? null : await request(db, 'current');
-        if (legacy?.cats?.length) checkpoint = { savedAt: null, project: legacy };
+        if (hasContent(legacy)) checkpoint = { savedAt: null, project: legacy };
         for (const key of references((previous || checkpoint)?.project)) keep.add(key);
       }
       await transaction(db,store=>{
@@ -156,7 +168,7 @@
     });
     if (exists) return;
     const current = await request(db, 'current');
-    if (current?.storageFormat === 2 && current.cats.length) {
+    if (current?.storageFormat === 2 && hasContent(current)) {
       await transaction(db, store => store.put({ savedAt: null, project: current }, recoveryKey));
     }
   });
@@ -173,16 +185,28 @@
   }
   async function backup(db,project,readImage) {
     // Encode one image at a time; never stringify a project-sized Base64 string.
-    const {cats,...metadata}=project, parts=[JSON.stringify(metadata).slice(0,-1)+',"cats":['];
+    const {cats,lookbookCards = [],...metadata}=project, parts=[JSON.stringify(metadata).slice(0,-1)+',"cats":['];
+    async function portable(item, image) {
+      const {data, assetKey, ...fields} = item;
+      if (!image) return fields;
+      const source = readImage ? await dataURL(await readImage(item)) :
+        isAsset(data) ? await dataURL(await imageBlob(db, data)) : data;
+      return { ...fields, data: source };
+    }
     for(let ci=0;ci<cats.length;ci++) {
       const {traits,...category}=cats[ci];parts.push((ci?',':'')+JSON.stringify(category).slice(0,-1)+',"traits":[');
       for(let ti=0;ti<traits.length;ti++) {
-        const trait=traits[ti];
-        let data = trait.data;
-        if (readImage) data = await dataURL(await readImage(trait));
-        else if (isAsset(data)) data = await dataURL(await imageBlob(db, data));
-        parts.push(new Blob([(ti?',':'')+JSON.stringify({...trait,data})]));
+        parts.push(new Blob([(ti?',':'')+JSON.stringify(await portable(traits[ti], true))]));
         if(ti%16===0)await breathe();
+      }
+      parts.push(']}');
+    }
+    parts.push('],"lookbookCards":[');
+    for (const [index, card] of lookbookCards.entries()) {
+      const { variants, ...cover } = card;
+      parts.push(new Blob([(index ? ',' : '') + JSON.stringify(await portable(cover, cover.data || cover.assetKey)).slice(0, -1) + ',"variants":[']));
+      for (const [i, variant] of variants.entries()) {
+        parts.push(new Blob([(i ? ',' : '') + JSON.stringify(await portable(variant, variant.data || variant.assetKey))]));
       }
       parts.push(']}');
     }
@@ -190,7 +214,7 @@
   }
   function compact(db,projects) {
     const cache=context(db),original=new Map(cache),retained=pins.get(db)||new Set();
-    for(const project of projects)for(const c of project.cats)for(const t of c.traits) {
+    for(const project of projects)for(const t of imageRecords(project)) {
       const entry=original.get(t.id);
       if(entry && entry.data===t.data) { t.data='asset:'+entry.key;retained.add(entry.key); }
     }
@@ -198,7 +222,7 @@
     pins.set(db,retained);
   }
   function retain(db,projects) {
-    const keys=new Set();for(const project of projects)for(const c of project.cats)for(const t of c.traits)if(isAsset(t.data))keys.add(t.data.slice(6));
+    const keys=new Set();for(const project of projects)for(const t of imageRecords(project))if(isAsset(t.data))keys.add(t.data.slice(6));
     pins.set(db,keys);
   }
   const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng};

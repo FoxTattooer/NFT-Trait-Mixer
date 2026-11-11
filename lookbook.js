@@ -15,6 +15,7 @@
   const selectedTrait = () => category()?.traits.find(trait => trait.id === traitId);
   const selectedSnapshot = () => state.snapshots.find(snapshot => snapshot.id === snapshotId);
   const selectedItem = () => view === 'traits' ? selectedTrait() : selectedSnapshot();
+  const customCards = window.TraitLookbookCards?.mount({ content, scroll, mast });
 
   function chance(trait, total, weight = M.rarityWeight(trait)) {
     if (trait.hidden || !total) return percent.format(0);
@@ -121,6 +122,12 @@
     for (const control of dialog.querySelectorAll('button[data-lookbook-view],button[data-lookbook-theme]')) {
       control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view || control.dataset.lookbookTheme === theme));
     }
+    if (view === 'cards') {
+      chapters.hidden = true;
+      chapters.replaceChildren();
+      customCards?.render(theme);
+      return;
+    }
     const items = view === 'traits' ? state.cats.filter(cat => cat.traits.length) : state.snapshots;
     const id = view === 'traits' ? categoryId : snapshotId;
     const selected = items.find(item => item.id === id) || items[0];
@@ -144,6 +151,7 @@
   }
 
   function saveCard() {
+    if (view === 'cards') return;
     const item = selectedItem(), form = content.querySelector('form');
     if (!item || !form || busy) return;
     const name = M.normalizeLookbookText(form.elements.lookbookName.value, M.LOOKBOOK_NAME_LIMIT);

@@ -3,10 +3,13 @@
   'use strict';
   const validId = v => typeof v === 'string' && /^[\w-]{1,100}$/.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
   const uid = () => globalThis.crypto?.randomUUID?.() || `trait-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, selectedExtras: {}, rules: [], snapshots: [], organizer: {}, rulesEnabled: true });
+  const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, selectedExtras: {}, rules: [], snapshots: [], lookbookCards: [], organizer: {}, rulesEnabled: true });
+  const hasContent = p => !!(p?.cats?.length || p?.lookbookCards?.length);
+  const cloneCardItem = item => ({ ...item, layers: [...item.layers] });
+  const cloneLookbookCards = (cards = []) => cards.map(card => ({ ...cloneCardItem(card), variants: card.variants.map(cloneCardItem) }));
   function clone(p) {
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
-    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
+    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -152,10 +155,12 @@
     const p = { ...empty(), name: name(raw.name, 'Můj NFT projekt'), rulesEnabled: raw.rulesEnabled !== false };
     const ids = new Set();
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
+    const validImage = data => typeof data === 'string' &&
+      (allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(data) || /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=\r\n]*$/.test(data));
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), visible: c.visible !== false, traits: c.traits.map(t => {
-        if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
+        if (!t || !validImage(t.data)) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
@@ -204,6 +209,24 @@
       if (!s || !s.selected || typeof s.selected !== 'object') fail('Neplatná uložená sestava.');
       const selected = selection(p, s.selected);
       return { id: unique(s.id || uid()), name: name(s.name, 'Sestava'), ...lookbookFields(s), selected, selectedExtras: normalizeExtras(p, s.selectedExtras, selected), visibility: Object.fromEntries(p.cats.map(c => [c.id, s.visibility?.[c.id] !== undefined ? s.visibility[c.id] !== false : c.visible])), rulesEnabled: s.rulesEnabled !== undefined ? s.rulesEnabled !== false : p.rulesEnabled };
+    });
+    const normalizeCardItem = (item, fallback) => {
+      if (!item || (item.data != null && !validImage(item.data))) fail('Karta Lookbooku obsahuje neplatný obrázek.');
+      const title = normalizeLookbookText(item.name, LOOKBOOK_NAME_LIMIT);
+      const note = normalizeLookbookText(item.note, LOOKBOOK_STORY_LIMIT);
+      return {
+        id: unique(item.id), name: title || fallback, note,
+        layers: Array.isArray(item.layers) ? [...new Set(item.layers.filter(validId))] : [],
+        ...(item.data ? { data: item.data } : {}),
+      };
+    };
+    if (raw.lookbookCards != null && !Array.isArray(raw.lookbookCards)) fail('Neplatný seznam karet Lookbooku.');
+    p.lookbookCards = (raw.lookbookCards || []).map(card => {
+      const cover = normalizeCardItem(card, 'Nová karta');
+      if (!Array.isArray(card.variants)) fail('Karta Lookbooku má neplatný seznam variant.');
+      return { ...cover, done: card.done === true, variants: card.variants.map(variant => ({
+        ...normalizeCardItem(variant, 'Varianta'), withCover: variant.withCover === true,
+      })) };
     });
     return p;
   }
@@ -351,7 +374,7 @@
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText,
     DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
-    empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+    empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

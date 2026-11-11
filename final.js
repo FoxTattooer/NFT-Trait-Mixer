@@ -30,6 +30,7 @@
       const category = model.category(project, categoryId);
       if (!category) throw new Error('Tuhle kategorii už ve stromu nelze najít.');
       project.cats = [category];
+      project.lookbookCards = [];
       title = category.name;
     }
     if (folderId) {
@@ -60,21 +61,35 @@
     const images = new Map(), imageKeys = Object.create(null);
     const frozen = { ...project, cats: [] };
     let done = 0;
+    async function freezeImage(item) {
+      const { data, ...metadata } = item;
+      const key = data.startsWith('asset:image:') ? data : item.id;
+      if (!images.has(key)) {
+        const blob = await readImage(item);
+        if (!blob || typeof blob.arrayBuffer !== 'function') throw new Error('PNG obrázek nelze uložit do Finálu.');
+        images.set(key, blob);
+      }
+      imageKeys[item.id] = key;
+      return metadata;
+    }
     for (const category of project.cats) {
       const copy = { ...category, traits: [] };
       frozen.cats.push(copy);
       for (const trait of category.traits) {
-        const { data, ...metadata } = trait;
-        const key = data.startsWith('asset:image:') ? data : trait.id;
-        if (!images.has(key)) {
-          const blob = await readImage(trait);
-          if (!blob || typeof blob.arrayBuffer !== 'function') throw new Error('PNG vrstvy nelze uložit do Finálu.');
-          images.set(key, blob);
-        }
-        imageKeys[trait.id] = key;
-        copy.traits.push(metadata);
+        copy.traits.push(await freezeImage(trait));
         progress(++done, entry.count);
       }
+    }
+    async function freezeCardItem(item) {
+      if (!item.data) return { ...item };
+      return { ...await freezeImage(item), assetKey: imageKeys[item.id] };
+    }
+    frozen.lookbookCards = [];
+    for (const { variants, ...card } of project.lookbookCards || []) {
+      const cover = await freezeCardItem(card);
+      cover.variants = [];
+      for (const variant of variants) cover.variants.push(await freezeCardItem(variant));
+      frozen.lookbookCards.push(cover);
     }
     // Blob handles stay disk-backed. One transaction publishes the tree and every image together.
     return new Promise((resolve, reject) => {

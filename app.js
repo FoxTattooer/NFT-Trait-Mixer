@@ -58,10 +58,10 @@ async function readProjectRecovery() {
   const record = await TraitStorage.readRecovery(db);
   if (!record) return null;
   const project = M.normalize(record.project, { allowStoredAssets: true });
-  return project.cats.length ? { project, savedAt: record.savedAt, categoryId: record.project.workspaceCategoryId } : null;
+  return M.hasContent(project) ? { project, savedAt: record.savedAt, categoryId: record.project.workspaceCategoryId } : null;
 }
 function renderProjectRecovery() {
-  const available = !!projectRecovery && !state.cats.length;
+  const available = !!projectRecovery && !M.hasContent(state);
   $('restoreProjectMenu').hidden = !available;
   $('projectRecovery').hidden = !available || recoveryDismissed;
   if (!available) return;
@@ -78,7 +78,7 @@ function renderProjectRecovery() {
   }
 }
 async function restoreLastProject() {
-  if (!db || !projectRecovery || state.cats.length) return;
+  if (!db || !projectRecovery || M.hasContent(state)) return;
   busy = true;
   render(true);
   try {
@@ -125,7 +125,7 @@ function flushSave(stagedImages) {
     if (layerReviewOpen && !busy) { renderLayerReview(); mountThumbnails(); }
     persistedRevision = savingRevision;
     if (revision === savingRevision) {
-      if (project.cats.length) projectRecovery = null;
+      if (M.hasContent(project)) projectRecovery = null;
       storageStatus('Automaticky uloženo v zařízení');
       $('storageWarning').hidden = true;
     }
@@ -2039,8 +2039,8 @@ async function handleAction(action, id, element) {
       break;
     case 'rename-project': { const name = await ask({ title: 'Název projektu', value: state.name }); if (name && name !== state.name) change(() => { state.name = name; }); break; }
     case 'new-project':
-      if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) {
-        if (state.cats.length && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
+      if (!M.hasContent(state) || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) {
+        if (M.hasContent(state) && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
         recoveryDismissed = true;
         layerBrowseHistory.length = 0;
         selectWorkspaceTab(false);
@@ -2444,7 +2444,7 @@ async function init() {
       readError = error;
       window.TraitDiagnostics?.error('project-load', error);
     }
-    if (state.cats.length) {
+    if (M.hasContent(state)) {
       storageStatus('Automaticky uloženo v zařízení');
       showProjectSource('Obnoveno z tohoto zařízení');
       await TraitStorage.seedRecovery(db).catch(error => window.TraitDiagnostics?.error('project-recovery', error));
