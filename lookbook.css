@@ -67,7 +67,7 @@
   background: var(--tape); transform: rotate(2deg); pointer-events: none;
 }
 .lookbook-card:nth-child(even) .lookbook-art { transform: rotate(1.8deg); }
-.lookbook-art img { display: block; width: auto; height: 100%; aspect-ratio: 1; object-fit: contain; }
+.lookbook-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .lookbook-art .layer-flag { position: absolute; top: 3px; right: 3px; z-index: 1; }
 .lookbook-card[data-hidden-trait] img { opacity: .42; }
 .lookbook-tag {

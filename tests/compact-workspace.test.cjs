@@ -580,7 +580,7 @@ const [{ data: matchingImage }, { data: otherImage }] = w.inspectState().cats[0]
 const comparisonProject = M.empty();
 comparisonProject.cats = [
   { id: 'compare', name: 'Clothes', visible: true, traits: Array.from({length: 5}, (_, index) => ({
-    id: 'compare-' + index, name: 'Kopie ' + (index + 1), data: matchingImage,
+    id: 'compare-' + index, name: 'Kopie ' + (index + 1), data: matchingImage, psdSource: `${source}:psd-${191 + index}`,
   })) },
   { id: 'other', name: 'Doplňky', visible: true, traits: [
     { id: 'other-1', name: 'Doplňky 1', data: otherImage },
@@ -607,14 +607,29 @@ const changeControl = (selector, value) => {
   control.dispatchEvent(new w.Event('change', { bubbles: true }));
 };
 const copy = () => M.locate(w.inspectState(), 'compare-4');
+const compareDialog = get('compareActionDialog');
+const compareAction = (action, id) => click(`#compareTraits [data-compare-action="${action}"][data-id="${id}"]`);
+const compareChoice = value => click(`#compareActionOptions [data-compare-choice="${value}"]`);
+assert(!compare.querySelector('select'));
+assert(!compare.textContent.includes('vrstva 195'));
+compareAction('info', 'compare-4');
+assert(compareDialog.open);
+assert.match(get('compareActionOptions').textContent, /PSD · vrstva 195/);
+click('#compareActionClose');
 click('#compareTraits [data-action="toggle-hidden-trait"][data-id="compare-4"]');
 assert(copy().trait.hidden);
 assert.equal(compare.querySelector('.compare-trait-cards').scrollLeft, 228, 'edits preserve horizontal position');
-changeControl('[data-compare-mark="compare-4"]', 'green');
+compareAction('mark', 'compare-4');
+compareChoice('green');
 assert.equal(copy().trait.flag, 'green');
-changeControl('[data-compare-move="compare-4"]', 'folder:archive');
+compareAction('mark', 'compare-4');
+assert.equal(find('#compareActionOptions [data-compare-choice="green"]').getAttribute('aria-pressed'), 'true');
+click('#compareActionClose');
+compareAction('move', 'compare-4');
+compareChoice('folder:archive');
 assert.equal(w.inspectState().organizer.compare.assignments['compare-4'], 'archive');
-changeControl('[data-compare-move="compare-4"]', 'category:other');
+compareAction('move', 'compare-4');
+compareChoice('category:other');
 await waitFor(() => copy().cat.id === 'other');
 click('#compareTraits [data-action="rename-trait"][data-id="compare-4"]');
 get('dialogInput').value = 'Přejmenovaná kopie';
@@ -628,9 +643,26 @@ assert.equal(copy().trait.name, 'Přejmenovaná kopie');
 await w.runAction('save-project');
 const backup = M.normalize(JSON.parse(await w.__downloads.at(-1).blob.text()));
 assert.equal(M.locate(backup, 'compare-4').trait.hidden, true);
-click('#compareTraits [data-compare-nav="next-group"]');
+const openMatchPicker = () => {
+  const picker = compare.querySelector('.compare-picker');
+  picker.open = true;
+  picker.dispatchEvent(new w.Event('toggle'));
+};
+const filterMatches = value => {
+  const field = find('.compare-search');
+  field.value = value;
+  field.dispatchEvent(new w.Event('input', { bubbles: true }));
+};
+openMatchPicker();
+assert.equal(compare.querySelectorAll('[data-compare-group]').length, 2);
+filterMatches('doplnky 2');
+assert.equal(compare.querySelectorAll('[data-compare-group]').length, 1);
+click('#compareTraits [data-compare-group="1"]');
 assert.equal(compare.querySelectorAll('article').length, 2);
-click('#compareTraits [data-compare-nav="prev-group"]');
+assert(compare.querySelector('.compare-trait-cards').classList.contains('is-pair'));
+openMatchPicker();
+filterMatches('kopie');
+click('#compareTraits [data-compare-group="0"]');
 assert.equal(compare.querySelectorAll('article').length, 5);
 compare.open = false;
 // Lookbook lives in the image menu and closing it restores the editor view.
@@ -650,6 +682,29 @@ click('#openLookbook');
 assert(get('lookbookDialog').open);
 assert(!get('openLookbook').closest('details').open);
 assert.equal(get('lookbookContent').querySelectorAll('[data-lookbook-trait]').length, 4);
+const lookbookImage = find('.lookbook-thumbnail');
+intersect(lookbookImage, true);
+await waitFor(() => lookbookImage.hasAttribute('src'));
+const renderedThumb = await w.__load(lookbookImage.getAttribute('src'));
+assert.equal(renderedThumb.width, 480);
+assert.equal(renderedThumb.height, 300);
+const artwork = createCanvas(1024, 1024);
+const ink = artwork.getContext('2d');
+for (let i = 0; i < 80; i++) {
+  ink.fillStyle = i % 2 ? 'white' : 'black';
+  ink.fillRect(240 + i * 4, 480, 4, 100);
+}
+const detailBlob = await w.TraitLookbook.thumbnail(artwork.toDataURL('image/png'), () => true);
+const detailImage = await loadImage(Buffer.from(await detailBlob.arrayBuffer()));
+const paper = createCanvas(480, 300).getContext('2d');
+paper.drawImage(detailImage, 0, 0);
+const pixels = paper.getImageData(0, 150, 480, 1).data;
+let transitions = 0;
+for (let x = 40; x < 440; x++) {
+  if ((pixels[x * 4] > 127) !== (pixels[(x - 1) * 4] > 127)) transitions++;
+}
+assert(transitions > 65, 'thumbnail preserves detail from the original before the alpha crop');
+assert.equal(pixels[3], 0, 'paper margin remains transparent');
 assert.match(find('.lookbook-chance').textContent, /^25\s*%$/);
 find('.lookbook-edit').open = true;
 changeControl('#lookbookContent [name="lookbookName"]', 'Redline');

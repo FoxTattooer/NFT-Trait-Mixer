@@ -1206,7 +1206,9 @@ function pumpThumbnails() {
     img.dataset.assetLoading = 'true';
     thumbnailJobs++;
     const valid = () => img.isConnected && (!managed || !thumbnailObserver || nearbyThumbnails.has(img));
-    thumbnailBlob(source, managed, valid).then(blob => {
+    const lookbookRenderer = img.classList.contains('lookbook-thumbnail') && window.TraitLookbook?.thumbnail;
+    const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid);
+    pending.then(blob => {
       if (!valid()) return;
       if (managed && source !== layerThumbnailSource(img)) { thumbnailQueue.add(img); return; }
       const url = blob ? URL.createObjectURL(blob) : source;
@@ -1820,7 +1822,7 @@ async function handleAction(action, id, element) {
         change(() => { if (marked) item.wip = true; else delete item.wip; }, marked ? 'Označeno jako WIP' : 'Označení WIP odebráno', true);
       }
       if (element.dataset.compareMark) {
-        $('compareTraitContent').querySelector(`[data-compare-mark="${id}"]`)?.focus({ preventScroll: true });
+        $('compareTraitContent').querySelector(`[data-compare-action="mark"][data-id="${id}"]`)?.focus({ preventScroll: true });
         break;
       }
       const menu = Array.from(document.querySelectorAll(`[data-action="open-layer-menu"][data-id="${id}"]`))

@@ -71,7 +71,7 @@
     const { folders, assignments } = organizerFolders(cat.id);
     const path = [cat.name, organizerPath(folders, assignments[trait.id]), trait.name].filter(Boolean).join(' / ');
     const cards = traits.map(item => `<button type="button" class="lookbook-card" data-lookbook-trait="${esc(item.id)}" aria-pressed="${item.id === traitId}" ${item.hidden ? 'data-hidden-trait' : ''}>
-      <span class="lookbook-art">${safeMode ? '' : layerThumbnail(cat, item)}${item.flag ? flagIcon(item.flag, true) : ''}</span>
+      <span class="lookbook-art">${safeMode ? '' : layerThumbnail(cat, item, 'lookbook-thumbnail')}${item.flag ? flagIcon(item.flag, true) : ''}</span>
       <span class="lookbook-tag" data-lookbook-card-name="${esc(item.id)}">${esc(label(item))}</span>
       <span class="lookbook-rate" data-lookbook-chance="${esc(item.id)}"></span>
     </button>`).join('');
@@ -257,29 +257,59 @@
   });
   content.addEventListener('submit', event => { event.preventDefault(); saveCard(); });
 
-  // The editor keeps PNGs on a full composition canvas. Fit the opaque region
-  // of each lazily loaded thumbnail inside its paper card without changing the PNG.
-  const sample = document.createElement('canvas');
-  sample.width = sample.height = 96;
-  content.addEventListener('load', event => {
-    const img = event.target;
-    if (!img.matches?.('.lookbook-art img') || !img.naturalWidth) return;
+  const thumbnails = new Map();
+  async function thumbnail(source, valid) {
+    if (thumbnails.has(source)) return thumbnails.get(source);
+    const blob = await TraitStorage.imageBlob(db, source);
+    if (!valid()) return blob;
+    const url = URL.createObjectURL(blob);
+    const canvas = document.createElement('canvas'), output = document.createElement('canvas');
+    let image;
     try {
-      const ctx = sample.getContext('2d', { willReadFrequently: true });
-      ctx.clearRect(0, 0, 96, 96);
-      ctx.drawImage(img, 0, 0, 96, 96);
-      const { data } = ctx.getImageData(0, 0, 96, 96);
-      let left = 96, right = -1, top = 96, bottom = -1;
-      for (let y = 0; y < 96; y++) for (let x = 0; x < 96; x++) {
-        if (data[(y * 96 + x) * 4 + 3] < 20) continue;
+      image = await decodeImage(url);
+      if (!valid()) return blob;
+      const { naturalWidth, naturalHeight } = image;
+      // Scan alpha on a bounded canvas, then sample the crop from the original PNG.
+      const scan = Math.min(1, 512 / Math.max(naturalWidth, naturalHeight));
+      const width = canvas.width = Math.max(1, Math.ceil(naturalWidth * scan));
+      const height = canvas.height = Math.max(1, Math.ceil(naturalHeight * scan));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(image, 0, 0, width, height);
+      const { data } = ctx.getImageData(0, 0, width, height);
+      let left = width, right = -1, top = height, bottom = -1;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * 4 + 3] < 4) continue;
         left = Math.min(left, x); right = Math.max(right, x);
         top = Math.min(top, y); bottom = Math.max(bottom, y);
       }
-      if (right < left) return;
-      const scale = Math.min(4, 132 / (right - left + 1), 84 / (bottom - top + 1));
-      const x = (48 - (left + right + 1) / 2) * scale / 96 * 100;
-      const y = (48 - (top + bottom + 1) / 2) * scale / 96 * 100;
-      img.style.transform = `translate(${x}%, ${y}%) scale(${scale})`;
-    } catch { /* The unscaled thumbnail is still usable. */ }
-  }, true);
+      if (right < left) return blob;
+      const sourceLeft = Math.floor(Math.max(0, left - 1) * naturalWidth / width);
+      const sourceTop = Math.floor(Math.max(0, top - 1) * naturalHeight / height);
+      const sourceWidth = Math.ceil(Math.min(width, right + 2) * naturalWidth / width) - sourceLeft;
+      const sourceHeight = Math.ceil(Math.min(height, bottom + 2) * naturalHeight / height) - sourceTop;
+      output.width = 480;
+      output.height = 300;
+      const scale = Math.min(432 / sourceWidth, 260 / sourceHeight);
+      const artWidth = sourceWidth * scale, artHeight = sourceHeight * scale;
+      const render = output.getContext('2d');
+      render.imageSmoothingEnabled = true;
+      render.imageSmoothingQuality = 'high';
+      render.drawImage(image, sourceLeft, sourceTop, sourceWidth, sourceHeight,
+        (480 - artWidth) / 2, (300 - artHeight) / 2, artWidth, artHeight);
+      const result = await new Promise(resolve => output.toBlob(resolve, 'image/png'));
+      if (!result) return blob;
+      if (TraitStorage.isAsset(source)) {
+        thumbnails.set(source, result);
+        if (thumbnails.size > 16) thumbnails.delete(thumbnails.keys().next().value);
+      }
+      return result;
+    } catch { return blob; }
+    finally {
+      if (image) image.src = '';
+      canvas.width = canvas.height = 1;
+      output.width = output.height = 1;
+      URL.revokeObjectURL(url);
+    }
+  }
+  window.TraitLookbook = { thumbnail };
 })();

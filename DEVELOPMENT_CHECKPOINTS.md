@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.104 | checkpoint/v0.7.104-lookbook-shody | Ostřejší náhledy traitů z původních PNG, výběr shody a nabídky akcí v aplikaci |
 | 0.7.103 | checkpoint/v0.7.103-lookbook | Lookbook v menu náhledu, listy traitů a sestav, příběhy, šance a návrat do editoru |
 | 0.7.102 | checkpoint/v0.7.102-compare-duplicates | Porovnání přesných duplicit v Sestavách, vodorovný posun karet a úpravy traitů přímo na kartách |
 | 0.7.101 | checkpoint/v0.7.101-pdf-info | Dva dokumenty v PDF info, čtení uvnitř aplikace a přímý návrat do editoru |
