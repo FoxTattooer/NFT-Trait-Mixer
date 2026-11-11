@@ -16,6 +16,31 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('review marks round-trip with the project and folder WIP reaches nested traits', () => {
+  const p = project();
+  const category = p.cats[0];
+  category.traits.push({ id: 'extra', name: 'Návrh', data: png, wip: true, flag: 'blue' });
+  category.traits[0].flag = '__proto__';
+  p.organizer.a = {
+    folders: [
+      { id: 'root', name: 'Projekt', parentId: null },
+      { id: 'drafts', name: 'Rozpracované', parentId: 'root', wip: true },
+      { id: 'detail', name: 'Detaily', parentId: 'drafts' },
+    ],
+    assignments: { red: 'detail' },
+  };
+  const restored = M.normalize(JSON.parse(JSON.stringify(M.clone(p))));
+  const [nested, marked] = restored.cats[0].traits;
+  assert.equal(nested.flag, undefined);
+  assert.equal(marked.flag, 'blue');
+  assert.equal(marked.wip, true);
+  assert.equal(restored.organizer.a.folders[1].wip, true);
+  const membership = M.workInProgress(restored, restored.cats[0]);
+  assert.deepEqual(membership.traits, new Set(['red', 'extra']));
+  assert.deepEqual(membership.folders, new Set(['drafts', 'detail']));
+  assert.deepEqual(membership.paths, new Set(['drafts', 'root', 'detail']));
+  assert.equal(restored.selected.a, 'red');
+});
 test('trait deletion removes selection, both kinds of rule references and snapshot selections', () => {
   const p = project();
   p.rules.push({ id: 'hide', source: 'blue', action: 'hide', targetCat: 'a', targetTrait: null });

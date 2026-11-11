@@ -79,6 +79,42 @@
   }
   const TRAIT_NOTE_LIMIT = 240;
   const normalizeTraitNote = value => typeof value === 'string' ? value.trim().slice(0, TRAIT_NOTE_LIMIT).trimEnd() : '';
+  const FLAG_COLORS = Object.freeze({ red: 'Červená', yellow: 'Žlutá', green: 'Zelená', blue: 'Modrá', purple: 'Fialová' });
+  const isFlagColor = value => typeof value === 'string' && Object.hasOwn(FLAG_COLORS, value);
+  function workInProgress(p, category) {
+    const { folders, assignments } = p.organizer?.[category.id] || { folders: [], assignments: {} };
+    const byParent = new Map();
+    const parents = new Map();
+    const pending = [];
+    for (const folder of folders) {
+      if (!byParent.has(folder.parentId)) byParent.set(folder.parentId, []);
+      byParent.get(folder.parentId).push(folder.id);
+      parents.set(folder.id, folder.parentId);
+      if (folder.wip) pending.push(folder.id);
+    }
+    const markedFolders = new Set();
+    while (pending.length) {
+      const id = pending.pop();
+      if (markedFolders.has(id)) continue;
+      markedFolders.add(id);
+      for (const child of byParent.get(id) || []) pending.push(child);
+    }
+    const traits = new Set();
+    const paths = new Set();
+    function includePath(folder) {
+      while (folder && !paths.has(folder)) {
+        paths.add(folder);
+        folder = parents.get(folder);
+      }
+    }
+    for (const folder of markedFolders) includePath(folder);
+    for (const trait of category.traits) {
+      if (!trait.wip && !markedFolders.has(assignments[trait.id])) continue;
+      traits.add(trait.id);
+      includePath(assignments[trait.id]);
+    }
+    return { folders: markedFolders, traits, paths };
+  }
   const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
@@ -93,7 +129,8 @@
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}) };
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
+          ...(t.wip === true ? { wip: true } : {}), ...(isFlagColor(t.flag) ? { flag: t.flag } : {}) };
       }) };
     });
     p.psdImports = {};
@@ -110,7 +147,8 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f), parentId: f.parentId == null ? null : f.parentId };
+        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f),
+          ...(f.wip === true ? { wip: true } : {}), parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
       for (const f of folders) if (f.parentId !== null && !folderIds.has(f.parentId)) fail('Projekt obsahuje složku s neplatným rodičem.');
@@ -270,7 +308,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, FLAG_COLORS, isFlagColor, workInProgress, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

@@ -534,6 +534,10 @@ body.compact-workspace[data-accent-coverage=strong] :is(button, summary):focus-v
   }
 }
 
+body.compact-workspace[data-color-scheme] #layerContext .layer-flag > .icon { color: inherit !important; }
+body.compact-workspace[data-color-scheme] #layerContext .layer-flag-palette button[aria-pressed="true"] {
+  border-color: var(--layer-flag-color) !important;
+}
 /* Destructive controls keep a semantic red even in monochrome colorways. */
 body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data-action^="delete-"]) {
   color: #ffa4ac !important;
