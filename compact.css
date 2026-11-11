@@ -405,7 +405,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   display:block;padding:0 10px 4px;color:#ac9caf;font-size:11px;line-height:1.4;
 }
 
-.layer-tab-back, #workspaceTabs #workspaceCredit, #workspaceTabsHandle, #workspaceTabsToggle[hidden] {display:none!important}
+.layer-tab-back, #workspaceTabs #workspaceCredit, #workspaceTabsHandle, #workspaceTabsToggle[hidden], #comparisonTab[hidden] {display:none!important}
 @media (max-width:900px) and (orientation:portrait) {
   body.compact-workspace {
     --workspace-bottom-inset:env(safe-area-inset-bottom,0px);
@@ -447,7 +447,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   }
   #appLayout #workspaceTabs[data-compact] {
     inset:auto auto var(--workspace-bottom-inset) 50%;
-    transform:translateX(-50%);grid-template-columns:repeat(3,54px);width:max-content;
+    transform:translateX(-50%);grid-template-columns:repeat(4,54px);width:max-content;
     gap:4px;padding:0;border:0;background:transparent!important;box-shadow:none;backdrop-filter:none;
   }
   #appLayout #workspaceTabs[data-compact] button[data-panel] {

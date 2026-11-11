@@ -324,6 +324,7 @@ function showPanel(panel) {
   if (changed) {
     closeWorkspaceToolMenus();
     workspaceTabsCollapsed = false;
+    if (panel !== 'snapshots') workspaceComparisonSelected = false;
   }
   mobilePanel = panel;
   if (panel !== 'layers') inspectorPanel = panel;
@@ -1649,6 +1650,7 @@ function chooseControlAccent(accent) {
 }
 const portraitWorkspace = window.matchMedia('(max-width:900px) and (orientation:portrait)');
 let workspaceTabSelected = false, workspaceTabsCollapsed = false;
+let workspaceComparisonSelected = false;
 let workspaceScrollTop = 0, workspaceScrollDistance = 0;
 function resetWorkspaceScroll() {
   workspaceScrollTop = Math.max(0, window.scrollY || 0);
@@ -1664,12 +1666,14 @@ function syncWorkspaceTabs() {
   document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
   tabs.toggleAttribute('data-compact', compact);
   tabs.hidden = collapsed;
+  $('comparisonTab').hidden = !compact;
   $('workspaceTabsHandle').hidden = !collapsed;
   toggle.hidden = !portrait;
   toggle.setAttribute('aria-expanded', String(!collapsed));
   toggle.querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
+  const selectedPanel = compact && workspaceComparisonSelected ? 'comparison' : mobilePanel;
   for (const tab of tabs.querySelectorAll('[data-panel]')) {
-    const selected = (!portrait || compact) && tab.dataset.panel === mobilePanel;
+    const selected = (!portrait || compact) && tab.dataset.panel === selectedPanel;
     tab.classList.toggle('is-active', selected);
     tab.setAttribute('aria-pressed', String(selected));
   }
@@ -1690,6 +1694,7 @@ function setWorkspaceTabsCollapsed(collapsed, focus = false) {
 }
 function selectWorkspaceTab(selected) {
   workspaceTabSelected = selected;
+  workspaceComparisonSelected = false;
   setWorkspaceTabsCollapsed(false);
 }
 function toggleWorkspaceTabs() {
@@ -1740,16 +1745,27 @@ async function handleAction(action, id, element) {
     }
     case 'show-panel': {
       closeLayerContext();
-      const panel = element.dataset.panel;
+      const compare = element.dataset.panel === 'comparison';
+      const panel = compare ? 'snapshots' : element.dataset.panel;
+      const returnToSnapshots = !compare && panel === 'snapshots' && workspaceComparisonSelected;
       if (panel === 'layers' && mobilePanel === 'layers') {
         if ($('layersTab').hasAttribute('data-back')) { returnToLayerView(); break; }
         if (layerOverview) layerBrowseHistory.length = 0;
         layerOverview = false;
       }
       selectWorkspaceTab(panel !== 'rules');
+      workspaceComparisonSelected = compare;
+      const comparison = $('compareTraits');
+      if (compare) comparison.open = true;
       showPanel(panel);
       renderSnapshotLayerLibrary();
       renderSnapshotThumbnails();
+      if (compare || returnToSnapshots) {
+        if (compare) comparison.querySelector('summary').focus({ preventScroll: true });
+        const section = compare ? comparison : $('snapshotsPanel');
+        section.scrollIntoView({ block: 'start', behavior: 'instant' });
+        resetWorkspaceScroll();
+      }
       break;
     }
     case 'reveal-trait': if (located) revealTrait(located, element); break;

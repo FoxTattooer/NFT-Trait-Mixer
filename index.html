@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0798">
-  <link rel="stylesheet" href="compact.css?build=0798">
+  <link rel="stylesheet" href="compact.css?build=07107">
   <link rel="stylesheet" href="schemes.css?build=07106">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
@@ -23,11 +23,11 @@
   <script src="project.js?build=07103" defer></script>
   <script src="storage.js?build=0794" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=07106" defer></script>
+  <script src="diagnostics.js?build=07107" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <script src="app.js?build=07106" defer></script>
+  <script src="app.js?build=07107" defer></script>
   <script src="trait-comparison.js?build=07104" defer></script>
   <script src="lookbook.js?build=07104" defer></script>
   <script src="final-ui.js?build=0788" defer></script>
@@ -50,6 +50,7 @@
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 6-10 6L2 9l10-6Zm-10 12 10 6 10-6M2 12l10 6 10-6"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
     <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V4h7l3 3h8v13H3V7Z"/></symbol>
@@ -112,8 +113,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.106" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.106</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.107" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.107</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -208,6 +209,7 @@
       </button>
       <button data-action="show-panel" data-panel="traits" aria-label="Správa" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span class="layer-tab-label">Správa</span></button>
       <button data-action="show-panel" data-panel="snapshots" aria-label="Sestavy" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg><span class="layer-tab-label">Sestavy</span></button>
+      <button type="button" id="comparisonTab" data-action="show-panel" data-panel="comparison" aria-label="Porovnat duplicity" aria-controls="compareTraits" aria-pressed="false" title="Porovnat duplicity" hidden><svg class="icon" aria-hidden="true"><use href="#i-compare"/></svg></button>
       <button type="button" id="workspaceCredit" class="workspace-credit" data-action="toggle-workspace-tabs" aria-label="Created by Fox · Sbalit spodní lištu">
         <img src="art/fox-credit-drop.png" width="8" height="13" alt="">
         Created by Fox
@@ -263,7 +265,7 @@
           <ul id="recentFiles" class="recent-files-grid" aria-labelledby="recentFilesHeading" hidden></ul>
         </section>
         <details id="compareTraits" class="compare-traits">
-          <summary><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><strong>Porovnat duplicity</strong><svg class="icon compare-chevron" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <summary><svg class="icon" aria-hidden="true"><use href="#i-compare"/></svg><strong>Porovnat duplicity</strong><svg class="icon compare-chevron" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
           <div id="compareTraitContent"></div>
         </details>
       </section>
@@ -463,6 +465,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.107-compact-comparison" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.107 – Zkratka k duplicitám</strong><small>Čtvrtá ikona ve zmenšené spodní liště otevírá karty duplicit v Sestavách.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.106-me-accents" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.106 – Akcenty Magic Eden</strong><small>Samostatné akcenty ME, kompaktní palety a nové odstíny Bordó, Oliva a Písek.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.105-preview-menu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.105 – Menu náhledu</strong><small>Showroom a Finál jsou v nabídce pod ikonou obrázku hned pod Lookbookem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.104-lookbook-shody" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.104 – Náhledy a shody</strong><small>Ostřejší náhledy v Lookbooku, přímý výběr shody a svislá nabídka akcí.</small></span><span class="version-tag">Uloženo</span></a>

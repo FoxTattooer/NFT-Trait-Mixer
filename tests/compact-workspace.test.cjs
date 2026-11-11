@@ -89,6 +89,7 @@ for(const [width,height] of [[852,393],[393,852],[667,375],[375,667]]) {
  assert.equal(w.document.body.classList.contains('landscape-editor-mode'),width>height);
  assert.equal(w.document.getElementById('landscapeShuffle').disabled,false);
  assert.equal(w.document.getElementById('landscapeSnapshot').disabled,false);
+ if (width > height) assert(w.document.getElementById('comparisonTab').hidden);
 }
 menus[0].open=true;w.document.getElementById('save').click();
 await waitFor(()=>w.__downloads.length>0);assert.equal(menus[0].open,false);
@@ -176,6 +177,7 @@ await waitFor(() => w.document.activeElement === showroomMenu.querySelector('sum
 assert.equal(JSON.stringify(w.inspectState()), beforeShowroom, 'export and exit preserve the editor project');
 assert(!get('showroomDialog').hasAttribute('data-intro'), 'exiting during the transition clears it');
 assert.equal(w.document.body.dataset.workspaceNavigation, 'full');
+assert(get('comparisonTab').hidden, 'the full bar has no comparison shortcut');
 assert(!find('#workspaceTabs [aria-pressed="true"]'), 'returning from Showroom shows the neutral navigation');
 click('.workspace-tabs [data-panel="traits"]');
 assert.equal(get('traitCount').textContent, '610 traitů');
@@ -318,6 +320,8 @@ const navigationState = () => w.document.body.dataset.workspaceNavigation;
 const selectedTab = () => find('#workspaceTabs [aria-pressed="true"]')?.dataset.panel;
 assert.equal(navigationState(), 'compact');
 assert.equal(selectedTab(), activePanel);
+assert.deepEqual([...get('workspaceTabs').querySelectorAll('button[data-panel]:not([hidden])')].map(button => button.dataset.panel),
+  ['layers', 'traits', 'snapshots', 'comparison']);
 showroomMenu.open = true;
 click('#workspaceTabsToggle');
 assert.equal(get('workspaceTabs').hidden, true);
@@ -606,8 +610,23 @@ comparisonProject.cats = [
 comparisonProject.selected.compare = 'compare-0';
 comparisonProject.organizer.compare = { folders: [{ id: 'archive', name: 'Archiv', parentId: null }], assignments: {} };
 w.useTestProject(comparisonProject);
-click('#workspaceTabs [data-panel="snapshots"]');
+click('#workspaceTabs [data-panel="traits"]');
 const compare = get('compareTraits');
+compare.scrollIntoView = () => { windowTop = 1024; };
+click('#comparisonTab');
+assert.equal(get('appLayout').dataset.mobilePanel, 'snapshots');
+assert.equal(selectedTab(), 'comparison');
+assert.equal(w.document.activeElement, compare.querySelector('summary'));
+assert(compare.open);
+assert.equal(windowTop, 1024, 'the shortcut scrolls to the comparison');
+assert.equal(compare.querySelectorAll('article').length, 5);
+w.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'compact', 'the shortcut jump keeps the icon bar visible');
+get('snapshotsPanel').scrollIntoView = () => { windowTop = 320; };
+click('#workspaceTabs [data-panel="snapshots"]');
+assert.equal(selectedTab(), 'snapshots');
+assert.equal(windowTop, 320, 'Sestavy returns to the top of its panel');
+compare.open = false;
 compare.open = true;
 compare.dispatchEvent(new w.Event('toggle'));
 assert.equal(compare.querySelectorAll('article').length, 5);
