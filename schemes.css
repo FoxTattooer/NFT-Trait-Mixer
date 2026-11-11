@@ -187,7 +187,7 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu[open]>sum
   background:var(--scheme-wash)!important;border-color:var(--scheme-accent)!important;box-shadow:0 0 8px var(--scheme-glow)!important;
 }
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(dialog,.header-menu-content,.layer-context) {background:var(--scheme-panel)!important;border-color:var(--scheme-stroke)!important}
-body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button:where(:not(.danger)),.app-header .header-menu-content :is(button,a:where(.roadmap-menu-item)) .icon,.library-category>summary) {
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button:where(:not(.danger)),.app-header .header-menu-content :is(button,a:where(.header-menu-link)) .icon,.library-category>summary) {
   background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
 }
 body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp {
@@ -263,7 +263,7 @@ body[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.trait-card.is
 body.compact-workspace[data-color-scheme=mono] {
   --text:#f2f2f2;--muted:#aaa;
 }
-body[data-color-scheme=mono] :is(.layer-tree-row .layer-tree-main,.header-menu-content :is(button,a:where(.roadmap-menu-item)),.layer-tree-more,.version-diagnostics,.preview-info,.category-sort-hint) {
+body[data-color-scheme=mono] :is(.layer-tree-row .layer-tree-main,.header-menu-content :is(button,a:where(.header-menu-link)),.layer-tree-more,.version-diagnostics,.preview-info,.category-sort-hint) {
   color:var(--scheme-text);
 }
 body[data-color-scheme=mono] :is(.file-menu-project,.category-card,.layer-folder-tree,.version-history-entry,.layer-thumb) {
@@ -299,14 +299,14 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
     background:var(--scheme-card-bg);border-color:var(--scheme-accent);
     box-shadow:0 4px 10px #0006,0 0 8px var(--scheme-glow);
   }
-  body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu-content :is(button,a:where(.roadmap-menu-item)),.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
+  body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) :is(.header-menu-content :is(button,a:where(.header-menu-link)),.layer-tree-row .layer-tree-main,.drag-handle):hover:not(:disabled) {
     background:var(--scheme-wash)!important;color:var(--scheme-text);
   }
-  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(button,summary,select,a:where(.roadmap-menu-item)):hover:not(:disabled):not(:focus-visible) {
+  body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(button,summary,select,a:where(.header-menu-link)):hover:not(:disabled):not(:focus-visible) {
     outline:1px solid var(--ui-feedback)!important;
     outline-offset:-1px;
   }
-  body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,a:where(.roadmap-menu-item)):hover:not(:disabled):not(:focus-visible) {
+  body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,a:where(.header-menu-link)):hover:not(:disabled):not(:focus-visible) {
     outline-width:2px!important;outline-offset:-2px;background-color:var(--ui-feedback-wash);
     box-shadow:var(--workspace-accent-shadow)!important;
   }
@@ -447,6 +447,19 @@ body.compact-workspace[data-accent-coverage=less] {
 }
 body.compact-workspace[data-accent-coverage=strong] {
   --workspace-accent-wash:color-mix(in srgb,var(--control-accent) 23%,var(--scheme-control));
+}
+body.compact-workspace[data-color-scheme] .header-end > .header-menu > .header-menu-content {
+  --options-icon-border:color-mix(in srgb,var(--workspace-accent-border) 40%,var(--scheme-stroke));
+  --options-icon-background:var(--workspace-accent-wash);
+}
+body.compact-workspace[data-accent-coverage=less] .header-end > .header-menu > .header-menu-content {
+  --options-icon-border:var(--scheme-stroke);
+  --options-icon-background:var(--scheme-control);
+}
+body.compact-workspace[data-color-scheme] .header-end > .header-menu > .header-menu-content > :is(button,a:where(.header-menu-link)) > .icon {
+  border-color:var(--options-icon-border)!important;
+  background:var(--options-icon-background)!important;
+  color:color-mix(in srgb,var(--workspace-accent-icon) 72%,var(--scheme-text))!important;
 }
 body.compact-workspace[data-color-scheme] :is(.workspace-tools :is(.icon-button,summary),.layer-tree-tools button,.layer-review-counts button) {
   border:1px solid var(--scheme-stroke)!important;border-radius:11px!important;
