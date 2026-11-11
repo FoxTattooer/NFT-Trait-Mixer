@@ -16,6 +16,7 @@ let traitSearchLimit = PAGE_SIZE, traitSearchMarkup = '';
 let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, dialogResolve;
 let recentProject;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
+let projectRecovery, recoveryDismissed = false;
 let installPrompt = null, workerRegistration = null;
 const undoStack = [], redoStack = [], imageCache = new Map();
 const undoLabels = [], redoLabels = [];
@@ -53,22 +54,80 @@ function storageFailure(error = lastStorageError) {
 }
 function openStorage() { return TraitStorage.open(); }
 function storedProject() { return TraitStorage.read(db, (done,total) => storageStatus(`Obnovuji vrstvy ${done} / ${total}…`), { lazy: true }); }
+async function readProjectRecovery() {
+  const record = await TraitStorage.readRecovery(db);
+  if (!record) return null;
+  const project = M.normalize(record.project, { allowStoredAssets: true });
+  return project.cats.length ? { project, savedAt: record.savedAt, categoryId: record.project.workspaceCategoryId } : null;
+}
+function renderProjectRecovery() {
+  const available = !!projectRecovery && !state.cats.length;
+  $('restoreProjectMenu').hidden = !available;
+  $('projectRecovery').hidden = !available || recoveryDismissed;
+  if (!available) return;
+  const { project, savedAt } = projectRecovery;
+  $('projectRecoveryName').textContent = project.name;
+  const date = $('projectRecoveryDate');
+  const time = new Date(savedAt ?? NaN);
+  if (Number.isFinite(time.getTime())) {
+    date.dateTime = time.toISOString();
+    date.textContent = time.toLocaleString('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
+  } else {
+    date.removeAttribute('datetime');
+    date.textContent = '';
+  }
+}
+async function restoreLastProject() {
+  if (!db || !projectRecovery || state.cats.length) return;
+  busy = true;
+  render(true);
+  try {
+    const previous = projectRecovery;
+    const record = projectRecovery = await readProjectRecovery();
+    if (!record) throw new Error('Záloha už není dostupná.');
+    if (record.savedAt !== previous.savedAt || record.project.name !== previous.project.name) {
+      recoveryDismissed = false;
+      toast('Mezitím byla uložena novější záloha. Potvrď obnovu znovu.');
+      return;
+    }
+    change(() => {
+      state = record.project;
+      active = record.categoryId;
+      layerOverview = false;
+      wipFilter = 0;
+      imageCache.clear();
+    }, 'Poslední projekt obnoven');
+    showPanel('layers');
+    showProjectSource('Obnoveno z automatické zálohy');
+    await flushSave();
+  } catch (error) {
+    window.TraitDiagnostics?.error('project-recovery', error);
+    toast(`Projekt se nepodařilo obnovit. ${error.message}`, true);
+  } finally {
+    busy = false;
+    render();
+  }
+}
 function flushSave(stagedImages) {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
-  const savingRevision = revision, project = M.clone(state);
+  const savingRevision = revision, project = M.clone(state), categoryId = active;
   queuedRevision = savingRevision;
   saveQueue = saveQueue.then(() => {
     TraitStorage.retain(db, [state, project, ...undoStack, ...redoStack]);
     return TraitStorage.save(db, project, (done,total) => {
     if (revision === savingRevision && (done === 1 || done === total || done % 16 === 0)) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
-    }, stagedImages);
+    }, stagedImages, { categoryId });
   }).then(() => {
     TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
     if (layerReviewOpen && !busy) { renderLayerReview(); mountThumbnails(); }
     persistedRevision = savingRevision;
-    if (revision === savingRevision) { storageStatus('Automaticky uloženo v zařízení'); $('storageWarning').hidden = true; }
+    if (revision === savingRevision) {
+      if (project.cats.length) projectRecovery = null;
+      storageStatus('Automaticky uloženo v zařízení');
+      $('storageWarning').hidden = true;
+    }
     return true;
   }).catch(error => { queuedRevision = persistedRevision; storageFailure(error); return false; });
   return saveQueue;
@@ -78,7 +137,7 @@ function scheduleSave() {
   clearTimeout(saveTimer);
   if (!db) { storageFailure(); return; }
   storageStatus('Ukládání změn…');
-  saveTimer = setTimeout(flushSave, 200);
+  saveTimer = setTimeout(flushSave, 120);
 }
 function pruneCache() {
   const ids = new Set(state.cats.flatMap(c => c.traits.map(t => t.id)));
@@ -197,7 +256,7 @@ function change(mutator, message = '', keepPreview = false) {
   if (undoStack.length > HISTORY_LIMIT) { undoStack.shift(); undoLabels.shift(); }
   redoStack.length = 0; redoLabels.length = 0;
   currentStepLabel = message || 'Úprava projektu';
-  pruneCache(); render(keepPreview); scheduleSave();
+  scheduleSave(); pruneCache(); render(keepPreview);
   if (message) toast(message);
 }
 function moveHistory(redo = false) {
@@ -1205,6 +1264,8 @@ function render(keepPreview = false) {
   }
   // Avoid rebuilding hundreds of DOM nodes and decoding previews while importing PSD.
   if (busy) return;
+  renderProjectRecovery();
+  $('emptyOpenBackup').hidden = !!state.cats.length || (!!projectRecovery && !recoveryDismissed);
   const categories = state.cats.filter(categoryPassesWip);
   if (categories.length && !categories.some(c => c.id === active)) {
     active = categories[0].id;
@@ -1827,7 +1888,20 @@ async function handleAction(action, id, element) {
       break;
     case 'rename-project': { const name = await ask({ title: 'Název projektu', value: state.name }); if (name && name !== state.name) change(() => { state.name = name; }); break; }
     case 'new-project':
-      if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) { change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven'); showProjectSource('Vytvořen nový projekt'); showPanel('layers'); }
+      if (!state.cats.length || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) {
+        if (state.cats.length && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
+        recoveryDismissed = true;
+        change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
+        showProjectSource('Vytvořen nový projekt');
+        showPanel('layers');
+      }
+      break;
+    case 'restore-last-project': await restoreLastProject(); break;
+    case 'dismiss-project-recovery':
+      recoveryDismissed = true;
+      renderProjectRecovery();
+      $('emptyOpenBackup').hidden = false;
+      $('emptyAction').focus();
       break;
     case 'open-project': $('projectFile').click(); break;
     case 'retry-save':
@@ -2204,11 +2278,33 @@ async function init() {
   const finishLog = window.TraitDiagnostics?.start('startup');
   try {
     db = await openStorage();
-    const saved = await storedProject();
-    if (saved) state = M.normalize(saved, { allowStoredAssets: true });
-    storageStatus(saved ? 'Automaticky uloženo v zařízení' : 'Automatické ukládání je zapnuté');
-    showProjectSource(saved ? 'Obnoveno z tohoto zařízení' : 'Vytvořen nový projekt');
     db.onversionchange = () => { db.close(); db = null; storageFailure(); };
+    let readError;
+    try {
+      const saved = await storedProject();
+      if (saved) {
+        state = M.normalize(saved, { allowStoredAssets: true });
+        active = saved.workspaceCategoryId;
+      }
+    } catch (error) {
+      readError = error;
+      window.TraitDiagnostics?.error('project-load', error);
+    }
+    if (state.cats.length) {
+      storageStatus('Automaticky uloženo v zařízení');
+      showProjectSource('Obnoveno z tohoto zařízení');
+      await TraitStorage.seedRecovery(db).catch(error => window.TraitDiagnostics?.error('project-recovery', error));
+    } else {
+      try { projectRecovery = await readProjectRecovery(); }
+      catch (error) { window.TraitDiagnostics?.error('project-recovery', error); }
+      storageStatus(projectRecovery ? 'Automatická záloha je k dispozici' : 'Automatické ukládání je zapnuté');
+      if (readError && !projectRecovery) {
+        storageStatus('Uložený projekt se nepodařilo načíst', true);
+        showProjectSource('Můžeš otevřít zálohu JSON.');
+      } else if (!projectRecovery) {
+        showProjectSource('Vytvořen nový projekt');
+      }
+    }
   } catch (error) { storageFailure(error); }
   $('recoveryNotice').hidden = !safeMode;
   ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();

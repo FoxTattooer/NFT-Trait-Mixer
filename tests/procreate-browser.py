@@ -17,6 +17,8 @@ class QuietServer(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         self.directory = str(self.server.active_release)
+        # The two checkouts can have timestamps unrelated to release order.
+        del self.headers['If-Modified-Since']
         super().do_GET()
 
 
@@ -38,14 +40,14 @@ def check_update(page, context, server, url, old_root, root):
     assert saved
     server.active_release = root
     page.locator('#refreshApp').click()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.93', timeout=30000)
+    expect(page.locator('#appVersion')).to_have_text('v0.7.94', timeout=30000)
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
     page.locator('.file-menu summary').click()
     expect(page.get_by_role('button', name='Import z Procreate')).to_be_visible()
     context.set_offline(True)
     page.reload()
-    expect(page.locator('#appVersion')).to_have_text('v0.7.93')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.94')
     expect(page.locator('#appLayout')).to_have_attribute('aria-busy', 'false')
     assert page.evaluate("state.name === 'Project before upgrade' && state.cats[0].traits[0].name === 'Original trait'")
     print(f'upgrade from {old_version}, retained IndexedDB project, new import entry and offline reload passed', flush=True)
@@ -57,7 +59,7 @@ def run(page, context, url, stress, mask):
     page.on('crash', lambda: errors.append('Page crashed'))
     page.goto(url)
     page.wait_for_function("document.querySelector('#appLayout').getAttribute('aria-busy') === 'false' && navigator.serviceWorker.controller")
-    expect(page.locator('#appVersion')).to_have_text('v0.7.93')
+    expect(page.locator('#appVersion')).to_have_text('v0.7.94')
     panel = page.locator('#catsPanel').bounding_box()
     canvas = page.locator('.stage').bounding_box()
     assert canvas['x'] < panel['x'] and .59 < canvas['width'] / (canvas['width'] + panel['width']) < .61, (panel, canvas)

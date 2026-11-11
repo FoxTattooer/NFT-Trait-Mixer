@@ -3,6 +3,7 @@
 (function(root) {
   'use strict';
   const contexts = new WeakMap(), pins = new WeakMap();
+  const recoveryKey = 'last-work';
   const isAsset = data => typeof data === "string" && /^asset:image:[a-f0-9]{64}$/.test(data);
   const context = db => { if (!contexts.has(db)) contexts.set(db,new Map()); return contexts.get(db); };
   function request(db,key) {
@@ -53,9 +54,9 @@
     if (!stagedImages.has(key)) stagedImages.set(key, new Blob([bytes], { type: 'image/png' }));
     return 'asset:' + key;
   }
-  const references = p => new Set((p?.storageFormat===2 ? p.cats : []).flatMap(c=>c.traits.map(t=>t.assetKey)));
-  async function readUnlocked(db,progress=()=>{},options={}) {
-    const project=await request(db,'current');
+  const references = p => new Set((p?.storageFormat === 2 && Array.isArray(p.cats) ? p.cats : [])
+    .flatMap(c => Array.isArray(c?.traits) ? c.traits.map(t => t?.assetKey) : []));
+  async function readProject(db,project,progress=()=>{},options={}) {
     if(!project)return project;
     // Accept the experimental v2 branch as well as the original inline records.
     if(project.storageFormat!==2) {
@@ -87,9 +88,10 @@
     }
     delete project.storageFormat;return project;
   }
-  async function saveUnlocked(db,project,progress=()=>{},stagedImages) {
+  async function saveUnlocked(db,project,progress=()=>{},stagedImages,workspace) {
     const cache=context(db),nextCache=new Map(),written=new Set();
     const manifest={...project,storageFormat:2,cats:project.cats.map(c=>({...c,traits:[]}))};
+    if (workspace?.categoryId) manifest.workspaceCategoryId = workspace.categoryId;
     const total=project.cats.reduce((n,c)=>n+c.traits.length,0);let done=0;
     try {
       const existingKeys = await new Promise((resolve,reject)=>{
@@ -117,24 +119,52 @@
       }
       // Publish only after every image is durable. On failure the previous project survives.
       const keep=references(manifest);
+      let checkpoint = manifest.cats.length ? { savedAt: Date.now(), project: manifest } : null;
+      if (!checkpoint) {
+        const previous = await request(db, recoveryKey);
+        // A project last saved by an older release can be the first recovery copy.
+        const legacy = previous ? null : await request(db, 'current');
+        if (legacy?.cats?.length) checkpoint = { savedAt: null, project: legacy };
+        for (const key of references((previous || checkpoint)?.project)) keep.add(key);
+      }
       await transaction(db,store=>{
         for(const key of existingKeys)if(typeof key==='string' && key.startsWith('image:') && !keep.has(key) && !pins.get(db)?.has(key))store.delete(key);
         store.put(manifest,'current');
+        if (checkpoint) store.put(checkpoint, recoveryKey);
       });
       contexts.set(db,nextCache);
     } catch(error) {
-      // Release this attempt's staged images, but never delete images referenced by current.
-      if(written.size)try{await transaction(db,store=>{
-        const r=store.get('current');r.onsuccess=()=>{const keep=references(r.result);for(const key of written)if(!keep.has(key))store.delete(key);};
-      });}catch{}
+      // Release staged images while protecting both published manifests.
+      if (written.size) try {
+        const keep = references(await request(db, 'current'));
+        for (const key of references((await request(db, recoveryKey))?.project)) keep.add(key);
+        await transaction(db, store => { for (const key of written) if (!keep.has(key)) store.delete(key); });
+      } catch {}
       throw error;
     }
   }
   function locked(fn) {
     return root.navigator?.locks?.request ? root.navigator.locks.request('nft-trait-storage',fn) : fn();
   }
-  const read = (db,progress,options) => locked(()=>readUnlocked(db,progress,options));
-  const save = (db,project,progress,stagedImages) => locked(()=>saveUnlocked(db,project,progress,stagedImages));
+  const read = (db,progress,options) => locked(async () => readProject(db, await request(db,'current'), progress, options));
+  const save = (db,project,progress,stagedImages,workspace) => locked(()=>saveUnlocked(db,project,progress,stagedImages,workspace));
+  const seedRecovery = db => locked(async () => {
+    const exists = await new Promise((resolve, reject) => {
+      const r = db.transaction('projects').objectStore('projects').getKey(recoveryKey);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    if (exists) return;
+    const current = await request(db, 'current');
+    if (current?.storageFormat === 2 && current.cats.length) {
+      await transaction(db, store => store.put({ savedAt: null, project: current }, recoveryKey));
+    }
+  });
+  const readRecovery = db => locked(async () => {
+    const record = await request(db, recoveryKey);
+    if (!record?.project) return null;
+    return { savedAt: record.savedAt, project: await readProject(db, record.project, undefined, { lazy: true }) };
+  });
   async function imageBlob(db,data) {
     if(!isAsset(data))return imageBytes(data);
     const blob=await request(db,data.slice(6));
@@ -171,6 +201,6 @@
     const keys=new Set();for(const project of projects)for(const c of project.cats)for(const t of c.traits)if(isAsset(t.data))keys.add(t.data.slice(6));
     pins.set(db,keys);
   }
-  const api={open,read,save,isAsset,imageBlob,backup,retain,compact,stagePng};
+  const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.TraitStorage=api;
 })(globalThis);

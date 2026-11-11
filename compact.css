@@ -463,6 +463,11 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 .showroom-menu-item small {font-size:.82em;opacity:.67;margin-inline-start:.2em}
 
 .layer-review { margin: 5px 0 8px; }
+.project-recovery:not([hidden]) {display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between}
+.project-recovery-copy {display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+.project-recovery-copy time {color:var(--scheme-muted,var(--muted));margin-inline-start:4px}
+.project-recovery-actions {display:flex;flex-wrap:wrap;gap:6px}
+.project-recovery-actions button {min-height:44px}
 #layerReviewLayers .layer-review:has(> .layer-review-panel[hidden]) {display:none}
 .layer-review-tools { display: flex; justify-content: flex-end; gap: 6px; }
 .layer-review-tools button, .layer-review-counts button { min-height: 44px; }
