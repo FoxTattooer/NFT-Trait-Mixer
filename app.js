@@ -1649,6 +1649,7 @@ function chooseControlAccent(accent) {
   saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
 }
 const portraitWorkspace = window.matchMedia('(max-width:900px) and (orientation:portrait)');
+const landscapeWorkspace = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)');
 let workspaceTabSelected = false, workspaceTabsCollapsed = false;
 let workspaceComparisonSelected = false;
 let workspaceScrollTop = 0, workspaceScrollDistance = 0;
@@ -1660,18 +1661,19 @@ function syncWorkspaceTabs() {
   const portrait = portraitWorkspace.matches;
   const compact = portrait && workspaceTabSelected;
   const collapsed = portrait && workspaceTabsCollapsed;
+  const showComparison = compact || landscapeWorkspace.matches;
   const tabs = $('workspaceTabs'), toggle = $('workspaceTabsToggle');
   const previous = layerBrowseHistory.at(-1);
   const back = mobilePanel === 'layers' && (previous || !$('layerTree').hidden) && (!portrait || compact);
   document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
   tabs.toggleAttribute('data-compact', compact);
   tabs.hidden = collapsed;
-  $('comparisonTab').hidden = !compact;
+  $('comparisonTab').hidden = !showComparison;
   $('workspaceTabsHandle').hidden = !collapsed;
   toggle.hidden = !portrait;
   toggle.setAttribute('aria-expanded', String(!collapsed));
   toggle.querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
-  const selectedPanel = compact && workspaceComparisonSelected ? 'comparison' : mobilePanel;
+  const selectedPanel = showComparison && workspaceComparisonSelected ? 'comparison' : mobilePanel;
   for (const tab of tabs.querySelectorAll('[data-panel]')) {
     const selected = (!portrait || compact) && tab.dataset.panel === selectedPanel;
     tab.classList.toggle('is-active', selected);
@@ -1715,6 +1717,7 @@ window.addEventListener('scroll', event => {
   }
 }, { capture: true, passive: true });
 portraitWorkspace.addEventListener('change', () => setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle')));
+landscapeWorkspace.addEventListener('change', syncWorkspaceTabs);
 $('showroomDialog').addEventListener('close', () => selectWorkspaceTab(false));
 window.addEventListener('resize', resetWorkspaceScroll);
 $('accentGlow').addEventListener('input', event => {

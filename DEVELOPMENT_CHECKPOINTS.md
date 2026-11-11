@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.108 | checkpoint/v0.7.108-landscape-comparison | Duplicita jako čtvrtá položka na šířku, s kompaktními ikonami a popisky |
 | 0.7.107 | checkpoint/v0.7.107-compact-comparison | Čtvrtá ikona ve zmenšené spodní liště otevírá stávající porovnání duplicit v Sestavách |
 | 0.7.106 | checkpoint/v0.7.106-me-accents | Samostatné akcenty Magic Eden pro všechna schémata, kompaktní výběr a tři nové palety |
 | 0.7.105 | checkpoint/v0.7.105-preview-menu | Showroom a Finál v nabídce náhledu hned pod Lookbookem |

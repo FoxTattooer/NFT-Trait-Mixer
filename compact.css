@@ -159,7 +159,19 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
     width:auto!important;height:var(--workspace-height)!important;min-height:0!important;max-height:none!important;
     margin:0!important;padding:0!important;gap:4px 10px!important;overflow:visible!important;
   }
-  body.compact-workspace .workspace-tabs {position:static!important;grid-area:tabs!important;gap:5px!important;background:none!important}
+  body.compact-workspace #workspaceTabs {
+    position:static!important;grid-area:tabs!important;display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr));gap:4px!important;background:none!important;
+    container:workspace-navigation / inline-size;
+  }
+  #workspaceTabs button[data-panel] {
+    min-width:0;padding:2px!important;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;font-size:9px;line-height:1.1;white-space:nowrap;
+  }
+  #workspaceTabs button[data-panel] .icon {width:14px;height:14px;flex:none}
+  @container workspace-navigation (min-width:280px) {
+    #workspaceTabs button[data-panel] {flex-direction:row;gap:4px;font-size:10px}
+  }
   body.compact-workspace .layers-panel,body.compact-workspace .inspector {
     grid-area:settings!important;min-height:0!important;height:100%!important;max-height:100%!important;
     overflow-y:auto!important;overflow-x:hidden!important;

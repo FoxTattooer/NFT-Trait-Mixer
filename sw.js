@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.107';
+const CACHE = PREFIX + 'v0.7.108';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const PDF_DOCUMENTS = new Set([
@@ -12,10 +12,10 @@ const SHELL = [
   './pdf-info.css?build=07101', './pdf-info.js?build=07101',
   './trait-comparison.css?build=07104', './trait-comparison.js?build=07104',
   './lookbook.css?build=07104', './lookbook.js?build=07104',
-  './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0798', './compact.css?build=07107',
-  './schemes.css?build=07106', './drag.js?build=0760', './project.js?build=07103', './diagnostics.js?build=07107',
+  './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0798', './compact.css?build=07108',
+  './schemes.css?build=07106', './drag.js?build=0760', './project.js?build=07103', './diagnostics.js?build=07108',
   './showroom.css?build=0799', './showroom.js?build=07102', SHOWROOM_ART, './art/fox-credit-drop.png',
-  './app.js?build=07107', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
+  './app.js?build=07108', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',
   './psd-file.js', './psd-ui.js?build=0789', './psd-worker.js', './vendor/ag-psd.js',
   './procreate-worker.js?build=0789', './procreate-file.js?build=0789', './procreate-plist.js', './procreate-tiles.js',

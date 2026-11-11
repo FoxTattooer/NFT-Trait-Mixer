@@ -89,7 +89,7 @@ for(const [width,height] of [[852,393],[393,852],[667,375],[375,667]]) {
  assert.equal(w.document.body.classList.contains('landscape-editor-mode'),width>height);
  assert.equal(w.document.getElementById('landscapeShuffle').disabled,false);
  assert.equal(w.document.getElementById('landscapeSnapshot').disabled,false);
- if (width > height) assert(w.document.getElementById('comparisonTab').hidden);
+ assert.equal(w.document.getElementById('comparisonTab').hidden,width<height);
 }
 menus[0].open=true;w.document.getElementById('save').click();
 await waitFor(()=>w.__downloads.length>0);assert.equal(menus[0].open,false);
@@ -626,6 +626,20 @@ get('snapshotsPanel').scrollIntoView = () => { windowTop = 320; };
 click('#workspaceTabs [data-panel="snapshots"]');
 assert.equal(selectedTab(), 'snapshots');
 assert.equal(windowTop, 320, 'Sestavy returns to the top of its panel');
+for (const width of [852, 667]) {
+  w.happyDOM.setWindowSize({width,height:375});
+  w.dispatchEvent(new w.Event('resize'));
+  assert(!get('comparisonTab').hidden);
+  assert.equal(get('comparisonTab').textContent.trim(), 'Duplicita');
+  click('#comparisonTab');
+  assert.equal(selectedTab(), 'comparison');
+  assert.equal(compare.querySelectorAll('article').length, 5);
+  click('#workspaceTabs [data-panel="snapshots"]');
+  assert.equal(selectedTab(), 'snapshots');
+}
+w.happyDOM.setWindowSize({width:375,height:667});
+w.dispatchEvent(new w.Event('resize'));
+assert(!get('comparisonTab').hidden, 'the compact portrait bar still has the shortcut');
 compare.open = false;
 compare.open = true;
 compare.dispatchEvent(new w.Event('toggle'));
