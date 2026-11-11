@@ -237,10 +237,10 @@ click('[data-action="open-settings"]');assert(get('settingsDialog').open);
 assert.equal(get('colorSchemes').open,false,'settings opens at the section list');
 click('#colorSchemes summary');
 assert.equal(get('colorSchemes').open,true,'the color scheme row opens the palette picker');
-assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-group')].map(group =>
-  [...group.querySelectorAll('[data-scheme]')].map(button => button.textContent.trim())
-), [['Magic Eden', 'Magic Eden Blue', 'The Magic Eden New'], ['Jantar', 'Fialový neon', 'Graphite Grey'], ['Icy', 'Deep Water Blue', 'Black & White']]);
-for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']) {
+const schemes = [...get('settingsDialog').querySelectorAll('.scheme-grid [data-scheme]')];
+assert.deepEqual(schemes.map(button => button.textContent.trim()),
+  ['ME', 'ME Blue', 'ME New', 'B&W', 'Jantar', 'Fialový', 'Grafit', 'Icy', 'Deep Water', 'Bordó', 'Oliva', 'Písek']);
+for (const {dataset: {scheme}} of schemes) {
   const selector = `[data-scheme="${scheme}"]`;
   click(selector);
   assert.equal(w.document.body.dataset.colorScheme, scheme);
@@ -252,18 +252,20 @@ for (const scheme of ['blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water'
   assert.equal(w.document.body.dataset.colorScheme, scheme, 'a saved scheme is restored');
 }
 const accent = name => find(`#accentChoices [data-control-accent="${name}"]`);
+click('[data-scheme="graphite-grey"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto');
 accent('red').click();
 assert.equal(accent('red').getAttribute('aria-pressed'), 'true');
 assert.equal(w.localStorage.getItem('nft-control-accent:graphite-grey'), 'red');
 click('[data-scheme="mono"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto', 'accent is saved per colorway');
-assert.equal(get('accentChoices').querySelectorAll('button').length, 9);
-for (const color of ['neon-red', 'neon-lime', 'neon-uv']) {
+assert.equal(get('accentChoices').querySelectorAll('button').length, 16);
+for (const color of ['me', 'me-blue', 'me-new', 'amber', 'bordeaux', 'olive', 'sand', 'neon-red', 'neon-lime', 'neon-uv']) {
   accent(color).click();
   assert.equal(accent(color).getAttribute('aria-pressed'), 'true');
   assert.equal(w.localStorage.getItem('nft-control-accent:mono'), color);
   w.reloadColorScheme();
+  assert.equal(w.document.body.dataset.colorScheme, 'mono', 'choosing an accent does not change the palette');
   assert.equal(w.document.body.dataset.controlAccent, color);
 }
 accent('quiet').click();

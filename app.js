@@ -1568,7 +1568,10 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 
 const colorSchemeKey = 'nft-color-scheme';
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
-const controlAccents = new Set(['auto', 'quiet', 'yellow', 'red', 'ice', 'mint', 'neon-red', 'neon-lime', 'neon-uv']);
+const controlAccents = new Set([
+  'auto', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
+  'mint', 'amber', 'bordeaux', 'olive', 'sand', 'neon-red', 'neon-lime', 'neon-uv',
+]);
 const accentCoverageKey = 'nft-accent-coverage', accentGlowKey = 'nft-accent-glow';
 const schemeAccentPreference = (key, scheme = document.body.dataset.colorScheme) => `${key}:${scheme}`;
 const accentCoverages = new Set(['less', 'normal', 'strong']);
@@ -1595,7 +1598,10 @@ function applyControlAccent(value) {
   }
   applyAccentGlow();
 }
-const colorSchemes = new Set(['pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey']);
+const colorSchemes = new Set([
+  'pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey',
+  'bordeaux', 'olive', 'sand',
+]);
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;

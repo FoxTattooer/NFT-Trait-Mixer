@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.106 | checkpoint/v0.7.106-me-accents | Samostatné akcenty Magic Eden pro všechna schémata, kompaktní výběr a tři nové palety |
 | 0.7.105 | checkpoint/v0.7.105-preview-menu | Showroom a Finál v nabídce náhledu hned pod Lookbookem |
 | 0.7.104 | checkpoint/v0.7.104-lookbook-shody | Ostřejší náhledy traitů z původních PNG, výběr shody a nabídky akcí v aplikaci |
 | 0.7.103 | checkpoint/v0.7.103-lookbook | Lookbook v menu náhledu, listy traitů a sestav, příběhy, šance a návrat do editoru |
