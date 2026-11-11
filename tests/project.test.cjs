@@ -28,6 +28,26 @@ test('hidden duplicates retain their identity and are skipped by rules and shuff
   M.randomize(restored, () => 0);
   assert.equal(restored.selected.a, 'copy');
 });
+test('Lookbook titles, stories and rarity round-trip without renaming source traits', () => {
+  const p = project();
+  Object.assign(p.cats[0].traits[0], { lookbookName: ' Redline ', story: ' Příběh ', rarityWeight: 25 });
+  p.cats[0].traits.push({ id: 'variant', name: 'Jiná vrstva', data: png });
+  p.snapshots[0].lookbookName = 'Přídavek';
+  p.snapshots[0].story = 'Příběh sestavy';
+  const restored = M.normalize(M.clone(p));
+  const [trait] = restored.cats[0].traits;
+  assert.equal(trait.name, 'Červená');
+  assert.equal(trait.lookbookName, 'Redline');
+  assert.equal(trait.story, 'Příběh');
+  assert.equal(restored.snapshots[0].lookbookName, 'Přídavek');
+  assert.equal(restored.snapshots[0].story, 'Příběh sestavy');
+  assert.equal(M.rarityTotal(restored.cats[0].traits), 125);
+  restored.rulesEnabled = false;
+  M.randomize(restored, () => 0.19);
+  assert.equal(restored.selected.a, 'red');
+  M.randomize(restored, () => 0.2);
+  assert.equal(restored.selected.a, 'variant');
+});
 test('review marks round-trip with the project and folder WIP reaches nested traits', () => {
   const p = project();
   const category = p.cats[0];

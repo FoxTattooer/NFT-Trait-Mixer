@@ -19,15 +19,17 @@
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07102">
-  <script src="project.js?build=07102" defer></script>
+  <link rel="stylesheet" href="lookbook.css?build=07103">
+  <script src="project.js?build=07103" defer></script>
   <script src="storage.js?build=0794" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=07102" defer></script>
+  <script src="diagnostics.js?build=07103" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <script src="app.js?build=07102" defer></script>
   <script src="trait-comparison.js?build=07102" defer></script>
+  <script src="lookbook.js?build=07103" defer></script>
   <script src="final-ui.js?build=0788" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
@@ -41,6 +43,7 @@
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></symbol>
     <symbol id="i-psd" viewBox="0 0 24 24"><path d="M13 3H5v18h14V9Zm0 0v6h6M8 17l3-4 2 3 2-2 2 3"/></symbol>
     <symbol id="i-document" viewBox="0 0 24 24"><path d="M13 3H5v18h14V9Zm0 0v6h6M8 13h8m-8 4h8"/></symbol>
+    <symbol id="i-lookbook" viewBox="0 0 24 24"><path d="M12 6C9.5 4 6.5 3.5 3 4.5v14c3.5-1 6.5-.5 9 1.5 2.5-2 5.5-2.5 9-1.5v-14C17.5 3.5 14.5 4 12 6Zm0 0v14M6 9h3m-3 4h3m6-4h3m-3 4h3"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
@@ -100,12 +103,13 @@
         <button type="button" id="landscapeSnapshot" data-action="add-snapshot" disabled><svg class="icon"><use href="#i-bookmark"/></svg>Uložit sestavu</button>
         <button type="button" id="landscapeInfo" aria-expanded="false" aria-controls="landscapeInfoBubble"><svg class="icon"><use href="#i-info"/></svg>Informace o náhledu</button>
         <div id="landscapeInfoBubble" class="preview-info" hidden><span id="landscapeLayerCount">Připraveno</span><span>1024 × 1024</span></div>
+        <button type="button" id="openLookbook" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-lookbook"/></svg><span>Lookbook</span></button>
       </div>
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.102" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.102</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.103" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.103</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -274,6 +278,20 @@
   </dialog>
   <div id="layerContext" class="layer-context" hidden aria-label="Akce vrstvy nebo složky"></div>
   <div id="toast" class="toast" role="status" hidden></div>
+  <dialog id="lookbookDialog" aria-labelledby="lookbookTitle">
+    <header class="lookbook-head">
+      <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
+      <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
+    </header>
+    <div id="lookbookScroll" class="lookbook-scroll">
+      <div class="lookbook-controls">
+        <div class="lookbook-segments" role="group" aria-label="Obsah Lookbooku"><button type="button" data-lookbook-view="traits" aria-pressed="true">Traity</button><button type="button" data-lookbook-view="looks" aria-pressed="false">Sestavy</button></div>
+        <div class="lookbook-segments lookbook-modes" role="group" aria-label="Vzhled stránky"><button type="button" data-lookbook-theme="paper" aria-pressed="true">Papír</button><button type="button" data-lookbook-theme="dark" aria-pressed="false">Tma</button></div>
+      </div>
+      <nav id="lookbookChapters" class="lookbook-chapters" aria-label="Listy Lookbooku"></nav>
+      <div id="lookbookContent" class="lookbook-layout"></div>
+    </div>
+  </dialog>
   <dialog id="categorySortDialog" class="category-sort-dialog" aria-labelledby="categorySortTitle"><div class="category-sort-head"><div><span class="eyebrow">RYCHLÉ ŘAZENÍ</span><h2 id="categorySortTitle">Kategorie <span id="sortCategoryCount"></span></h2></div><button type="button" data-action="close-category-sort" class="icon-button subtle" aria-label="Zavřít">✕</button></div><p class="category-sort-hint">Podrž šest teček a přetáhni kategorii na nové místo.</p><div id="categorySortList" class="category-sort-list" aria-label="Seřadit kategorie"></div><div class="category-sort-foot"><button type="button" data-action="close-category-sort" class="primary">Hotovo</button></div></dialog>
   <dialog id="pdfInfoDialog" aria-labelledby="pdfInfoTitle">
     <header class="pdf-info-header">
@@ -432,6 +450,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.103-lookbook" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.103 – Lookbook</strong><small>Listy traitů a sestav, příběhy, rarita a návrat do editoru z menu náhledu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.102-compare-duplicates" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.102 – Porovnání duplicit</strong><small>Tři karty vedle sebe v Sestavách, posun do strany a akce pro každý trait.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.101-pdf-info" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.101 – PDF info</strong><small>Popis aplikace a mobilní design v prohlížeči PDF s návratem do editoru.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.100-unified-menu-accents" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.100 – Sjednocené akcenty nabídky</strong><small>Všechny ikony v nabídce pod třemi tečkami používají vybranou paletu a rozsah akcentu.</small></span><span class="version-tag">Uloženo</span></a>

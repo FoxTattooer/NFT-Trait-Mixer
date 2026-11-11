@@ -79,6 +79,19 @@
   }
   const TRAIT_NOTE_LIMIT = 240;
   const normalizeTraitNote = value => typeof value === 'string' ? value.trim().slice(0, TRAIT_NOTE_LIMIT).trimEnd() : '';
+  const LOOKBOOK_NAME_LIMIT = 80;
+  const LOOKBOOK_STORY_LIMIT = 1200;
+  const DEFAULT_RARITY_WEIGHT = 100;
+  const MAX_RARITY_WEIGHT = 1000;
+  const normalizeLookbookText = (value, limit) => typeof value === 'string' ? value.trim().slice(0, limit).trimEnd() : '';
+  const validRarityWeight = value => Number.isInteger(value) && value >= 1 && value <= MAX_RARITY_WEIGHT;
+  const rarityWeight = trait => validRarityWeight(trait.rarityWeight) ? trait.rarityWeight : DEFAULT_RARITY_WEIGHT;
+  const rarityTotal = traits => traits.reduce((sum, trait) => sum + (trait.hidden ? 0 : rarityWeight(trait)), 0);
+  function lookbookFields(item) {
+    const lookbookName = normalizeLookbookText(item.lookbookName, LOOKBOOK_NAME_LIMIT);
+    const story = normalizeLookbookText(item.story, LOOKBOOK_STORY_LIMIT);
+    return { ...(lookbookName ? { lookbookName } : {}), ...(story ? { story } : {}) };
+  }
   function exactMatches(rows) {
     const byAsset = new Map();
     // Identical stored PNGs already share a SHA-256 asset key.
@@ -144,7 +157,10 @@
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || typeof t.data !== 'string' || !(allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(t.data) || /^data:image\/png;base64,[A-Za-z0-9+/=\r\n]+$/.test(t.data) && t.data.startsWith('data:image/png;base64,iVBORw0KGgo'))) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}), ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t) };
+        const weight = rarityWeight(t);
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
+          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t),
+          ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
     });
     p.psdImports = {};
@@ -187,7 +203,7 @@
     p.snapshots = (raw.snapshots || []).map(s => {
       if (!s || !s.selected || typeof s.selected !== 'object') fail('Neplatná uložená sestava.');
       const selected = selection(p, s.selected);
-      return { id: unique(s.id || uid()), name: name(s.name, 'Sestava'), selected, selectedExtras: normalizeExtras(p, s.selectedExtras, selected), visibility: Object.fromEntries(p.cats.map(c => [c.id, s.visibility?.[c.id] !== undefined ? s.visibility[c.id] !== false : c.visible])), rulesEnabled: s.rulesEnabled !== undefined ? s.rulesEnabled !== false : p.rulesEnabled };
+      return { id: unique(s.id || uid()), name: name(s.name, 'Sestava'), ...lookbookFields(s), selected, selectedExtras: normalizeExtras(p, s.selectedExtras, selected), visibility: Object.fromEntries(p.cats.map(c => [c.id, s.visibility?.[c.id] !== undefined ? s.visibility[c.id] !== false : c.visible])), rulesEnabled: s.rulesEnabled !== undefined ? s.rulesEnabled !== false : p.rulesEnabled };
     });
     return p;
   }
@@ -246,10 +262,17 @@
   }
   function randomize(p, random = Math.random) {
     p.selectedExtras = {};
-    const pools = p.cats.map(cat => ({ id: cat.id, traits: cat.traits.filter(trait => !trait.hidden) }));
+    const pools = p.cats.map(cat => {
+      let total = 0;
+      const choices = cat.traits.filter(trait => !trait.hidden).map(trait => ({
+        id: trait.id, upper: total += rarityWeight(trait),
+      }));
+      return { id: cat.id, choices, total };
+    });
     for (let i = 0; i < 120; i++) {
-      for (const { id, traits } of pools) {
-        p.selected[id] = traits.length ? traits[Math.min(traits.length - 1, Math.floor(random() * traits.length))].id : null;
+      for (const { id, choices, total } of pools) {
+        const roll = total ? random() * total : 0;
+        p.selected[id] = choices.find(choice => roll < choice.upper)?.id || choices.at(-1)?.id || null;
       }
       if (!conflicts(p).warnings.length) return;
     }
@@ -325,7 +348,10 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, exactMatches, FLAG_COLORS, isFlagColor, workInProgress, moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid, empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText,
+    DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
+    moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
+    empty, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);

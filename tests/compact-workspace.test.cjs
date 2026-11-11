@@ -35,7 +35,7 @@ w.__load=async src=>loadImage(src.startsWith('blob:')?Buffer.from(await urls.get
 w.HTMLCanvasElement.prototype.getContext=function(){this.native ||= createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
 w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
 w.__downloads=[];
-w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js','trait-comparison.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','diagnostics.js','showroom.js','app.js','trait-comparison.js','lookbook.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -633,6 +633,50 @@ assert.equal(compare.querySelectorAll('article').length, 2);
 click('#compareTraits [data-compare-nav="prev-group"]');
 assert.equal(compare.querySelectorAll('article').length, 5);
 compare.open = false;
+// Lookbook lives in the image menu and closing it restores the editor view.
+const bookProject = M.clone(w.inspectState());
+bookProject.snapshots = [{ id: 'look-one', name: 'První sestava', selected: { compare: 'compare-0', other: 'other-1' },
+  selectedExtras: {}, visibility: { compare: true, other: true }, rulesEnabled: true }];
+w.useTestProject(bookProject);
+assert.equal(get('openLookbook').textContent.trim(), 'Lookbook');
+assert(get('landscapePreviewActions').contains(get('openLookbook')));
+const editorSelection = JSON.stringify(w.inspectState().selected);
+const editorPanel = get('appLayout').dataset.mobilePanel;
+const editorPane = get('snapshotsPanel').closest('.inspector');
+editorPane.scrollTop = 57;
+windowTop = 121;
+get('openLookbook').closest('details').open = true;
+click('#openLookbook');
+assert(get('lookbookDialog').open);
+assert(!get('openLookbook').closest('details').open);
+assert.equal(get('lookbookContent').querySelectorAll('[data-lookbook-trait]').length, 4);
+assert.match(find('.lookbook-chance').textContent, /^25\s*%$/);
+find('.lookbook-edit').open = true;
+changeControl('#lookbookContent [name="lookbookName"]', 'Redline');
+changeControl('#lookbookContent [name="story"]', 'Příběh brýlí');
+changeControl('#lookbookContent [name="rarity"]', '20');
+assert.match(find('.lookbook-chance').textContent, /^6,25\s*%$/);
+assert.equal(M.locate(w.inspectState(), 'compare-0').trait.name, 'Kopie 1');
+assert.equal(find('[data-lookbook-title]').textContent, 'Redline');
+click('[data-lookbook-view="looks"]');
+assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava');
+assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Redline/);
+click('[data-lookbook-jump="other-1"]');
+assert.equal(find('[data-lookbook-title]').textContent, 'Doplňky 1');
+click('[data-lookbook-theme="dark"]');
+assert.equal(find('.lookbook-sheet').dataset.paper, 'dark');
+windowTop = 0;
+editorPane.scrollTop = 0;
+click('#lookbookExit');
+await waitFor(() => !get('lookbookDialog').open && !get('lookbookContent').childElementCount);
+assert.equal(windowTop, 121);
+assert.equal(editorPane.scrollTop, 57);
+assert.equal(get('appLayout').dataset.mobilePanel, editorPanel);
+assert.equal(JSON.stringify(w.inspectState().selected), editorSelection);
+await w.runAction('save-project');
+const savedBook = M.normalize(JSON.parse(await w.__downloads.at(-1).blob.text()));
+assert.equal(M.locate(savedBook, 'compare-0').trait.lookbookName, 'Redline');
+assert.equal(M.locate(savedBook, 'compare-0').trait.rarityWeight, 20);
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');
