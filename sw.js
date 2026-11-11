@@ -1,12 +1,17 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.100';
+const CACHE = PREFIX + 'v0.7.101';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
+const PDF_DOCUMENTS = new Set([
+  './docs/NFT-Trait-Mixer-pruvodce-v0.7.97.pdf',
+  './docs/NFT-Trait-Mixer-mobilni-design.pdf',
+].map(path => new URL(path, self.registration.scope).pathname));
 const SHELL = [
+  './pdf-info.css?build=07101', './pdf-info.js?build=07101',
   './', './index.html', ROADMAP, './styles.css?build=0768', './design.css?build=0798', './compact.css?build=0798',
-  './schemes.css?build=07100', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=07100',
+  './schemes.css?build=07100', './drag.js?build=0760', './project.js?build=0793', './diagnostics.js?build=07101',
   './showroom.css?build=0799', './showroom.js?build=0799', SHOWROOM_ART, './art/fox-credit-drop.png',
   './app.js?build=0797', './recent.js?build=0789', './storage.js?build=0794', './final.js?build=0788', './final-ui.js?build=0788',
   './psd-core.js?build=0786', './psd-core.js',
@@ -41,7 +46,8 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== self.location.origin || !url.href.startsWith(self.registration.scope)) return;
-  if (url.pathname.endsWith('.pdf')) return;
+  const isPdf = url.pathname.endsWith('.pdf');
+  if (isPdf && (!PDF_DOCUMENTS.has(url.pathname) || event.request.headers.has('range'))) return;
   // Keep each shell version together, including while a newer version waits.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
@@ -51,14 +57,15 @@ self.addEventListener('fetch', event => {
       if (artwork) return artwork;
     }
     const roadmapURL = new URL(ROADMAP, self.registration.scope);
-    const key = event.request.mode === 'navigate'
+    const key = !isPdf && event.request.mode === 'navigate'
       ? (url.pathname === roadmapURL.pathname ? roadmapURL.href : new URL('./index.html', self.registration.scope).href)
       : event.request;
     // Prefer deployed files when online; retain cached shell for offline usage.
     try {
       const response = await fetch(event.request, { cache: 'no-store' });
       if (response.ok) {
-        await cache.put(key, response.clone());
+        if (isPdf) await cache.put(key, response.clone()).catch(() => {});
+        else await cache.put(key, response.clone());
         return response;
       }
     } catch (_) { /* offline: use cached shell */ }

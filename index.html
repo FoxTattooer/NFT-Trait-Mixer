@@ -17,10 +17,12 @@
   <link rel="stylesheet" href="compact.css?build=0798">
   <link rel="stylesheet" href="schemes.css?build=07100">
   <link rel="stylesheet" href="showroom.css?build=0799">
+  <link rel="stylesheet" href="pdf-info.css?build=07101">
   <script src="project.js?build=0793" defer></script>
   <script src="storage.js?build=0794" defer></script>
   <script src="final.js?build=0788" defer></script>
-  <script src="diagnostics.js?build=07100" defer></script>
+  <script src="diagnostics.js?build=07101" defer></script>
+  <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=0799" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <script src="app.js?build=0797" defer></script>
@@ -100,13 +102,13 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.100" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.100</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.101" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.101</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
           <a href="plan-rozvoje.html" class="header-menu-link"><svg class="icon" aria-hidden="true"><use href="#i-roadmap"/></svg><span>Plán rozvoje</span></a>
-          <a href="docs/NFT-Trait-Mixer-pruvodce-v0.7.97.pdf" target="_blank" rel="noopener" class="header-menu-link"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>PDF průvodce</span></a>
+          <button type="button" id="openPdfInfo" class="subtle" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>PDF info</span></button>
           <button type="button" data-action="open-settings" class="subtle"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Nastavení</button>
           <button id="workspaceTabsToggle" type="button" data-action="toggle-workspace-tabs" class="subtle" aria-controls="workspaceTabs" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>Sbalit spodní lištu</span></button>
           <button id="quickTraitsToggle" type="button" data-action="toggle-quick-traits" class="subtle" aria-controls="quickTraits"><svg class="icon" aria-hidden="true"><use href="#i-thumbnail-strip"/></svg><span>Skrýt rychlý výběr</span></button>
@@ -267,6 +269,34 @@
   <div id="layerContext" class="layer-context" hidden aria-label="Akce vrstvy nebo složky"></div>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="categorySortDialog" class="category-sort-dialog" aria-labelledby="categorySortTitle"><div class="category-sort-head"><div><span class="eyebrow">RYCHLÉ ŘAZENÍ</span><h2 id="categorySortTitle">Kategorie <span id="sortCategoryCount"></span></h2></div><button type="button" data-action="close-category-sort" class="icon-button subtle" aria-label="Zavřít">✕</button></div><p class="category-sort-hint">Podrž šest teček a přetáhni kategorii na nové místo.</p><div id="categorySortList" class="category-sort-list" aria-label="Seřadit kategorie"></div><div class="category-sort-foot"><button type="button" data-action="close-category-sort" class="primary">Hotovo</button></div></dialog>
+  <dialog id="pdfInfoDialog" aria-labelledby="pdfInfoTitle">
+    <header class="pdf-info-header">
+      <h2 id="pdfInfoTitle" tabindex="-1">PDF info</h2>
+      <button type="button" id="pdfExit" class="subtle"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Zpět do editoru</button>
+    </header>
+    <div id="pdfChoices" class="pdf-choices">
+      <button type="button" data-pdf="docs/NFT-Trait-Mixer-pruvodce-v0.7.97.pdf">
+        <svg class="icon" aria-hidden="true"><use href="#i-document"/></svg>
+        <span><strong>Popis aplikace</strong><small>Produktový průvodce a pracovní postupy</small></span>
+        <svg class="icon pdf-choice-next" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+      <button type="button" data-pdf="docs/NFT-Trait-Mixer-mobilni-design.pdf">
+        <svg class="icon" aria-hidden="true"><use href="#i-document"/></svg>
+        <span><strong>Mobilní design</strong><small>Vzhled a ovládání na iPhonu</small></span>
+        <svg class="icon pdf-choice-next" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+    </div>
+    <section id="pdfReader" class="pdf-reader" hidden>
+      <div class="pdf-reader-actions">
+        <button type="button" id="pdfBack" class="subtle"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>PDF info</button>
+        <a id="pdfDownload" download><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Stáhnout PDF</a>
+      </div>
+      <div id="pdfScroll" class="pdf-scroll" tabindex="0" role="region" aria-label="Stránky dokumentu">
+        <p id="pdfStatus" role="status"></p>
+        <ol id="pdfPages" class="pdf-pages"></ol>
+      </div>
+    </section>
+  </dialog>
   <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
     <div class="settings-heading">
       <h2 id="settingsTitle">Nastavení</h2>
@@ -396,6 +426,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.101-pdf-info" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.101 – PDF info</strong><small>Popis aplikace a mobilní design v prohlížeči PDF s návratem do editoru.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.100-unified-menu-accents" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.100 – Sjednocené akcenty nabídky</strong><small>Všechny ikony v nabídce pod třemi tečkami používají vybranou paletu a rozsah akcentu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.99-showroom-controls" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.99 – Ovládání Showroomu</strong><small>Větší šipky, jemnější název varianty a samostatné vyčištění kroku a celé postavy.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.98-guide-and-diagnostics" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.98 – PDF průvodce a Diagnostika</strong><small>Průvodce v horní nabídce a tlačítko Diagnostika v Historii verzí.</small></span><span class="version-tag">Uloženo</span></a>
