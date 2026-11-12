@@ -664,10 +664,14 @@ function positionLayerContext(trigger) {
   const viewport = window.visualViewport;
   const width = viewport?.width || window.innerWidth, height = viewport?.height || window.innerHeight;
   menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, width - menu.offsetWidth - 8))}px`;
-  menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, height - menu.offsetHeight - 8))}px`;
+  const below = rect.bottom + 5, above = rect.top - menu.offsetHeight - 5;
+  const top = below + menu.offsetHeight <= height - 8 ? below : above >= 8 ? above : height - menu.offsetHeight - 8;
+  menu.style.top = `${Math.max(8, top)}px`;
 }
 const layerBulkSelection = new Set();
 const layerStatusLabels = Object.freeze({ wip: 'WIP', fin: 'FIN', trash: 'TRASH', draw: 'DRAW' });
+const layerStatusIcons = Object.freeze({ wip: 'clock', fin: 'check', trash: 'trash', draw: 'brush' });
+const layerSelectionLabel = id => layerBulkSelection.has(id) ? 'Odebrat z výběru' : layerBulkSelection.size ? 'Přidat do výběru' : 'Vybrat položky';
 let layerInventoryView, layerInventoryReturn;
 
 function inventoryTree() {
@@ -712,14 +716,14 @@ function renderLayerBulk() {
     button('open-layer-inventory', 'Výběr', '', '', 'type="button"') +
     button('clear-layer-bulk', 'Zrušit', '', '', 'type="button"');
 }
-function openLayerInventory(trigger) {
+function openLayerInventory(trigger, mode) {
   const dialog = $('layerInventoryDialog');
   const header = trigger.closest('.header-menu');
   layerInventoryReturn = header?.querySelector('summary') || trigger;
   if (header) header.open = false;
   if (!dialog.open) dialog.showModal();
   if (trigger.closest('#editorLayerBulk')) window.TraitInventoryBaseUI.showProject();
-  else window.TraitInventoryBaseUI.open();
+  else window.TraitInventoryBaseUI.open(mode);
 }
 function showInventoryProject() {
   if (!layerInventoryView) layerInventoryView = window.TraitInventory.mount($('layerInventory'), {
@@ -737,6 +741,7 @@ function showInventoryProject() {
         }
       }, 'Rozhodnutí uloženo', true);
     },
+    preview: node => window.TraitInventoryBaseUI.addProjectPreview(node),
     thumbnail: node => !safeMode && node.kind === 'layer' ? layerThumbnail({ id: node.categoryId }, node) : '',
     onRender: () => { renderLayerBulk(); mountThumbnails(); },
   });
@@ -744,16 +749,35 @@ function showInventoryProject() {
 }
 $('layerInventoryDialog').addEventListener('close', () => layerInventoryReturn?.focus({ preventScroll: true }));
 
+function layerMenuIcon(glyph) {
+  return `<span class="layer-menu-icon">${icon(glyph)}</span>`;
+}
+function layerMenuButton(action, label, id, glyph, tone, attributes = '', danger = false) {
+  return button(action, `${layerMenuIcon(glyph)}<span>${label}</span>`, id, '',
+    `type="button" class="layer-menu-row${danger ? ' danger' : ''}" data-tone="${tone}" ${attributes}`);
+}
+function layerMenuDisclosure(label, graphic, tone, palette, actions) {
+  return `<details class="layer-menu-disclosure"><summary class="layer-menu-row" data-tone="${tone}">${graphic}${label}${icon('chevron')}</summary>${palette}${actions || ''}</details>`;
+}
 function layerMarkActions(item, attributes) {
+  const activeMark = Object.keys(layerStatusLabels).find(key => item[key]);
+  const statusLabel = `<span>Označit jako…</span>${activeMark ? `<small class="layer-menu-current" data-mark="${activeMark}">${layerStatusLabels[activeMark]}</small>` : ''}`;
+  const statuses = Object.entries(layerStatusLabels).map(([key, label]) =>
+    button('toggle-layer-status', `${layerMenuIcon(layerStatusIcons[key])}<span>${label}</span>`, item.id, '',
+      `type="button" ${attributes} data-mark="${key}" aria-pressed="${!!item[key]}"`)).join('');
   const options = Object.entries(M.FLAG_COLORS).map(([color, label]) =>
-    button('set-layer-flag', `${flagIcon(color)}<span>${label}</span>`, item.id, '',
+    button('set-layer-flag', `<span class="layer-menu-icon">${flagIcon(color)}</span><span>${label}</span>`, item.id, '',
       `type="button" ${attributes} data-flag="${color}" aria-pressed="${item.flag === color}"`)).join('');
-  const remove = item.flag ? button('set-layer-flag', 'Odebrat vlajku', item.id, '', `type="button" ${attributes} data-flag=""`) : '';
-  return `<details class="layer-flag-options"><summary>${flagIcon(item.flag)}${item.flag ? 'Barva vlajky' : 'Přidat vlajku'}</summary>
-    <div class="layer-flag-palette" role="group" aria-label="Barvy vlajky">${options}</div>${remove}</details>` +
-    `<details class="layer-flag-options"><summary>${icon('check')}Označit</summary><div class="layer-flag-palette inv-mark-palette" role="group" aria-label="Označení položky">${Object.entries(layerStatusLabels).map(([key, label]) =>
-      button('toggle-layer-status', label, item.id, '', `type="button" ${attributes} data-mark="${key}" aria-pressed="${!!item[key]}"`)).join('')}</div></details>` +
-    button('toggle-layer-bulk-item', layerBulkSelection.has(item.id) ? 'Odebrat z výběru' : 'Přidat do hromadného výběru', item.id, 'layers', `type="button" ${attributes}`);
+  const remove = item.flag ? layerMenuButton('set-layer-flag', 'Odebrat vlajku', item.id, 'close', 'flag', `${attributes} data-flag=""`) : '';
+  return `<section class="layer-menu-section" aria-label="Označení a výběr">
+    ${layerMenuDisclosure(statusLabel, layerMenuIcon('tag'), 'mark', `<div class="layer-menu-palette" role="group" aria-label="Označit jako">${statuses}</div>`)}
+    ${layerMenuButton('toggle-layer-bulk-item', layerSelectionLabel(item.id), item.id, 'select-items', 'select', `${attributes} aria-pressed="${layerBulkSelection.has(item.id)}"`)}
+    ${layerMenuDisclosure(`<span>${item.flag ? 'Barva vlajky' : 'Přidat vlajku'}</span>`, `<span class="layer-menu-icon">${flagIcon(item.flag)}</span>`, 'flag',
+      `<div class="layer-menu-palette layer-flag-palette" role="group" aria-label="Barvy vlajky">${options}</div>`, remove)}
+  </section>`;
+}
+function layerMenuMove(label, select) {
+  return `<label class="layer-menu-move" data-tone="arrange"><span>${layerMenuIcon('folder')}${label}</span>${select}</label>`;
 }
 function openLayerContext(trigger, id) {
   if (layerContextTrigger === trigger) { closeLayerContext(true); return; }
@@ -763,47 +787,50 @@ function openLayerContext(trigger, id) {
   const { folders, assignments } = organizerFolders(c.id);
   const attributes = `data-category="${esc(c.id)}"`;
   const kind = trigger.dataset.kind;
+  const item = kind === 'category' ? c : kind === 'folder' ? folders.find(folder => folder.id === id) : c.traits.find(trait => trait.id === id);
+  if (!item) return;
   const markAttributes = `${attributes} data-kind="${kind}"`;
-  if (kind === 'category') {
-    menu.innerHTML = button('rename-category', 'Přejmenovat', id, 'edit') + layerMarkActions(c, markAttributes);
-  } else if (kind === 'folder') {
-    const folder = folders.find(item => item.id === id);
-    if (!folder) return;
+  const rename = { category: 'rename-category', folder: 'rename-organizer-folder', trait: 'rename-trait' }[kind];
+  let edits = layerMenuButton(rename, 'Přejmenovat', id, 'edit', 'edit', kind === 'folder' ? attributes : '');
+  let other = '';
+  if (kind === 'folder') {
     const excluded = organizerDescendants(folders, id);
-    menu.innerHTML = button('save-folder-final', 'Uložit do Finálu', id, 'lock', attributes) +
-      button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
-      button('rename-organizer-folder', 'Přejmenovat', id, 'edit', attributes) +
-      `<label>Přesunout složku<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(f => !excluded.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` +
-      layerMarkActions(folder, markAttributes) +
-      button('delete-organizer-folder', 'Smazat složku', id, 'trash', `${attributes} class="danger"`);
-  } else {
-    const trait = c.traits.find(item => item.id === id);
-    if (!trait) return;
+    edits += layerMenuButton('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', 'arrange', attributes) +
+      layerMenuMove('Přesunout složku', `<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(folder => !excluded.has(folder.id)).map(folder => `<option value="${esc(folder.id)}" ${item.parentId === folder.id ? 'selected' : ''}>${esc(organizerPath(folders, folder.id))}</option>`).join('')}</select>`);
+    other = layerMenuButton('save-folder-final', 'Uložit do Finálu', id, 'lock', 'visibility', attributes) +
+      layerMenuButton('delete-organizer-folder', 'Smazat složku', id, 'trash', 'delete', attributes, true);
+  } else if (kind === 'trait') {
     const siblings = M.traitSiblings(state, c.id, id);
-    const index = siblings.findIndex(t => t.id === id);
-    menu.innerHTML = button('rename-trait', 'Přejmenovat', id, 'edit') +
-      button('reorder-trait-up', 'Posunout výš', id, 'up', index === 0 ? 'disabled' : '') +
-      button('reorder-trait-down', 'Posunout níž', id, 'down', index === siblings.length - 1 ? 'disabled' : '') +
-      (folders.length ? `<label>Přesunout do složky<select data-action="assign-trait-folder" ${attributes} data-trait-id="${esc(id)}"><option value="">Bez složky</option>${folders.map(f => `<option value="${esc(f.id)}" ${assignments[id] === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` : '') +
-      (state.cats.length > 1 ? `<label>Přesunout do kategorie${traitCategorySelect(trait, c.id)}</label>` : '') +
-      layerMarkActions(trait, markAttributes) +
-      button('toggle-hidden-trait', trait.hidden ? 'Zobrazit trait' : 'Skrýt trait', id, trait.hidden ? 'eye' : 'eye-off') +
-      button('delete-trait', 'Smazat', id, 'trash', 'class="danger"');
+    const index = siblings.findIndex(trait => trait.id === id);
+    edits += `<div class="layer-menu-pair" role="group" aria-label="Pořadí traitu">${
+      layerMenuButton('reorder-trait-up', 'Výš', id, 'up', 'arrange', `aria-label="Posunout výš" ${index === 0 ? 'disabled' : ''}`)}${
+      layerMenuButton('reorder-trait-down', 'Níž', id, 'down', 'arrange', `aria-label="Posunout níž" ${index === siblings.length - 1 ? 'disabled' : ''}`)}</div>` +
+      (folders.length ? layerMenuMove('Přesunout do složky', `<select data-action="assign-trait-folder" ${attributes} data-trait-id="${esc(id)}"><option value="">Bez složky</option>${folders.map(folder => `<option value="${esc(folder.id)}" ${assignments[id] === folder.id ? 'selected' : ''}>${esc(organizerPath(folders, folder.id))}</option>`).join('')}</select>`) : '') +
+      (state.cats.length > 1 ? layerMenuMove('Přesunout do kategorie', traitCategorySelect(item, c.id, 'Vybrat kategorii…')) : '');
+    other = layerMenuButton('toggle-hidden-trait', item.hidden ? 'Zobrazit trait' : 'Skrýt trait', id, item.hidden ? 'eye' : 'eye-off', 'visibility') +
+      layerMenuButton('delete-trait', 'Smazat', id, 'trash', 'delete', '', true);
   }
+  menu.innerHTML = `<div class="layer-menu-title" title="${esc(item.name)}">${layerMenuIcon(kind === 'trait' ? 'layers' : 'folder')}<strong>${esc(item.name)}</strong></div>` +
+    layerMarkActions(item, markAttributes) + `<section class="layer-menu-section" aria-label="Úpravy a přesuny">${edits}</section>` +
+    (other ? `<section class="layer-menu-section" aria-label="Další akce">${other}</section>` : '');
   layerContextTrigger = trigger;
   trigger.setAttribute('aria-expanded', 'true');
   menu.hidden = false;
   menu.scrollTop = 0;
   positionLayerContext(trigger);
-  for (const details of menu.querySelectorAll('.layer-flag-options')) details.addEventListener('toggle', event => {
+  const disclosures = [...menu.querySelectorAll('.layer-menu-disclosure')];
+  for (const details of disclosures) details.addEventListener('toggle', () => {
     if (menu.hidden || layerContextTrigger !== trigger) return;
+    if (details.open) {
+      for (const other of disclosures) if (other !== details) other.open = false;
+    }
     positionLayerContext(trigger);
-    if (event.target.open) {
-      const palette = event.target.querySelector('.layer-flag-palette');
+    if (details.open) {
+      const palette = details.querySelector('.layer-menu-palette');
       menu.scrollTop += Math.max(0, palette.getBoundingClientRect().bottom - menu.getBoundingClientRect().bottom + 6);
     }
   });
-  menu.querySelector('button')?.focus({ preventScroll: true });
+  menu.querySelector('summary')?.focus({ preventScroll: true });
 }
 function dragHandle(kind, id, categoryId, label) {
   return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
@@ -931,9 +958,9 @@ function renderOrganizerFolderRows(category, folders, assignments, marks, parent
     </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, marks, folder.id, depth + 1) : ''}`;
   }).join('');
 }
-function traitCategorySelect(trait, categoryId) {
+function traitCategorySelect(trait, categoryId, placeholder = 'Přesunout do…') {
   const targets = state.cats.filter(c => c.id !== categoryId);
-  return targets.length ? `<select class="trait-category-select" data-action="move-trait-category" data-trait-id="${esc(trait.id)}" aria-label="Přesunout ${esc(trait.name)} do jiné kategorie"><option value="">Přesunout do…</option>${targets.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : '';
+  return targets.length ? `<select class="trait-category-select" data-action="move-trait-category" data-trait-id="${esc(trait.id)}" aria-label="Přesunout ${esc(trait.name)} do jiné kategorie"><option value="">${esc(placeholder)}</option>${targets.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>` : '';
 }
 function traitNoteEditor(trait) {
   return `<details class="trait-note" id="trait-note-${esc(trait.id)}">
@@ -2004,6 +2031,7 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'open-layer-inventory': openLayerInventory(element); break;
+    case 'open-inventory-proposals': openLayerInventory(element,'review'); break;
     case 'toggle-layer-bulk-item':
       if (layerBulkSelection.has(id)) layerBulkSelection.delete(id);
       else if (layerItemIndex().has(id)) layerBulkSelection.add(id);
@@ -2499,7 +2527,8 @@ $('traits').addEventListener('submit', async event => {
 document.addEventListener('click', event => {
   for (const menu of workspaceToolMenus) if (menu.open && !menu.contains(event.target)) menu.open = false;
   const target = event.target.closest('[data-action]');
-  if (target?.dataset.action !== 'open-layer-menu' && (!$('layerContext').contains(event.target) || target?.tagName === 'BUTTON')) closeLayerContext();
+  const insideLayerMenu = $('layerContext').contains(event.target);
+  if (target?.dataset.action !== 'open-layer-menu' && (!insideLayerMenu || target?.tagName === 'BUTTON')) closeLayerContext(insideLayerMenu);
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
 });
 for (const id of ['layerReviewCategory', 'layerReviewFolder', 'layerReviewOrder']) $(id).addEventListener('change', event => {

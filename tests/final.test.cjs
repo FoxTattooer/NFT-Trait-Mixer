@@ -132,3 +132,12 @@ test('FIN source follows category and folder marks while omitting WIP, DRAW and 
   active.cats[0].traits[0].trash=true;
   assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
 });
+
+test('the empty ZIP scaffold creates the exact hierarchy for configured folder paths', async () => {
+  const archive=await Final.zipFolderTemplate('Finál',['Hlava/Účesy/Afro','Hlava/Účesy/Goku','Oblečení']);
+  const reader=new zip.ZipReader(new zip.BlobReader(archive),{ useWebWorkers:false });
+  const entries=await reader.getEntries();
+  assert(entries.every(entry=>entry.directory));
+  assert.deepEqual(entries.map(entry=>entry.filename),['Finál/','Finál/Hlava/','Finál/Hlava/Účesy/','Finál/Hlava/Účesy/Afro/','Finál/Hlava/Účesy/Goku/','Finál/Oblečení/']);
+  await reader.close();
+});

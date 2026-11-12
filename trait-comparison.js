@@ -127,7 +127,7 @@
 
   function markChoices(trait) {
     return Object.entries(layerStatusLabels).map(([key, label]) => choice(key, label, !!trait[key])).join('') +
-      choice('bulk', layerBulkSelection.has(trait.id) ? 'Odebrat z výběru' : 'Přidat do hromadného výběru') +
+      choice('bulk', layerSelectionLabel(trait.id)) +
       Object.entries(M.FLAG_COLORS).map(([color, name]) =>
         choice(color, `${flagIcon(color)} <span>${name} vlajka</span>`, trait.flag === color)).join('') +
       (trait.flag ? choice('clear', 'Odebrat vlajku') : '');
@@ -148,7 +148,7 @@
     const { cat, trait } = found;
     const kind = control.dataset.compareAction;
     actionOrigin = { id: trait.id, kind };
-    $('compareActionTitle').textContent = { move: 'Přesunout', mark: 'Označit jako', info: 'Info o vrstvě' }[kind];
+    $('compareActionTitle').textContent = { move: 'Přesunout', mark: 'Označit jako…', info: 'Info o vrstvě' }[kind];
     $('compareActionTrait').textContent = trait.name;
     actionOptions.innerHTML = kind === 'move' ? moveChoices(cat, trait) : kind === 'mark' ? markChoices(trait) : infoDetails(cat, trait);
     actionDialog.showModal();

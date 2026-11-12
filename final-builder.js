@@ -1,7 +1,8 @@
 /* Step-by-step review of local PNGs or the editor's FIN layers. */
 'use strict';
 let finalDraft, finalDraftLoad, finalDraftSource = 'fin', finalDraftIndex = 0, finalDraftLimit = 36;
-let finalDraftSettings = false, finalDraftURL, finalDraftStatus = '';
+let finalDraftSettings = false, finalDraftURL, finalDraftStatus = '', finalDraftPreviewOpen = false;
+const finalDraftPreviewChoices = new Map();
 const finalDraftPreviews = new Map();
 const draftRootInput = $('finalDraftRootInput');
 
@@ -37,9 +38,9 @@ function clearFinalDraftDownload() {
   setTimeout(() => URL.revokeObjectURL(url),60000);
   finalDraftURL = null;
 }
-function draftPreview(row,used) {
+function draftPreview(row,used,full = false) {
   if (safeMode) return '';
-  if (!row.blob) return layerThumbnail(row.category,row.trait);
+  if (!row.blob) return full ? `<img ${imageAttributes(row.trait.data)} alt="" decoding="async">` : layerThumbnail(row.category,row.trait);
   used.add(row.blob);
   if (!finalDraftPreviews.has(row.blob)) finalDraftPreviews.set(row.blob,URL.createObjectURL(row.blob));
   return `<img src="${esc(finalDraftPreviews.get(row.blob))}" alt="" loading="lazy" decoding="async">`;
@@ -54,9 +55,48 @@ function renderFinalDraftSettings() {
     <p class="helper"><code>HAIRS = Hlava/Účesy</code> načte PNG ze složky i jejích podsložek. Tečka označuje kořen.</p>
     <label>Vlastní cesty jednotlivých položek<textarea name="slots" rows="4" spellcheck="false" autocapitalize="off" placeholder="HAIRS / Cowboy Afro = Výjimky/Cowboy Afro.png">${esc(slots)}</textarea></label>
     <p class="helper">U položky zadej přímo PNG nebo složku, kde je jedno PNG či soubor pojmenovaný podle položky.</p>
+    <div class="final-draft-settings-actions"><button type="button" class="subtle" data-final-draft="use-inventory">Převzít strom ze Soupisu</button><button type="button" class="subtle" data-final-draft="folder-template">Stáhnout složky ZIP</button></div>
     <div class="final-draft-settings-actions"><button type="button" class="subtle" data-final-draft="settings">Zpět</button><button type="submit" class="primary">Potvrdit cesty</button></div>
   </form>`;
 }
+function finalDraftPreviewKey(group) { return `${finalDraftSource}:${group.id}`; }
+function renderFinalDraftPreview(groups,group,excluded,used) {
+  const chosen = candidate => {
+    const choice = finalDraftPreviewChoices.get(finalDraftPreviewKey(candidate));
+    if (choice === 'none') return null;
+    return candidate.rows.find(row => !excluded.has(row.id) && row.id === choice) || candidate.rows.find(row => !excluded.has(row.id));
+  };
+  const rendered = finalDraftPreviewOpen ? [...groups].reverse().map(chosen).filter(Boolean) : [];
+  const select = group && finalDraftPreviewOpen ? `<label>Vrstva v náhledu · ${esc(group.name)}<select id="finalDraftPreviewLayer" data-preview-key="${esc(finalDraftPreviewKey(group))}">
+    <option value="auto">První zahrnutá vrstva</option><option value="none" ${finalDraftPreviewChoices.get(finalDraftPreviewKey(group)) === 'none' ? 'selected' : ''}>Skrýt kategorii v náhledu</option>${group.rows.filter(row => !excluded.has(row.id)).map(row => `<option value="${esc(row.id)}" ${finalDraftPreviewChoices.get(finalDraftPreviewKey(group)) === row.id ? 'selected' : ''}>${esc(row.name)}</option>`).join('')}</select></label>` : '';
+  return `<details id="finalDraftPreview" class="final-draft-preview" ${finalDraftPreviewOpen ? 'open' : ''}><summary>Náhled Finálu</summary>${finalDraftPreviewOpen ? `<div class="inventory-composition" aria-label="Složený náhled Finálu">${rendered.length ? rendered.map(row => draftPreview(row,used,true)).join('') : '<p>V náhledu zatím nejsou zahrnuté vrstvy.</p>'}</div>${select}<p class="helper">Náhled skládá jednu zahrnutou vrstvu z každé kategorie. ZIP obsahuje celý zaškrtnutý výběr.</p>` : ''}</details>`;
+}
+async function finalDraftFolderAction(action, control) {
+  const form = $('finalDraftSettingsForm');
+  const categories = form.elements.namedItem('categories');
+  control.disabled = true;
+  $('finalStatus').textContent = 'Čtu strom ze Soupisu…';
+  try {
+    const nodes = await window.TraitInventoryBaseUI.readTree();
+    const layout = window.TraitInventoryBase.folderLayout(nodes,TraitFinal.fileName);
+    const current = categories.value.trim() ? TraitFinal.parseLayout(categories.value,'').categories : [];
+    if (!current.length && action === 'folder-template') throw new Error('Nejdřív přidej alespoň jednu kategorii.');
+    const byName = new Map(layout.map(category => [category.name,category]));
+    if (action === 'use-inventory') {
+      const known = new Map(current.map(category => [category.name,category]));
+      const complete = [...layout.map(category => known.get(category.name) || category),...current.filter(category => !byName.has(category.name))];
+      categories.value = complete.map(({ name,path }) => `${name} = ${path || '.'}`).join('\n');
+      $('finalStatus').textContent = 'Strom převzat. Cesty můžeš upravit a potvrdit.';
+    } else {
+      const paths = current.flatMap(category => [category.path,...(byName.get(category.name)?.folders || []).map(folder => [category.path,folder].filter(Boolean).join('/'))]);
+      const name = state.name + ' – Složky Finálu';
+      download(await TraitFinal.zipFolderTemplate(name,paths),TraitFinal.fileName(name)+'.zip');
+      $('finalStatus').textContent = 'Struktura složek připravena.';
+    }
+  } catch (error) { $('finalStatus').textContent = error.message; }
+  finally { control.disabled = false; }
+}
+
 function renderFinalBuilder() {
   const draft = finalDraftData(), groups = finalDraftCategories(), excluded = new Set(draft.excluded[finalDraftSource] || []);
   const selected = group => group.rows.reduce((count,row) => count + !excluded.has(row.id),0);
@@ -75,12 +115,18 @@ function renderFinalBuilder() {
         <label><span>Kategorie ${finalDraftIndex+1} / ${groups.length}</span><select id="finalDraftCategory" aria-label="Přejít na kategorii">${groups.map((entry,index) => `<option value="${index}" ${index===finalDraftIndex ? 'selected' : ''}>${esc(entry.name)} · ${selected(entry)} PNG</option>`).join('')}</select></label>
         <button type="button" class="icon-button subtle" data-final-draft="next" aria-label="Další kategorie" ${finalDraftIndex+1 < groups.length ? '' : 'disabled'}>›</button></div>
         ${group.path !== undefined ? `<p class="helper">Cesta kategorie · <code>${esc(group.path || '.')}</code></p>` : ''}
+        ${renderFinalDraftPreview(groups,group,excluded,used)}
         ${group.unresolved?.length ? `<details class="final-draft-missing"><summary>${group.unresolved.length} položek čeká na PNG</summary><ul>${group.unresolved.map(slot => `<li>${esc(slot.name)} · <code>${esc(slot.path || '.')}</code></li>`).join('')}</ul></details>` : ''}
         ${list.length ? `<div class="final-draft-grid">${list.map(row => `<label class="final-draft-card"><span class="final-draft-art">${draftPreview(row,used)}</span><span class="final-draft-card-label"><input type="checkbox" data-final-draft-row="${esc(row.id)}" ${excluded.has(row.id) ? '' : 'checked'}><span><strong>${esc(row.name)}</strong>${row.path ? `<small>${esc(row.path)}</small>` : ''}</span></span></label>`).join('')}</div>` : `<p class="helper">${finalDraftSource === 'fin' ? 'V této kategorii zatím nejsou vrstvy pro export. Označ vrstvy nebo jejich složku jako FIN.' : draft.layout ? 'V této cestě zatím nejsou načtená PNG.' : 'V Nastavení Finálu nejdřív potvrď cesty kategorií.'}</p>`}
         ${group.rows.length > list.length ? '<button type="button" class="subtle" data-final-draft="more">Další vrstvy</button>' : ''}` : '<p class="helper">Projekt zatím nemá kategorie. Vrstvy můžeš také načíst ze složek PNG.</p>'}
       <div class="final-draft-export"><strong>${total} PNG k exportu</strong>${finalDraftURL ? `<a href="${esc(finalDraftURL.url)}" download="${esc(finalDraftURL.name)}">Stáhnout ZIP</a>` : `<button type="button" class="primary" data-final-draft="export" ${total ? '' : 'disabled'}>Připravit ZIP</button>`}</div>`}
     </section>`;
   $('finalStatus').textContent = finalDraftStatus;
+  const preview = $('finalDraftPreview');
+  preview?.addEventListener('toggle',() => {
+    if (!preview.isConnected || preview.open === finalDraftPreviewOpen) return;
+    finalDraftPreviewOpen = preview.open; renderFinalBuilder();
+  });
   clearFinalDraftPreviews(used);
   mountThumbnails();
 }
@@ -119,6 +165,7 @@ finalDialog.addEventListener('click', event => {
   const control = event.target.closest('[data-final-draft]');
   if (!control || busy || finalView !== 'compose') return;
   const action = control.dataset.finalDraft;
+  if (action === 'use-inventory' || action === 'folder-template') { void finalDraftFolderAction(action,control); return; }
   if (action === 'pick-root') { draftRootInput.click(); return; }
   if (action === 'export') {
     finalBuilderWork(async () => {
@@ -166,6 +213,10 @@ finalDialog.addEventListener('submit', event => {
 finalDialog.addEventListener('change', event => {
   const control = event.target;
   if (busy || finalView !== 'compose') return;
+  if (control.id === 'finalDraftPreviewLayer') {
+    finalDraftPreviewChoices.set(control.dataset.previewKey,control.value); renderFinalBuilder();
+    $('finalDraftPreviewLayer')?.focus({preventScroll:true}); return;
+  }
   if (control.id === 'finalDraftCategory') {
     finalDraftIndex = Number(control.value); finalDraftLimit = 36; renderFinalBuilder();
     $('finalDraftCategory').focus({preventScroll:true}); return;
@@ -188,5 +239,5 @@ draftRootInput.addEventListener('change', () => {
 });
 finalDialog.addEventListener('close', () => {
   clearFinalDraftPreviews(); clearFinalDraftDownload(); finalDraftStatus = '';
-  finalDraftIndex = 0; finalDraftLimit = 36; finalDraftSettings = false;
+  finalDraftIndex = 0; finalDraftLimit = 36; finalDraftSettings = false; finalDraftPreviewOpen = false;
 });

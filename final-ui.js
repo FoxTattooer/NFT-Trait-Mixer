@@ -64,7 +64,7 @@ function renderFinalMarked(category, edit) {
       <span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
       ${path ? `<small>${esc(path)}</small>` : ''}${item.note ? `<small>${esc(item.note)}</small>` : ''}</span>${editButton(item)}
     </div>`;
-  }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a v nabídce „Označit“ vyber FIN.'}</p>` : '');
+  }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a v nabídce „Označit jako…“ vyber FIN.'}</p>` : '');
   $('finalMore').hidden = items.length <= finalLimit;
   mountThumbnails();
 }

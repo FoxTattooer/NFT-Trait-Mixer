@@ -334,8 +334,20 @@
     return { project,images };
   }
 
+  function zipFolderTemplate(title, paths) {
+    const root = fileName(title) + '/', empty = new Blob([]), names = new Set([root]);
+    for (const path of paths) {
+      let name = root;
+      for (const part of relativePath(path || '.').split('/').filter(Boolean)) {
+        name += fileName(part) + '/';
+        names.add(name);
+      }
+    }
+    return zipStored([...names].map(name => ({ name,blob:empty })));
+  }
+
   const api = { open, snapshot, save, list, load, image, fileName, zipProject, loadWorkspace, saveWorkspace,
-    parseLayout, directoryFiles, folderCategories, finCategories, draftProject };
+    parseLayout, directoryFiles, folderCategories, finCategories, draftProject, zipFolderTemplate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitFinal = api;
 })(globalThis);

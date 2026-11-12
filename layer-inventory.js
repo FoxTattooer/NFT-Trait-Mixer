@@ -9,7 +9,7 @@
   const folderIcon = '<span class="inv-folder-icon" aria-hidden="true"></span>';
 
   function mount(root, options) {
-    const { read, update, selected = new Set(), thumbnail, onRender, edit, manage, showPlans = manage } = options;
+    const { read, update, selected = new Set(), thumbnail, onRender, edit, preview, propose, manage, showPlans = manage } = options;
     const expanded = new Map((options.initialOpen || []).map(id => [id,true]));
     let query = '', filter = '', decision = '', activeMenu = '', selectionMode = false;
     let branches = [], entries = [], current = new Map();
@@ -17,7 +17,7 @@
       <div class="inv-controls"><label class="inv-search"><span>Hledat v soupisu</span><input type="search" placeholder="Název, třeba Cowboy…"></label>
         <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Doložené</option><option value="plan">K ověření</option><option value="option">Volby</option><option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
         ${manage ? `<label class="inv-decisions"><span>Rozhodnutí</span><select><option value="">Všechna</option><option value="keep">Ponechat</option><option value="todo">Dodělat</option><option value="skip">Není třeba</option><option value="undecided">Nerozhodnuto</option></select></label>` : ''}
-        <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false">Hromadný výběr</button></div>
+        <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false">Vybrat položky</button></div>
       <div class="inv-bulk" aria-label="Akce pro vybrané položky" hidden></div><div class="inv-tree"></div>`;
     const metrics = root.querySelector('.inv-metrics');
     const bulk = root.querySelector('.inv-bulk');
@@ -55,9 +55,11 @@
       const id = escape(node.id);
       const isOpen = activeMenu === node.id;
       const group = node.kind === 'group';
-      const actions = group ? '' : `<span>Označit</span><div class="inv-mark-palette">${Object.entries(marks).map(([key, label]) => `<button type="button" data-inv="mark" data-id="${id}" data-mark="${key}" aria-pressed="${!!node[key]}">${label}</button>`).join('')}</div><button type="button" data-inv="select" data-id="${id}">${selected.has(node.id) ? 'Odebrat z výběru' : 'Přidat do výběru'}</button>`;
+      const actions = group ? '' : `<span>Označit jako…</span><div class="inv-mark-palette">${Object.entries(marks).map(([key, label]) => `<button type="button" data-inv="mark" data-id="${id}" data-mark="${key}" aria-pressed="${!!node[key]}">${label}</button>`).join('')}</div><button type="button" data-inv="select" data-id="${id}">${selected.has(node.id) ? 'Odebrat z výběru' : 'Přidat do výběru'}</button>`;
       const edits = edit ? `<button type="button" data-inv="edit" data-id="${id}">Upravit položku</button>${['category','folder','group'].includes(node.kind) ? `<button type="button" data-inv="add" data-id="${id}">Přidat do složky</button>` : ''}` : '';
-      return `<div class="inv-menu-host"><button type="button" class="inv-more" data-inv="menu" data-id="${id}" aria-label="Možnosti · ${escape(node.name)}" aria-expanded="${isOpen}">•••</button>${isOpen ? `<div class="inv-menu">${edits}${actions}</div>` : ''}</div>`;
+      const previewAction = preview && node.kind === 'layer' && (node.image || node.categoryId) ? `<button type="button" data-inv="preview" data-id="${id}">Přidat do náhledu</button>` : '';
+      const proposalAction = propose && ['layer','plan','option'].includes(node.kind) ? `<button type="button" data-inv="propose" data-id="${id}">Navrhnout změnu</button>` : '';
+      return `<div class="inv-menu-host"><button type="button" class="inv-more" data-inv="menu" data-id="${id}" aria-label="Možnosti · ${escape(node.name)}" aria-expanded="${isOpen}">•••</button>${isOpen ? `<div class="inv-menu">${edits}${previewAction}${proposalAction}${actions}</div>` : ''}</div>`;
     }
     function image(node) {
       if (node.image) return `<img alt="" loading="lazy" decoding="async" src="${escape(node.image)}">`;
@@ -72,7 +74,7 @@
       const details = [node.note, (node.aliases || []).length && `Jiné názvy · ${node.aliases.join(' / ')}`].filter(Boolean).join(' ');
       return `<article class="inv-card ${art ? 'has-art' : 'text-card'} ${selected.has(node.id) ? 'inv-selected' : ''}" data-kind="${node.kind}">
         ${art ? `<div class="inv-art">${art}</div>` : ''}<div class="inv-card-copy"><div class="inv-card-title">${checkbox(node)}<h3>${escape(node.name)}</h3>${menu(node)}</div>
-        <div class="inv-card-meta"><span>${kinds[node.kind]}</span>${markPills(node)}</div>
+        <div class="inv-card-meta"><span>${kinds[node.kind]}</span>${edit && node.kind === 'layer' && !art ? '<span>Bez miniatury</span>' : ''}${markPills(node)}</div>
         ${details ? `<p>${escape(details)}</p>` : ''}
         ${manage ? decisionControl(node) : ''}</div></article>`;
     }
@@ -156,6 +158,8 @@
         setSelected(id,!selected.has(id)); selectionMode = true;
       } else if ((action === 'edit' || action === 'add') && node && edit) {
         activeMenu = ''; render(); edit(action,node); return;
+      } else if (node && (action === 'preview' && preview || action === 'propose' && propose)) {
+        activeMenu = ''; render(); (action === 'preview' ? preview : propose)(node); return;
       } else if (action === 'mark' && node) {
         update([id],mark,!node[mark]);
       } else if (action === 'apply') {

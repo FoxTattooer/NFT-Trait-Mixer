@@ -31,17 +31,19 @@
         return entry;
       });
     }
-    return { format, nodes:visit(raw.nodes) };
+    const nodes = visit(raw.nodes);
+    const suggestions = (Array.isArray(raw.suggestions) ? raw.suggestions : []).map(normalizeSuggestion).filter(Boolean);
+    return { format, nodes, suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
   }
   const pathNodes = (nodes, path = '') => nodes.map(node => {
     const next = path ? `${path} / ${node.name}` : node.name;
     return { ...node, path:next, ...(isBranch(node) ? { children:pathNodes(node.children,next) } : {}) };
   });
-  function locate(nodes,id) {
+  function locate(nodes,id,parent = null) {
     for (const item of nodes) {
-      if (item.id === id) return { item, siblings:nodes };
+      if (item.id === id) return { item, siblings:nodes,parent };
       if (isBranch(item)) {
-        const found = locate(item.children,id);
+        const found = locate(item.children,id,item);
         if (found) return found;
       }
     }
@@ -80,6 +82,45 @@
     if (image === '') delete item.image;
     else if (isThumbnail(image)) item.image = image;
     return item.id;
+  }
+  function normalizeSuggestion(raw) {
+    const id = label(raw?.id,200), name = label(raw?.name,200);
+    if (!id || !name || !['layer','plan','option'].includes(raw.kind)) return null;
+    return { id,name,kind:raw.kind,reason:label(raw.reason,1000),parentId:label(raw.parentId,200),targetId:label(raw.targetId,200),
+      status:['approved','dismissed'].includes(raw.status) ? raw.status : 'pending', ...(isThumbnail(raw.image) ? { image:raw.image } : {}) };
+  }
+  function includeSuggestions(base, suggestions) {
+    const known = new Set(base.suggestions.map(item => item.id));
+    for (const raw of suggestions) {
+      const suggestion = normalizeSuggestion(raw);
+      if (!suggestion || known.has(suggestion.id)) continue;
+      base.suggestions.push(suggestion);
+      known.add(suggestion.id);
+    }
+  }
+  function approveSuggestion(base, id, { name, parentId, targetId }) {
+    const suggestion = base.suggestions.find(item => item.id === id && item.status === 'pending');
+    const parent = locate(base.nodes,parentId)?.item;
+    const target = targetId ? locate(base.nodes,targetId) : null;
+    if (!suggestion) throw new Error('Návrh už byl vyřízen.');
+    if (!parent || !isBranch(parent)) throw new Error('Vyber cílovou kategorii nebo složku.');
+    if (targetId && (!target || isBranch(target.item))) throw new Error('Vyber platnou položku k přiřazení.');
+    const itemId = applyEdit(base.nodes,{ id:targetId,parentId,name,kind:suggestion.kind,note:target?.item.note,image:suggestion.image });
+    if (target && target.siblings !== parent.children) {
+      target.siblings.splice(target.siblings.indexOf(target.item),1);
+      parent.children.push(target.item);
+    }
+    Object.assign(suggestion,{ status:'approved',name:name.trim(),parentId,targetId:itemId });
+    return itemId;
+  }
+  function suggestChange(base, node) {
+    const parent = locate(base.nodes,node.id)?.parent;
+    if (!parent) throw new Error('Položka nemá kategorii.');
+    const existing = base.suggestions.find(item => item.status === 'pending' && item.targetId === node.id);
+    if (existing) return existing.id;
+    const id = newId();
+    includeSuggestions(base,[{ id,name:node.name,kind:node.kind,parentId:parent.id,targetId:node.id,reason:'Návrh změny názvu nebo zařazení.' }]);
+    return id;
   }
   function merge(target, incoming) {
     const result = { added:0, matched:0 };
@@ -125,6 +166,28 @@
       return { ...node(category,'category',category.id),children:map(null) };
     });
   }
+  function folderLayout(nodes, safeName) {
+    const unique = (name, used) => {
+      const base = safeName(name.replace(/[=\r\n]/g,' '));
+      let value = base;
+      for (let i = 2; used.has(nameKey(value)); i++) value = `${base} ${i}`;
+      used.add(nameKey(value));
+      return value;
+    };
+    function descendants(node, prefix = '') {
+      const used = new Set();
+      return node.children.filter(child => isBranch(child) && !(child.kind === 'group' && child.name.startsWith('Z plánu'))).flatMap(child => {
+        const name = unique(child.name,used);
+        const path = prefix ? `${prefix}/${name}` : name;
+        return [path,...descendants(child,path)];
+      });
+    }
+    const used = new Set();
+    return nodes.map(node => {
+      const name = unique(node.name,used);
+      return { name,path:name,folders:descendants(node) };
+    });
+  }
   function fromDocument(tree, fileName) {
     const source = `${fileName}:`;
     function item(layer, kind) {
@@ -137,7 +200,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch };
+  const api = { format, normalize, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);

@@ -48,3 +48,25 @@ test('project and document inventories retain group hierarchy and strip arbitrar
   document.nodes[0].children[0].image='https://example.com/track';
   assert.equal(Base.normalize(document).nodes[0].children[0].image,undefined);
 });
+
+test('approvals preserve the matched item, update its name and move it into the chosen folder', () => {
+  const planned=trait('planned','Red','plan',{ note:'Moje poznámka',decision:'todo' });
+  const folder={ id:'ready',name:'Ready',kind:'folder',children:[] };
+  const base=from([cat('skin','SKIN',[planned,folder])]);
+  Base.includeSuggestions(base,[{ id:'p',name:'Red',kind:'layer',parentId:'skin',targetId:'planned' }]);
+  assert.equal(Base.approveSuggestion(base,'p',{name:'Red new',parentId:'ready',targetId:'planned'}),'planned');
+  assert.equal(Base.locate(base.nodes,'planned').parent.id,'ready');
+  assert.equal(Base.locate(base.nodes,'planned').item.note,'Moje poznámka');
+  assert.equal(Base.locate(base.nodes,'planned').item.name,'Red new');
+  assert.equal(Base.normalize(base).suggestions[0].status,'approved');
+  assert.throws(()=>Base.approveSuggestion(base,'p',{name:'Red new',parentId:'ready',targetId:'planned'}),/vyřízen/);
+});
+
+test('a fixed folder layout keeps subfolders and distinct names while skipping plan sections', () => {
+  const group=(id,name,children=[])=>({ id,name,kind:'group',children });
+  const base=from([cat('h','HAIRS',[group('afro','Afro',[group('basic','Basic')]),group('draft','Z plánu · další')]),cat('l1','Leafs',[]),cat('l2','Leafs',[])]);
+  assert.deepEqual(Base.folderLayout(base.nodes,value=>value),[
+    {name:'HAIRS',path:'HAIRS',folders:['Afro','Afro/Basic']},
+    {name:'Leafs',path:'Leafs',folders:[]},{name:'Leafs 2',path:'Leafs 2',folders:[]},
+  ]);
+});
