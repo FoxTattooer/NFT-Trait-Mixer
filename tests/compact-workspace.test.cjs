@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {Window}=require('happy-dom'),{IDBFactory,IDBObjectStore}=require('fake-indexeddb');
 const {createCanvas,loadImage}=require('@napi-rs/canvas');
 const M=require('../project'),S=require('../storage');
+const zip=require('../vendor/procreate-zip');
 async function waitFor(fn){for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,10));}throw Error('UI timeout');}
 (async()=>{
 global.indexedDB=new IDBFactory();const p=M.empty(),c=createCanvas(2,2),ctx=c.getContext('2d');
@@ -816,6 +817,96 @@ assert.equal(savedBook.lookbookCards[0].note, 'Doplnit variantu Afro');
 assert.match(savedBook.lookbookCards[0].data, /^data:image\/png;base64,/);
 assert.deepEqual(savedBook.lookbookCards[0].variants[0].layers, ['other-2']);
 assert.equal(savedBook.lookbookCards[0].variants[0].withCover, true);
+// A category export contains original PNGs, including hidden traits and nested folders.
+const pngA = savedBook.cats[0].traits[0].data, pngB = savedBook.cats[1].traits[0].data;
+const exportProject = M.empty();
+exportProject.name = 'Výběr';
+exportProject.cats = [
+  { id: 'export-a', name: 'Klobouky', visible: false, traits: [
+    { id: 'export-hat', name: 'Klobouk', data: pngA }, { id: 'export-hidden', name: 'Skrytá vrstva', data: pngB, hidden: true },
+  ] },
+  { id: 'export-b', name: 'Vlasy', visible: true, traits: [{ id: 'export-hair', name: 'Vlasy', data: pngB }] },
+  { id: 'export-c', name: 'Pozadí', visible: true, traits: [{ id: 'export-bg', name: 'Pozadí', data: pngA }] },
+];
+exportProject.organizer['export-a'] = {
+  folders: [{ id: 'export-folder', name: 'Podskupina', parentId: null }],
+  assignments: { 'export-hidden': 'export-folder' },
+};
+exportProject.selected['export-b'] = 'export-hair';
+w.useTestProject(exportProject);
+click('#layersTab');
+if (get('categoryOverview').hidden) click('#compactToggle');
+click('#openCategoryExport');
+assert(get('categoryExportDialog').open);
+assert(get('categoryExportSubmit').disabled);
+click('#categoryExportAll');
+assert.match(get('categoryExportCount').textContent, /3 kategorie · 4 PNG/);
+click('#categoryExportChoices input[value="export-c"]');
+assert.match(get('categoryExportCount').textContent, /2 kategorie · 3 PNG/);
+click('#categoryExportSubmit');
+const exportedSelection = get('categoryExportDownload');
+await waitFor(() => !exportedSelection.hidden);
+assert.equal(exportedSelection.download, 'Výběr – PNG vrstev.zip');
+const selectionZip = new zip.ZipReader(new zip.BlobReader(urls.get(exportedSelection.getAttribute('href'))), { useWebWorkers: false });
+const exportedPNGs = (await selectionZip.getEntries()).filter(entry => !entry.directory);
+assert.deepEqual(exportedPNGs.map(entry => entry.filename), [
+  'Výběr – PNG vrstev/01 Klobouky/01 Podskupina/01 Skrytá vrstva.png',
+  'Výběr – PNG vrstev/01 Klobouky/02 Klobouk.png',
+  'Výběr – PNG vrstev/02 Vlasy/01 Vlasy.png',
+]);
+for (const [index, entry] of exportedPNGs.entries()) {
+  assert.equal(Buffer.from(await entry.getData(new zip.Uint8ArrayWriter(), { checkSignature: true })).toString('base64'),
+    [pngB, pngA, pngB][index].split(',')[1]);
+}
+await selectionZip.close();
+assert.equal(w.inspectState().selected['export-b'], 'export-hair');
+assert.equal(M.locate(w.inspectState(), 'export-hidden').trait.hidden, true);
+click('[data-action="close-category-export"]');
+
+// FIN marks follow project edits and the FIN view edits the live records.
+click('#cats [data-action="open-layer-menu"][data-id="export-a"]');
+click('#layerContext [data-action="toggle-layer-fin"]');
+assert(find('#cats [data-category="export-a"] .layer-fin-mark'));
+click('#cats [data-action="select-category"][data-id="export-b"]');
+click('#layerTree [data-action="open-layer-menu"][data-id="export-hair"]');
+click('#layerContext [data-action="toggle-layer-fin"]');
+assert(find('#layerTree .layer-fin-mark'));
+finalEntry.click();
+assert(get('finalDialog').open);
+assert.equal(get('finalRows').querySelectorAll('[data-final-action="open-marked-category"]').length, 2);
+click('#finalRows [data-id="export-a"]');
+assert.equal(get('finalRows').querySelectorAll('.final-marked-row').length, 2, 'a FIN category exposes every layer');
+click('#finalRows [data-final-action="edit-marked"][data-id="export-a"]');
+find('#finalMarkedForm [name="name"]').value = 'Hotové klobouky';
+get('finalMarkedForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+assert.equal(M.category(w.inspectState(), 'export-a').name, 'Hotové klobouky');
+click('#finalBack');
+click('#finalRows [data-id="export-b"]');
+click('#finalRows [data-final-action="edit-marked"][data-id="export-hair"]');
+find('#finalMarkedForm [name="name"]').value = 'Hotové vlasy';
+find('#finalMarkedForm [name="note"]').value = 'Připraveno do kolekce';
+get('finalMarkedForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+assert.equal(M.locate(w.inspectState(), 'export-hair').trait.note, 'Připraveno do kolekce');
+click('#finalBack');
+click('[data-final-action="show-archives"]');
+await waitFor(() => !get('finalDialog').hasAttribute('aria-busy'));
+assert(!get('finalSave').hidden, 'locked snapshots still have their own save action');
+click('[data-final-action="close"]');
+await w.waitSave();
+const finDatabase = await w.TraitStorage.open();
+const storedFin = M.normalize(await w.TraitStorage.read(finDatabase, undefined, { lazy: true }), { allowStoredAssets: true });
+finDatabase.close();
+assert.equal(M.category(storedFin, 'export-a').fin, true);
+assert.equal(M.locate(storedFin, 'export-hair').trait.fin, true);
+assert.equal(M.locate(storedFin, 'export-hair').trait.name, 'Hotové vlasy');
+finalEntry.click();
+click('#finalRows [data-id="export-b"]');
+click('#finalRows [data-final-action="edit-marked"][data-id="export-hair"]');
+find('#finalMarkedForm [name="fin"]').checked = false;
+get('finalMarkedForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+assert.equal(M.locate(w.inspectState(), 'export-hair').trait.fin, undefined);
+assert(!find('#finalRows [data-id="export-b"]'), 'removing the last mark clears that category from the FIN index');
+click('[data-final-action="close"]');
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

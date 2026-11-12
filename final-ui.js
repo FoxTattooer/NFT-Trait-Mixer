@@ -1,7 +1,8 @@
-/* Read-only library of saved projects and folders. */
+/* Editable FIN marks and read-only copies. */
 'use strict';
 const finalDialog = $('finalDialog');
 let finalConnection, finalEntries = [], finalArchive, finalCategory, finalPath = [], finalLimit = 80, finalURL;
+let finalView = 'marked', finalMarkedCategory, finalMarkedEdit;
 
 function finalDatabase() {
   finalConnection ||= TraitFinal.open().catch(error => { finalConnection = null; throw error; });
@@ -19,18 +20,72 @@ function clearFinalDownload() {
   link.hidden = true;
 }
 
+const markedTraits = category => category.fin ? category.traits : category.traits.filter(trait => trait.fin);
+function markedCategory() {
+  const category = M.category(state, finalMarkedCategory);
+  return category && (category.fin || markedTraits(category).length) ? category : null;
+}
+function renderMarkedEdit(category, item) {
+  const isTrait = item !== category;
+  return `<form id="finalMarkedForm" class="final-marked-form">
+    <label>Název<input name="name" value="${esc(item.name)}" type="text" maxlength="120" required></label>
+    ${isTrait ? `<label>Poznámka<textarea name="note" maxlength="${M.TRAIT_NOTE_LIMIT}" rows="3">${esc(item.note || '')}</textarea></label>` : ''}
+    <label class="final-marked-check"><input type="checkbox" name="fin" ${item.fin ? 'checked' : ''}> Označeno FIN</label>
+    <button type="submit" class="primary">Uložit úpravy</button>
+  </form>`;
+}
+function renderFinalMarked(category, edit) {
+  const rows = $('finalRows');
+  if (edit) {
+    rows.innerHTML = renderMarkedEdit(category, edit);
+    $('finalMore').hidden = true;
+    return;
+  }
+  const items = category ? markedTraits(category) : state.cats.filter(item => item.fin || markedTraits(item).length);
+  const editButton = item => `<button type="button" class="icon-button subtle final-marked-edit" data-final-action="edit-marked"
+    data-id="${esc(item.id)}" aria-label="Upravit · ${esc(item.name)}" title="Upravit">${icon('edit')}</button>`;
+  rows.innerHTML = (category ? `<div class="final-marked-category">
+    <strong>${esc(category.name)} ${category.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}</strong>${editButton(category)}
+  </div>` : '') + items.slice(0, finalLimit).map(item => {
+    if (!category) {
+      return `<button type="button" class="final-row" data-final-action="open-marked-category" data-id="${esc(item.id)}">
+        ${icon('folder')}<span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
+        <small>${counted(markedTraits(item).length, 'vrstva', 'vrstvy', 'vrstev')}</small></span>${icon('chevron')}
+      </button>`;
+    }
+    const { folders, assignments } = organizerFolders(category.id);
+    const path = organizerPath(folders, assignments[item.id]);
+    return `<div class="final-row final-marked-row">
+      <span class="layer-thumb">${safeMode ? icon('image') : layerThumbnail(category, item)}</span>
+      <span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
+      ${path ? `<small>${esc(path)}</small>` : ''}${item.note ? `<small>${esc(item.note)}</small>` : ''}</span>${editButton(item)}
+    </div>`;
+  }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a vyber „Označit jako FIN“.'}</p>` : '');
+  $('finalMore').hidden = items.length <= finalLimit;
+  mountThumbnails();
+}
+
 function renderFinal() {
   const archiveOpen = !!finalArchive;
-  $('finalBack').hidden = !archiveOpen;
-  $('finalSave').hidden = archiveOpen;
+  const showMarked = !archiveOpen && finalView === 'marked';
+  const category = showMarked ? markedCategory() : null;
+  const edit = category && finalMarkedEdit
+    ? (category.id === finalMarkedEdit ? category : markedTraits(category).find(item => item.id === finalMarkedEdit)) : null;
+  if (showMarked && !category) finalMarkedCategory = finalMarkedEdit = null;
+  $('finalViews').hidden = archiveOpen || !!category;
+  $('finalViews').querySelector('[data-final-action="show-marked"]').setAttribute('aria-pressed', String(showMarked));
+  $('finalViews').querySelector('[data-final-action="show-archives"]').setAttribute('aria-pressed', String(!showMarked));
+  $('finalBack').hidden = !archiveOpen && !category;
+  $('finalSave').hidden = archiveOpen || showMarked;
   $('finalExport').hidden = !archiveOpen || !!finalURL;
   $('finalLock').hidden = !archiveOpen;
   $('finalTitle').textContent = finalArchive?.entry.title || 'Finál';
   $('finalPath').textContent = archiveOpen
     ? [finalArchive.entry.source, finalCategory?.name, ...finalPath.map(item => item.name)].filter(Boolean).join(' / ')
-    : '';
-  $('finalPath').hidden = !archiveOpen || (!finalCategory && finalArchive.entry.source === finalArchive.entry.title);
+    : category ? ['Označeno FIN', category.name, edit !== category && edit?.name].filter(Boolean).join(' / ') : '';
+  $('finalPath').hidden = archiveOpen ? !finalCategory && finalArchive.entry.source === finalArchive.entry.title : !category;
   $('finalStatus').textContent = '';
+  if (showMarked) { renderFinalMarked(category, edit); return; }
   const rows = $('finalRows');
   if (!archiveOpen) {
     const format = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
@@ -53,6 +108,7 @@ function renderFinal() {
 
 function resetFinalNavigation() {
   finalArchive = finalCategory = null;
+  finalMarkedCategory = finalMarkedEdit = null;
   finalPath = [];
   finalLimit = 80;
   clearFinalDownload();
@@ -78,11 +134,17 @@ async function withFinalStorage(phase, status, action) {
   }
 }
 
-async function openFinalDialog() {
+function openFinalDialog() {
   resetFinalNavigation();
-  finalEntries = [];
+  finalView = 'marked';
   renderFinal();
   if (!finalDialog.open) finalDialog.showModal();
+}
+
+async function openFinalArchives() {
+  resetFinalNavigation();
+  finalView = 'archives';
+  renderFinal();
   await withFinalStorage('final-open', 'Načítám uložené kopie…', async database => {
     finalEntries = await TraitFinal.list(database);
     renderFinal();
@@ -95,6 +157,7 @@ async function saveToFinal(categoryId, folderId) {
     $('finalStatus').textContent = 'Projekt ještě nemá žádné kategorie.';
     return;
   }
+  finalView = 'archives';
   if (!finalDialog.open) {
     resetFinalNavigation();
     renderFinal();
@@ -116,12 +179,60 @@ async function saveToFinal(categoryId, folderId) {
 
 finalDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 finalDialog.addEventListener('close', resetFinalNavigation);
+function focusFinalMarked() {
+  ($('finalRows').querySelector('input,button') || $('finalViews').querySelector('[aria-pressed="true"]')).focus({ preventScroll: true });
+}
+finalDialog.addEventListener('submit', event => {
+  const form = event.target;
+  if (form.id !== 'finalMarkedForm') return;
+  event.preventDefault();
+  if (busy) return;
+  const category = markedCategory(), isTrait = category?.id !== finalMarkedEdit;
+  const item = category && (isTrait ? markedTraits(category).find(trait => trait.id === finalMarkedEdit) : category);
+  if (!item) return;
+  const name = form.elements.namedItem('name').value.trim().slice(0, 120);
+  if (!name) { $('finalStatus').textContent = 'Zadej název.'; return; }
+  const note = isTrait ? M.normalizeTraitNote(form.elements.namedItem('note').value) : '';
+  const marked = form.elements.namedItem('fin').checked;
+  if (name !== item.name || marked !== !!item.fin || (isTrait && note !== (item.note || ''))) {
+    change(() => {
+      item.name = name;
+      if (marked) item.fin = true; else delete item.fin;
+      if (isTrait) {
+        if (note) item.note = note; else delete item.note;
+      }
+    }, 'Úprava ve Finálu uložena', true);
+  }
+  finalMarkedEdit = null;
+  renderFinal();
+  $('finalStatus').textContent = 'Úpravy uloženy.';
+  focusFinalMarked();
+});
 finalDialog.addEventListener('click', async event => {
   const control = event.target.closest('[data-final-action]');
   if (!control || busy) return;
   const action = control.dataset.finalAction, id = control.dataset.id;
   switch (action) {
     case 'close': finalDialog.close(); break;
+    case 'show-marked':
+      resetFinalNavigation();
+      finalView = 'marked';
+      renderFinal();
+      break;
+    case 'show-archives': await openFinalArchives(); break;
+    case 'open-marked-category':
+      finalMarkedCategory = id;
+      finalLimit = 80;
+      renderFinal();
+      $('finalRows').scrollTop = 0;
+      focusFinalMarked();
+      break;
+    case 'edit-marked':
+      finalMarkedEdit = id;
+      renderFinal();
+      $('finalRows').scrollTop = 0;
+      focusFinalMarked();
+      break;
     case 'save': await saveToFinal(); break;
     case 'open-entry':
       await withFinalStorage('final-open', 'Načítám kopii…', async database => {
@@ -141,6 +252,13 @@ finalDialog.addEventListener('click', async event => {
       break;
     }
     case 'back':
+      if (finalView === 'marked') {
+        if (finalMarkedEdit) finalMarkedEdit = null;
+        else { finalMarkedCategory = null; finalLimit = 80; }
+        renderFinal();
+        focusFinalMarked();
+        break;
+      }
       if (finalPath.length) finalPath.pop();
       else if (finalCategory) finalCategory = null;
       else resetFinalNavigation();

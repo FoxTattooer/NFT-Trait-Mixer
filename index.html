@@ -14,24 +14,24 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0798">
-  <link rel="stylesheet" href="compact.css?build=07108">
+  <link rel="stylesheet" href="compact.css?build=07110">
   <link rel="stylesheet" href="schemes.css?build=07106">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
   <link rel="stylesheet" href="lookbook.css?build=07109">
-  <script src="project.js?build=07109" defer></script>
+  <script src="project.js?build=07110" defer></script>
   <script src="storage.js?build=07109" defer></script>
-  <script src="final.js?build=07109" defer></script>
-  <script src="diagnostics.js?build=07109" defer></script>
+  <script src="final.js?build=07110" defer></script>
+  <script src="diagnostics.js?build=07110" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <script src="app.js?build=07109" defer></script>
-  <script src="trait-comparison.js?build=07104" defer></script>
+  <script src="app.js?build=07110" defer></script>
+  <script src="trait-comparison.js?build=07110" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
   <script src="lookbook.js?build=07109" defer></script>
-  <script src="final-ui.js?build=0788" defer></script>
+  <script src="final-ui.js?build=07110" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
@@ -114,8 +114,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.109" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.109</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.110" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.110</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -187,6 +187,7 @@
       </div>
       <div id="layerTree" class="layer-tree" aria-label="Strom vrstev"></div>
       <div id="categoryOverview" hidden>
+      <button id="openCategoryExport" type="button" class="outline category-export-trigger" data-action="open-category-export" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export kategorií</button>
       <div id="cats" class="category-list"></div>
       <button data-action="add-category" class="outline full-width"><svg class="icon"><use href="#i-plus"/></svg>Přidat kategorii</button>
       </div>
@@ -466,6 +467,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.110-export-fin" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.110 – Export kategorií a FIN</strong><small>Výběr více kategorií pro export PNG a živý přehled označených vrstev ve Finálu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.109-lookbook-karty" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.109 – Papírové karty v Lookbooku</strong><small>Vlastní karty s obrázky, vrstvami z projektu, variantami a poznámkami k vývoji.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.108-landscape-comparison" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.108 – Duplicita na šířku</strong><small>Čtvrtá položka Duplicita v liště na šířku a kompaktní popisky všech čtyř ikon.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.107-compact-comparison" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.107 – Zkratka k duplicitám</strong><small>Čtvrtá ikona ve zmenšené spodní liště otevírá karty duplicit v Sestavách.</small></span><span class="version-tag">Uloženo</span></a>
@@ -531,13 +533,33 @@
     <pre id="diagnosticsReport" aria-label="Diagnostický záznam"></pre>
     <button type="button" class="outline full-width" data-action="download-diagnostics"><svg class="icon"><use href="#i-download"/></svg>Stáhnout záznam</button>
   </dialog>
+  <dialog id="categoryExportDialog" class="category-export-dialog" aria-labelledby="categoryExportTitle">
+    <header class="final-header">
+      <h2 id="categoryExportTitle">Export kategorií</h2>
+      <button type="button" class="icon-button subtle" data-action="close-category-export" aria-label="Zavřít export kategorií">✕</button>
+    </header>
+    <div class="category-export-tools">
+      <button id="categoryExportAll" type="button" class="subtle" data-action="select-all-export-categories">Označit vše</button>
+      <span id="categoryExportCount" role="status"></span>
+    </div>
+    <div id="categoryExportChoices" class="category-export-choices" role="group" aria-label="Kategorie k exportu"></div>
+    <p id="categoryExportStatus" class="helper" role="status" hidden></p>
+    <div class="final-actions">
+      <button id="categoryExportSubmit" type="button" class="primary" data-action="export-selected-categories" disabled>Připravit ZIP s PNG</button>
+      <a id="categoryExportDownload" class="outline" download hidden><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Stáhnout ZIP</a>
+    </div>
+  </dialog>
   <dialog id="finalDialog" class="final-dialog" aria-labelledby="finalTitle">
     <header class="final-header">
       <button id="finalBack" type="button" class="icon-button subtle" data-final-action="back" aria-label="O úroveň výš" hidden><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></button>
       <div class="final-heading"><p id="finalLock" class="helper" hidden>Zamčená kopie</p><h2 id="finalTitle">Finál</h2><p id="finalPath" class="helper" hidden></p></div>
       <button type="button" class="icon-button subtle" data-final-action="close" aria-label="Zavřít Finál">✕</button>
     </header>
-    <div id="finalRows" class="final-rows" aria-label="Uložené složky a PNG"></div>
+    <div id="finalViews" class="final-views" role="group" aria-label="Obsah Finálu">
+      <button type="button" data-final-action="show-marked" aria-pressed="true">Označeno FIN</button>
+      <button type="button" data-final-action="show-archives" aria-pressed="false">Zamčené kopie</button>
+    </div>
+    <div id="finalRows" class="final-rows" aria-label="Položky Finálu"></div>
     <button id="finalMore" type="button" class="subtle" data-final-action="more" hidden>Zobrazit další</button>
     <p id="finalStatus" class="helper" role="status"></p>
     <div class="final-actions">

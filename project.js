@@ -159,12 +159,13 @@
       (allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(data) || /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=\r\n]*$/.test(data));
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
-      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), visible: c.visible !== false, traits: c.traits.map(t => {
+      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c),
+        ...(c.fin === true ? { fin: true } : {}), visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || !validImage(t.data)) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
-          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t),
+          ...(t.hidden === true ? { hidden: true } : {}), ...(t.fin === true ? { fin: true } : {}), ...layerMarks(t), ...lookbookFields(t),
           ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
     });

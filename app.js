@@ -431,7 +431,8 @@ function flagIcon(color, label = false) {
 }
 function layerMarkBadges(item) {
   return (item.hidden ? '<span class="layer-wip-mark">Skrytý</span>' : '') +
-    (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
+    (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') +
+    (item.fin ? '<span class="layer-fin-mark">FIN</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
@@ -663,14 +664,15 @@ function positionLayerContext(trigger) {
   menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, width - menu.offsetWidth - 8))}px`;
   menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, height - menu.offsetHeight - 8))}px`;
 }
-function layerMarkActions(item, attributes) {
+function layerMarkActions(item, attributes, canMarkFin = true) {
   const options = Object.entries(M.FLAG_COLORS).map(([color, label]) =>
     button('set-layer-flag', `${flagIcon(color)}<span>${label}</span>`, item.id, '',
       `type="button" ${attributes} data-flag="${color}" aria-pressed="${item.flag === color}"`)).join('');
   const remove = item.flag ? button('set-layer-flag', 'Odebrat vlajku', item.id, '', `type="button" ${attributes} data-flag=""`) : '';
   return `<details class="layer-flag-options"><summary>${flagIcon(item.flag)}${item.flag ? 'Barva vlajky' : 'Přidat vlajku'}</summary>
     <div class="layer-flag-palette" role="group" aria-label="Barvy vlajky">${options}</div>${remove}</details>` +
-    button('toggle-layer-wip', item.wip ? 'Odebrat WIP' : 'Označit jako WIP', item.id, 'eye-half', attributes);
+    button('toggle-layer-wip', item.wip ? 'Odebrat WIP' : 'Označit jako WIP', item.id, 'eye-half', attributes) +
+    (canMarkFin ? button('toggle-layer-fin', item.fin ? 'Odebrat FIN' : 'Označit jako FIN', item.id, 'check', attributes) : '');
 }
 function openLayerContext(trigger, id) {
   if (layerContextTrigger === trigger) { closeLayerContext(true); return; }
@@ -691,7 +693,7 @@ function openLayerContext(trigger, id) {
       button('add-organizer-subfolder', 'Přidat podsložku', id, 'folder', attributes) +
       button('rename-organizer-folder', 'Přejmenovat', id, 'edit', attributes) +
       `<label>Přesunout složku<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">Hlavní úroveň</option>${folders.filter(f => !excluded.has(f.id)).map(f => `<option value="${esc(f.id)}" ${folder.parentId === f.id ? 'selected' : ''}>${esc(organizerPath(folders, f.id))}</option>`).join('')}</select></label>` +
-      layerMarkActions(folder, markAttributes) +
+      layerMarkActions(folder, markAttributes, false) +
       button('delete-organizer-folder', 'Smazat složku', id, 'trash', `${attributes} class="danger"`);
   } else {
     const trait = c.traits.find(item => item.id === id);
@@ -1321,6 +1323,7 @@ function render(keepPreview = false) {
   syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
   $('exportPackage').disabled = !state.cats.length || busy || exporting;
+  $('openCategoryExport').disabled = busy || exporting || !state.cats.some(category => category.traits.length);
   $('warnings').innerHTML = warnings.map(w => `<p class="conflict-warning">${esc(w.message)}. Uprav výběr před exportem.</p>`).join('');
   $('canvasEmpty').hidden = !!layers.length;
   if (!state.cats.length) {
@@ -1342,7 +1345,7 @@ function render(keepPreview = false) {
     active = categories[0].id;
     layerLimit = LAYER_BATCH;
   }
-  fillSelect($('layerCategory'), categories.map(c => [c.id, c.name + (c.wip ? ' · WIP' : '')]), state.cats.length ? 'Žádné kategorie' : 'Vyber kategorii');
+  fillSelect($('layerCategory'), categories.map(c => [c.id, c.name + (c.wip ? ' · WIP' : '') + (c.fin ? ' · FIN' : '')]), state.cats.length ? 'Žádné kategorie' : 'Vyber kategorii');
   if (categories.length) $('layerCategory').value = active;
   renderCategories(hidden, categories); renderTraits(categories); renderRules(); renderSnapshots(); showPanel(mobilePanel); if(!keepPreview)draw();
 }
@@ -1395,6 +1398,87 @@ async function exportPackage() {
     finishLog?.(); busy = false; render(true);
   }
 }
+
+const categoryExportDialog = $('categoryExportDialog');
+const categoryExportInputs = () => [...$('categoryExportChoices').querySelectorAll('input[type="checkbox"]')];
+function clearCategoryExportDownload() {
+  const link = $('categoryExportDownload');
+  const url = link.getAttribute('href');
+  if (url) setTimeout(() => URL.revokeObjectURL(url), 60000);
+  link.removeAttribute('href');
+  link.hidden = true;
+  $('categoryExportSubmit').hidden = false;
+  $('categoryExportStatus').hidden = true;
+}
+function selectedExportCategories() {
+  const selected = new Set(categoryExportInputs().filter(input => input.checked).map(input => input.value));
+  return state.cats.filter(category => selected.has(category.id));
+}
+function updateCategoryExportSelection() {
+  const selected = selectedExportCategories();
+  const pngCount = selected.reduce((total, category) => total + category.traits.length, 0);
+  $('categoryExportCount').textContent = `${counted(selected.length, 'kategorie', 'kategorie', 'kategorií')} · ${pngCount} PNG`;
+  $('categoryExportAll').textContent = selected.length === state.cats.length ? 'Zrušit výběr' : 'Označit vše';
+  $('categoryExportSubmit').disabled = busy || !pngCount;
+}
+function openCategoryExport() {
+  if (!state.cats.some(category => category.traits.length) || exporting) return;
+  $('categoryExportChoices').innerHTML = state.cats.map(category => `
+    <label class="category-export-choice">
+      <input type="checkbox" value="${esc(category.id)}">
+      <span>${esc(category.name)}</span><small>${category.traits.length} PNG</small>
+    </label>`).join('');
+  clearCategoryExportDownload();
+  updateCategoryExportSelection();
+  categoryExportDialog.showModal();
+}
+$('categoryExportChoices').addEventListener('change', () => {
+  clearCategoryExportDownload();
+  updateCategoryExportSelection();
+});
+categoryExportDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+categoryExportDialog.addEventListener('close', clearCategoryExportDownload);
+
+async function exportSelectedCategories() {
+  const project = { ...state, cats: selectedExportCategories() };
+  const total = project.cats.reduce((count, category) => count + category.traits.length, 0);
+  if (!total || exporting) return;
+  const finish = window.TraitDiagnostics?.start('category-png-export');
+  const status = $('categoryExportStatus');
+  const controls = [...categoryExportDialog.querySelectorAll('button, input')];
+  controls.forEach(control => { control.disabled = true; });
+  busy = true;
+  categoryExportDialog.setAttribute('aria-busy', 'true');
+  status.hidden = false;
+  status.textContent = `Připravuji PNG · 0 / ${total}`;
+  render(true);
+  try {
+    const title = project.name + ' – PNG vrstev';
+    const blob = await TraitFinal.zipProject(M, {
+      project, title,
+      readImage: trait => TraitStorage.imageBlob(db, trait.data),
+      progress: done => { status.textContent = `Připravuji PNG · ${done} / ${total}`; },
+    });
+    const link = $('categoryExportDownload');
+    link.href = URL.createObjectURL(blob);
+    link.download = TraitFinal.fileName(title) + '.zip';
+    link.hidden = false;
+    $('categoryExportSubmit').hidden = true;
+    link.focus({ preventScroll: true });
+    status.textContent = `ZIP s ${total} PNG je připravený ke stažení.`;
+  } catch (error) {
+    window.TraitDiagnostics?.error('category-png-export', error);
+    status.textContent = error.message || 'ZIP se nepodařilo připravit.';
+  } finally {
+    busy = false;
+    categoryExportDialog.removeAttribute('aria-busy');
+    controls.forEach(control => { control.disabled = false; });
+    updateCategoryExportSelection();
+    render(true);
+    finish?.();
+  }
+}
+
 function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Soubor nelze přečíst.')); reader.onabort = () => reject(new Error('Načítání bylo přerušeno.')); reader.readAsDataURL(new Blob([file], { type: 'image/png' })); });
 }
@@ -1834,7 +1918,8 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'set-layer-flag':
-    case 'toggle-layer-wip': {
+    case 'toggle-layer-wip':
+    case 'toggle-layer-fin': {
       const { category, kind, flag } = element.dataset;
       const item = kind === 'category' ? c : kind === 'folder'
         ? organizerFolders(category).folders.find(folder => folder.id === id) : located?.trait;
@@ -1842,9 +1927,12 @@ async function handleAction(action, id, element) {
       if (action === 'set-layer-flag') {
         if ((flag && !M.isFlagColor(flag)) || flag === (item.flag || '')) break;
         change(() => { if (flag) item.flag = flag; else delete item.flag; }, flag ? 'Vlajka nastavena' : 'Vlajka odebrána', true);
-      } else {
+      } else if (action === 'toggle-layer-wip') {
         const marked = !item.wip;
         change(() => { if (marked) item.wip = true; else delete item.wip; }, marked ? 'Označeno jako WIP' : 'Označení WIP odebráno', true);
+      } else if (kind !== 'folder') {
+        const marked = !item.fin;
+        change(() => { if (marked) item.fin = true; else delete item.fin; }, marked ? 'Označeno jako FIN' : 'Označení FIN odebráno', true);
       }
       if (element.dataset.compareMark) {
         $('compareTraitContent').querySelector(`[data-compare-action="mark"][data-id="${id}"]`)?.focus({ preventScroll: true });
@@ -2000,6 +2088,16 @@ async function handleAction(action, id, element) {
     }
     case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); $('traitFiles').click(); } break;
     case 'export-package': await exportPackage(); break;
+    case 'open-category-export': openCategoryExport(); break;
+    case 'close-category-export': categoryExportDialog.close(); break;
+    case 'select-all-export-categories': {
+      const inputs = categoryExportInputs(), select = inputs.some(input => !input.checked);
+      inputs.forEach(input => { input.checked = select; });
+      clearCategoryExportDownload();
+      updateCategoryExportSelection();
+      break;
+    }
+    case 'export-selected-categories': await exportSelectedCategories(); break;
     case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { $('traitFiles').click(); } break;
     case 'toggle-trait-visibility': {
       if (located) toggleTraitInPreview(located.cat, id);

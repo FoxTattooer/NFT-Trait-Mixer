@@ -127,6 +127,7 @@
 
   function markChoices(trait) {
     return choice('wip', 'Rozpracovaný (WIP)', !!trait.wip) +
+      choice('fin', 'Hotový (FIN)', !!trait.fin) +
       Object.entries(M.FLAG_COLORS).map(([color, name]) =>
         choice(color, `${flagIcon(color)} <span>${name} vlajka</span>`, trait.flag === color)).join('') +
       (trait.flag ? choice('clear', 'Odebrat vlajku') : '');
@@ -181,7 +182,8 @@
       control.dataset.kind = 'trait';
       control.dataset.compareMark = 'true';
       control.dataset.flag = value === 'clear' ? '' : value;
-      handleAction(value === 'wip' ? 'toggle-layer-wip' : 'set-layer-flag', id, control).catch(error => toast(error.message, true));
+      const action = { wip: 'toggle-layer-wip', fin: 'toggle-layer-fin' }[value] || 'set-layer-flag';
+      handleAction(action, id, control).catch(error => toast(error.message, true));
     }
   });
 

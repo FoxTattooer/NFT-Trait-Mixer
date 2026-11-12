@@ -190,7 +190,7 @@
           }
         }
       }
-      yield { name: top + '/project.json', blob: await backup() };
+      if (backup) yield { name: top + '/project.json', blob: await backup() };
       if (composite) yield { name: top + '/final.png', blob: composite };
     }
     return zipStored(entries());
