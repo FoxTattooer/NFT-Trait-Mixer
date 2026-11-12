@@ -2,7 +2,7 @@
 'use strict';
 const finalDialog = $('finalDialog');
 let finalConnection, finalEntries = [], finalArchive, finalCategory, finalPath = [], finalLimit = 80, finalURL;
-let finalView = 'marked', finalMarkedCategory, finalMarkedEdit;
+let finalView = 'compose', finalMarkedCategory, finalMarkedEdit;
 
 function finalDatabase() {
   finalConnection ||= TraitFinal.open().catch(error => { finalConnection = null; throw error; });
@@ -21,12 +21,15 @@ function clearFinalDownload() {
 }
 
 const markedTraits = category => category.fin ? category.traits : category.traits.filter(trait => trait.fin);
+const markedFolders = category => organizerFolders(category.id).folders.filter(folder => folder.fin);
+const markedItems = category => [...markedFolders(category), ...markedTraits(category)];
+const isMarkedCategory = category => category.fin || markedItems(category).length;
 function markedCategory() {
   const category = M.category(state, finalMarkedCategory);
-  return category && (category.fin || markedTraits(category).length) ? category : null;
+  return category && isMarkedCategory(category) ? category : null;
 }
 function renderMarkedEdit(category, item) {
-  const isTrait = item !== category;
+  const isTrait = category.traits.includes(item);
   return `<form id="finalMarkedForm" class="final-marked-form">
     <label>Název<input name="name" value="${esc(item.name)}" type="text" maxlength="120" required></label>
     ${isTrait ? `<label>Poznámka<textarea name="note" maxlength="${M.TRAIT_NOTE_LIMIT}" rows="3">${esc(item.note || '')}</textarea></label>` : ''}
@@ -41,7 +44,7 @@ function renderFinalMarked(category, edit) {
     $('finalMore').hidden = true;
     return;
   }
-  const items = category ? markedTraits(category) : state.cats.filter(item => item.fin || markedTraits(item).length);
+  const items = category ? markedItems(category) : state.cats.filter(isMarkedCategory);
   const editButton = item => `<button type="button" class="icon-button subtle final-marked-edit" data-final-action="edit-marked"
     data-id="${esc(item.id)}" aria-label="Upravit · ${esc(item.name)}" title="Upravit">${icon('edit')}</button>`;
   rows.innerHTML = (category ? `<div class="final-marked-category">
@@ -50,27 +53,39 @@ function renderFinalMarked(category, edit) {
     if (!category) {
       return `<button type="button" class="final-row" data-final-action="open-marked-category" data-id="${esc(item.id)}">
         ${icon('folder')}<span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
-        <small>${counted(markedTraits(item).length, 'vrstva', 'vrstvy', 'vrstev')}</small></span>${icon('chevron')}
+        <small>${counted(markedTraits(item).length, 'vrstva', 'vrstvy', 'vrstev')}${markedFolders(item).length ? ` · ${counted(markedFolders(item).length, 'podsložka', 'podsložky', 'podsložek')}` : ''}</small></span>${icon('chevron')}
       </button>`;
     }
     const { folders, assignments } = organizerFolders(category.id);
-    const path = organizerPath(folders, assignments[item.id]);
+    const isTrait = category.traits.includes(item);
+    const path = organizerPath(folders, isTrait ? assignments[item.id] : item.parentId);
     return `<div class="final-row final-marked-row">
-      <span class="layer-thumb">${safeMode ? icon('image') : layerThumbnail(category, item)}</span>
+      <span class="layer-thumb">${!isTrait ? icon('folder') : safeMode ? icon('image') : layerThumbnail(category, item)}</span>
       <span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
       ${path ? `<small>${esc(path)}</small>` : ''}${item.note ? `<small>${esc(item.note)}</small>` : ''}</span>${editButton(item)}
     </div>`;
-  }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a vyber „Označit jako FIN“.'}</p>` : '');
+  }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a v nabídce „Označit“ vyber FIN.'}</p>` : '');
   $('finalMore').hidden = items.length <= finalLimit;
   mountThumbnails();
 }
 
 function renderFinal() {
+  const compose = finalView === 'compose' && !finalArchive;
+  $('finalViews').querySelector('[data-final-action="show-compose"]').setAttribute('aria-pressed', String(compose));
+  if (compose) {
+    $('finalViews').hidden = false;
+    $('finalViews').querySelectorAll('[data-final-action]:not([data-final-action="show-compose"])').forEach(button => button.setAttribute('aria-pressed', 'false'));
+    $('finalTitle').textContent = 'Finál';
+    for (const id of ['finalBack','finalLock','finalPath','finalMore','finalSave','finalExport','finalDownload']) $(id).hidden = true;
+    renderFinalBuilder(); loadFinalBuilder();
+    return;
+  }
+  clearFinalDraftPreviews(); clearFinalDraftDownload();
   const archiveOpen = !!finalArchive;
   const showMarked = !archiveOpen && finalView === 'marked';
   const category = showMarked ? markedCategory() : null;
   const edit = category && finalMarkedEdit
-    ? (category.id === finalMarkedEdit ? category : markedTraits(category).find(item => item.id === finalMarkedEdit)) : null;
+    ? (category.id === finalMarkedEdit ? category : markedItems(category).find(item => item.id === finalMarkedEdit)) : null;
   if (showMarked && !category) finalMarkedCategory = finalMarkedEdit = null;
   $('finalViews').hidden = archiveOpen || !!category;
   $('finalViews').querySelector('[data-final-action="show-marked"]').setAttribute('aria-pressed', String(showMarked));
@@ -136,7 +151,7 @@ async function withFinalStorage(phase, status, action) {
 
 function openFinalDialog() {
   resetFinalNavigation();
-  finalView = 'marked';
+  finalView = 'compose';
   renderFinal();
   if (!finalDialog.open) finalDialog.showModal();
 }
@@ -187,17 +202,22 @@ finalDialog.addEventListener('submit', event => {
   if (form.id !== 'finalMarkedForm') return;
   event.preventDefault();
   if (busy) return;
-  const category = markedCategory(), isTrait = category?.id !== finalMarkedEdit;
-  const item = category && (isTrait ? markedTraits(category).find(trait => trait.id === finalMarkedEdit) : category);
+  const category = markedCategory();
+  const item = category && (category.id === finalMarkedEdit ? category : markedItems(category).find(entry => entry.id === finalMarkedEdit));
   if (!item) return;
-  const name = form.elements.namedItem('name').value.trim().slice(0, 120);
+  const isTrait = category.traits.includes(item);
+  const limit = item === category || isTrait ? 120 : 100;
+  const name = form.elements.namedItem('name').value.trim().slice(0, limit);
   if (!name) { $('finalStatus').textContent = 'Zadej název.'; return; }
   const note = isTrait ? M.normalizeTraitNote(form.elements.namedItem('note').value) : '';
   const marked = form.elements.namedItem('fin').checked;
   if (name !== item.name || marked !== !!item.fin || (isTrait && note !== (item.note || ''))) {
     change(() => {
       item.name = name;
-      if (marked) item.fin = true; else delete item.fin;
+      if (marked) {
+        if (!item.fin) for (const key of Object.keys(layerStatusLabels)) if (key !== 'fin') delete item[key];
+        item.fin = true;
+      } else delete item.fin;
       if (isTrait) {
         if (note) item.note = note; else delete item.note;
       }
@@ -214,6 +234,8 @@ finalDialog.addEventListener('click', async event => {
   const action = control.dataset.finalAction, id = control.dataset.id;
   switch (action) {
     case 'close': finalDialog.close(); break;
+    case 'show-compose':
+      resetFinalNavigation(); finalView = 'compose'; renderFinal(); break;
     case 'show-marked':
       resetFinalNavigation();
       finalView = 'marked';

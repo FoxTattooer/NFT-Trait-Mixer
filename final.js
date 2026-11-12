@@ -5,9 +5,11 @@
 
   function open() {
     return new Promise((resolve, reject) => {
-      const request = root.indexedDB.open(dbName, 1);
+      const request = root.indexedDB.open(dbName, 2);
       request.onupgradeneeded = () => {
-        for (const name of ['entries', 'projects', 'images']) request.result.createObjectStore(name);
+        for (const name of ['entries', 'projects', 'images', 'workspace']) {
+          if (!request.result.objectStoreNames.contains(name)) request.result.createObjectStore(name);
+        }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -196,7 +198,144 @@
     return zipStored(entries());
   }
 
-  const api = { open, snapshot, save, list, load, image, fileName, zipProject };
+  const loadWorkspace = (db, key = 'final') => read(db, 'workspace', 'get', key);
+  function saveWorkspace(db, workspace, key = 'final') {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('workspace', 'readwrite');
+      tx.oncomplete = () => resolve(workspace);
+      tx.onabort = () => reject(tx.error || new Error('Změny se nepodařilo uložit.'));
+      tx.objectStore('workspace').put(workspace, key);
+    });
+  }
+  function relativePath(raw) {
+    const value = raw.trim().replace(/\\/g, '/').normalize('NFC');
+    if (!value || value.startsWith('/') || /^[a-z]:/i.test(value) || /[\u0000-\u001f]/.test(value)) {
+      throw new Error('Zadej cestu uvnitř vybrané kořenové složky.');
+    }
+    if (value === '.') return '';
+    const parts = value.replace(/\/$/, '').split('/');
+    if (parts.some(part => !part || part === '..' || part === '.')) throw new Error(`Neplatná cesta „${raw}“.`);
+    return parts.join('/');
+  }
+  function parseLayout(categoryText, itemText) {
+    const categories = new Map(), slots = new Map();
+    const lines = input => input.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+      const equals = line.indexOf('=');
+      if (equals < 1) throw new Error(`Doplň oddělovač = na řádku „${line}“.`);
+      const label = line.slice(0,equals).trim();
+      if (!label) throw new Error('Každý řádek musí mít název.');
+      return [label, relativePath(line.slice(equals + 1))];
+    });
+    for (const [name, path] of lines(categoryText)) {
+      if (name.includes('/') || categories.has(name)) throw new Error(`Název kategorie „${name}“ musí být jedinečný a bez lomítka.`);
+      categories.set(name, path);
+    }
+    if (!categories.size) throw new Error('Přidej alespoň jednu kategorii.');
+    for (const [label, path] of lines(itemText)) {
+      const slash = label.indexOf('/');
+      const category = label.slice(0,slash).trim(), name = label.slice(slash + 1).trim();
+      if (slash < 1 || !name || !categories.has(category)) throw new Error(`U položky „${label}“ zadej existující kategorii a název.`);
+      const id = JSON.stringify([category,name]);
+      if (slots.has(id)) throw new Error(`Položka „${label}“ je v nastavení dvakrát.`);
+      slots.set(id,{ category, name, path });
+    }
+    return { categories: [...categories].map(([name,path]) => ({ name,path })), slots: [...slots.values()] };
+  }
+  const pngSignature = [137,80,78,71,13,10,26,10];
+  async function directoryFiles(input) {
+    const files = new Map();
+    let rootName = '';
+    for (const file of input) {
+      const raw = file.webkitRelativePath;
+      if (!raw) continue;
+      const slash = raw.indexOf('/');
+      if (slash < 1) continue;
+      const root = raw.slice(0,slash);
+      if (rootName && root !== rootName) throw new Error('Vyber jednu kořenovou složku.');
+      rootName = root;
+      if (!/\.png$/i.test(file.name)) continue;
+      const bytes = new Uint8Array(await file.slice(0,8).arrayBuffer());
+      if (!pngSignature.every((value,index) => value === bytes[index])) continue;
+      const path = relativePath(raw.slice(slash + 1));
+      files.set(path,{ path, blob: file });
+    }
+    if (!rootName) throw new Error('Výběr neposkytl cestu ke složce. Ve výběru Souborů otevři samotnou složku.');
+    return { rootName, files: [...files.values()].sort((a,b) => a.path.localeCompare(b.path,'cs',{numeric:true})) };
+  }
+  const inFolder = (path, folder) => !folder || path.startsWith(folder + '/');
+  const baseName = path => path.split('/').at(-1).replace(/\.png$/i, '');
+  function folderCategories(layout, files) {
+    const byPath = new Map(files.map(file => [file.path,file]));
+    return layout.categories.map(({ name, path }) => {
+      const id = 'folder:' + name, overrides = layout.slots.filter(slot => slot.category === name);
+      const rows = [], used = new Set(), unresolved = [];
+      for (const slot of overrides) {
+        let file = byPath.get(slot.path);
+        if (!file && !/\.png$/i.test(slot.path)) {
+          const inside = files.filter(item => inFolder(item.path,slot.path));
+          const matching = inside.filter(item => baseName(item.path).toLocaleLowerCase('cs') === slot.name.toLocaleLowerCase('cs'));
+          if (matching.length === 1) file = matching[0];
+          else if (inside.length === 1) file = inside[0];
+        }
+        if (!file) { unresolved.push(slot); continue; }
+        used.add(file.path);
+        rows.push({ id: JSON.stringify([id,'slot',slot.name]), name: slot.name, path: file.path, blob: file.blob, folders: [] });
+      }
+      for (const file of files) {
+        if (used.has(file.path) || !inFolder(file.path,path)) continue;
+        const inside = path ? file.path.slice(path.length+1) : file.path;
+        const parts = inside.split('/').slice(0,-1);
+        rows.push({ id: JSON.stringify([id,'file',file.path]), name: baseName(file.path), path: file.path, blob: file.blob,
+          folders: parts.map((name,index) => ({ key: parts.slice(0,index+1).join('/'), name })) });
+      }
+      return { id, name, path, rows, unresolved };
+    });
+  }
+  function finCategories(model, project) {
+    return project.cats.map(category => {
+      const children = model.layerChildren(project,category), rows = [];
+      function visit(parent, inherited, folders) {
+        for (const { item, kind } of children(parent)) {
+          const fin = !item.trash && !item.wip && !item.draw && (inherited || item.fin);
+          if (kind === 'folders') visit(item.id,fin,[...folders,{ key:item.id,name:item.name }]);
+          else if (fin) rows.push({ id:item.id, name:item.name, folders, trait:item, category, path:folders.map(folder => folder.name).join(' / ') });
+        }
+      }
+      visit(null,category.fin && !category.trash && !category.wip && !category.draw,[]);
+      return { id:category.id,name:category.name,rows };
+    });
+  }
+  function draftProject(model, title, categories, excluded) {
+    const project = model.empty(), images = new Map();
+    project.name = title;
+    for (const [categoryIndex, category] of categories.entries()) {
+      const id = `category-${categoryIndex+1}`;
+      const traits = [], folders = [], assignments = {}, folderIds = new Map();
+      project.cats.push({ id, name:category.name, traits });
+      project.organizer[id] = { folders, assignments };
+      for (const row of category.rows) {
+        if (excluded.has(row.id)) continue;
+        const traitId = `${id}-trait-${traits.length+1}`;
+        let parentId = null;
+        for (const folder of row.folders) {
+          let folderId = folderIds.get(folder.key);
+          if (!folderId) {
+            folderId = `${id}-folder-${folders.length+1}`;
+            folderIds.set(folder.key,folderId);
+            folders.push({ id:folderId,name:folder.name,parentId });
+          }
+          parentId = folderId;
+        }
+        traits.push({ id:traitId,name:row.name });
+        if (parentId) assignments[traitId] = parentId;
+        images.set(traitId,row);
+      }
+    }
+    return { project,images };
+  }
+
+  const api = { open, snapshot, save, list, load, image, fileName, zipProject, loadWorkspace, saveWorkspace,
+    parseLayout, directoryFiles, folderCategories, finCategories, draftProject };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitFinal = api;
 })(globalThis);

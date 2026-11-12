@@ -20,18 +20,23 @@
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
   <link rel="stylesheet" href="lookbook.css?build=07109">
-  <script src="project.js?build=07110" defer></script>
+  <script src="project.js?build=07111" defer></script>
   <script src="storage.js?build=07109" defer></script>
-  <script src="final.js?build=07110" defer></script>
-  <script src="diagnostics.js?build=07110" defer></script>
+  <script src="final.js?build=07111" defer></script>
+  <script src="diagnostics.js?build=07111" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <script src="app.js?build=07110" defer></script>
-  <script src="trait-comparison.js?build=07110" defer></script>
+  <link rel="stylesheet" href="layer-inventory.css?build=07111">
+  <script src="layer-inventory.js?build=07111" defer></script>
+  <script src="inventory-base.js?build=07111" defer></script>
+  <script src="app.js?build=07111" defer></script>
+  <script src="trait-comparison.js?build=07111" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
   <script src="lookbook.js?build=07109" defer></script>
-  <script src="final-ui.js?build=07110" defer></script>
+  <script src="final-ui.js?build=07111" defer></script>
+  <script src="final-builder.js?build=07111" defer></script>
+  <script src="inventory-base-ui.js?build=07111" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
@@ -114,12 +119,13 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.110" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.110</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.111" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.111</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
           <a href="plan-rozvoje.html" class="header-menu-link"><svg class="icon" aria-hidden="true"><use href="#i-roadmap"/></svg><span>Plán rozvoje</span></a>
+          <button type="button" data-action="open-layer-inventory" class="subtle" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>Soupis vrstev</span></button>
           <button type="button" id="openPdfInfo" class="subtle" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>PDF info</span></button>
           <button type="button" data-action="open-settings" class="subtle"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Nastavení</button>
           <button id="workspaceTabsToggle" type="button" data-action="toggle-workspace-tabs" class="subtle" aria-controls="workspaceTabs" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>Sbalit spodní lištu</span></button>
@@ -467,6 +473,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.111-soupis-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.111 – Soupis vrstev</strong><small>Upravitelný základ dripd s miniaturami, import soupisů a hromadné označování. Finál z označených vrstev nebo složek PNG.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.110-export-fin" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.110 – Export kategorií a FIN</strong><small>Výběr více kategorií pro export PNG a živý přehled označených vrstev ve Finálu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.109-lookbook-karty" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.109 – Papírové karty v Lookbooku</strong><small>Vlastní karty s obrázky, vrstvami z projektu, variantami a poznámkami k vývoji.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.108-landscape-comparison" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.108 – Duplicita na šířku</strong><small>Čtvrtá položka Duplicita v liště na šířku a kompaktní popisky všech čtyř ikon.</small></span><span class="version-tag">Uloženo</span></a>
@@ -556,9 +563,11 @@
       <button type="button" class="icon-button subtle" data-final-action="close" aria-label="Zavřít Finál">✕</button>
     </header>
     <div id="finalViews" class="final-views" role="group" aria-label="Obsah Finálu">
-      <button type="button" data-final-action="show-marked" aria-pressed="true">Označeno FIN</button>
+      <button type="button" data-final-action="show-compose" aria-pressed="true">Sestavit export</button>
+      <button type="button" data-final-action="show-marked" aria-pressed="false">Označeno FIN</button>
       <button type="button" data-final-action="show-archives" aria-pressed="false">Zamčené kopie</button>
     </div>
+    <input id="finalDraftRootInput" type="file" webkitdirectory multiple hidden>
     <div id="finalRows" class="final-rows" aria-label="Položky Finálu"></div>
     <button id="finalMore" type="button" class="subtle" data-final-action="more" hidden>Zobrazit další</button>
     <p id="finalStatus" class="helper" role="status"></p>
@@ -569,6 +578,41 @@
     </div>
   </dialog>
   <dialog id="historyDialog" class="history-dialog" aria-labelledby="historyTitle"><div class="history-dialog-head"><div><span class="eyebrow">PROJEKT</span><h2 id="historyTitle">Historie kroků <span id="historyCount">1</span></h2></div><button type="button" data-action="close-history" class="icon-button subtle" aria-label="Zavřít historii">✕</button></div><p class="helper">Klepni na krok a vrať se k němu. Zpět a Vpřed jsou dostupné v horní liště. Historie platí pro aktuální otevření aplikace.</p><div id="historyList" class="history-list" aria-label="Historie úprav projektu"></div></dialog>
+  <aside id="editorLayerBulk" class="editor-inv-bulk" aria-label="Hromadné označení vrstev" hidden></aside>
+  <dialog id="layerInventoryDialog" class="layer-inventory-dialog" aria-labelledby="layerInventoryTitle">
+    <header class="inv-dialog-head"><div><h2 id="layerInventoryTitle">Soupis vrstev</h2><span id="layerInventoryProject"></span></div><form method="dialog"><button type="submit" class="subtle">Zavřít</button></form></header>
+    <div class="inv-source-tabs" role="group" aria-label="Zdroj soupisu">
+      <button id="inventoryBaseTab" type="button" class="subtle" aria-pressed="true">Základ dripd</button>
+      <button id="inventoryProjectTab" type="button" class="subtle" aria-pressed="false">Otevřený projekt</button>
+    </div>
+    <section id="inventoryBasePanel" aria-label="Upravitelný základ dripd">
+      <div class="inv-source-actions">
+        <button id="inventoryAddCategory" type="button" class="subtle" disabled>+ Kategorie</button>
+        <details class="inv-import-menu"><summary>Načíst / zálohovat</summary><div>
+          <button id="inventoryFromProject" type="button" class="subtle" disabled>Přidat z otevřeného projektu</button>
+          <button id="inventoryFromFile" type="button" class="subtle" disabled>Načíst dokument nebo soupis</button>
+          <button id="inventoryBackup" type="button" class="subtle" disabled>Stáhnout soupis JSON</button>
+        </div></details>
+      </div>
+      <p id="inventoryBaseStatus" class="helper" role="status"></p>
+      <input id="inventorySourceFile" type="file" accept=".psd,.psb,.procreate,.json,.html,.htm" hidden>
+      <div id="layerInventoryBase" class="layer-inventory"></div>
+    </section>
+    <div id="layerInventory" class="layer-inventory" hidden></div>
+  </dialog>
+  <dialog id="inventoryItemDialog" aria-labelledby="inventoryItemTitle">
+    <h2 id="inventoryItemTitle">Upravit položku</h2>
+    <form id="inventoryItemForm" class="inv-item-form">
+      <label>Název<input name="name" maxlength="200" required></label>
+      <label id="inventoryItemKind">Typ položky<select name="kind"></select></label>
+      <label>Poznámka<textarea name="note" maxlength="4000" rows="3"></textarea></label>
+      <label>Miniatura<input name="image" type="file" accept="image/*"></label>
+      <label id="inventoryRemoveImage" hidden><input type="checkbox" name="removeImage"> Odebrat miniaturu</label>
+      <details id="inventoryItemDelete" hidden><summary>Odebrat ze soupisu</summary><button id="inventoryItemDeleteConfirm" type="button" class="subtle">Potvrdit odebrání</button></details>
+      <p id="inventoryItemError" role="alert"></p>
+      <div class="dialog-actions"><button id="inventoryItemCancel" type="button" class="subtle">Zrušit</button><button id="inventoryItemSave" type="submit" class="primary">Uložit</button></div>
+    </form>
+  </dialog>
   <dialog id="editDialog" aria-labelledby="dialogTitle" aria-describedby="dialogDescription"><form id="dialogForm"><span class="eyebrow">TRAIT WORKSHOP</span><h2 id="dialogTitle"></h2><p id="dialogDescription" class="helper"></p><label id="dialogLabel" for="dialogInput">Název</label><input id="dialogInput" type="text" maxlength="120" autocomplete="off" required><div class="dialog-actions"><button type="button" id="dialogCancel" data-action="cancel-dialog" class="subtle">Zrušit</button><button id="dialogSubmit" type="submit" class="primary">Uložit</button></div></form></dialog>
   <dialog id="installDialog" aria-labelledby="installTitle"><img src="icons/icon.svg" width="64" height="64" alt=""><h2 id="installTitle">Tvůj ateliér. I v telefonu.</h2><p class="helper">Aplikaci můžeš mít na ploše a po prvním načtení ji používat i bez internetu.</p><ol class="install-steps"><li><strong>iPhone / iPad</strong><br>Otevři odkaz v Safari → Sdílet → Přidat na plochu.</li><li><strong>Android</strong><br>V nabídce prohlížeče vyber Nainstalovat aplikaci nebo Přidat na plochu.</li></ol><p id="installNote" class="helper"></p><button data-action="close-install" class="primary full-width">Rozumím</button></dialog>
   <dialog id="psdDialog" aria-labelledby="psdTitle" aria-describedby="psdStatus">

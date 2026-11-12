@@ -126,8 +126,8 @@
   }
 
   function markChoices(trait) {
-    return choice('wip', 'Rozpracovaný (WIP)', !!trait.wip) +
-      choice('fin', 'Hotový (FIN)', !!trait.fin) +
+    return Object.entries(layerStatusLabels).map(([key, label]) => choice(key, label, !!trait[key])).join('') +
+      choice('bulk', layerBulkSelection.has(trait.id) ? 'Odebrat z výběru' : 'Přidat do hromadného výběru') +
       Object.entries(M.FLAG_COLORS).map(([color, name]) =>
         choice(color, `${flagIcon(color)} <span>${name} vlajka</span>`, trait.flag === color)).join('') +
       (trait.flag ? choice('clear', 'Odebrat vlajku') : '');
@@ -182,7 +182,8 @@
       control.dataset.kind = 'trait';
       control.dataset.compareMark = 'true';
       control.dataset.flag = value === 'clear' ? '' : value;
-      const action = { wip: 'toggle-layer-wip', fin: 'toggle-layer-fin' }[value] || 'set-layer-flag';
+      control.dataset.mark = value;
+      const action = Object.hasOwn(layerStatusLabels, value) ? 'toggle-layer-status' : (value === 'bulk' ? 'toggle-layer-bulk-item' : 'set-layer-flag');
       handleAction(action, id, control).catch(error => toast(error.message, true));
     }
   });

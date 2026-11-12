@@ -144,6 +144,10 @@
   }
   const layerMarks = item => ({
     ...(item.wip === true ? { wip: true } : {}),
+    ...(item.draw === true ? { draw: true } : {}),
+    ...(item.fin === true ? { fin: true } : {}),
+    ...(item.trash === true ? { trash: true } : {}),
+    ...(['keep', 'todo', 'skip'].includes(item.decision) ? { decision: item.decision } : {}),
     ...(isFlagColor(item.flag) ? { flag: item.flag } : {}),
   });
   const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
@@ -160,12 +164,12 @@
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
       return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c),
-        ...(c.fin === true ? { fin: true } : {}), visible: c.visible !== false, traits: c.traits.map(t => {
+        visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || !validImage(t.data)) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
-          ...(t.hidden === true ? { hidden: true } : {}), ...(t.fin === true ? { fin: true } : {}), ...layerMarks(t), ...lookbookFields(t),
+          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t),
           ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
     });

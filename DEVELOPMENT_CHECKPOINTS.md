@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.111 | checkpoint/v0.7.111-soupis-vrstev | Upravitelný základ dripd s miniaturami, načtení soupisů z projektů a dokumentů a hromadná označení WIP, FIN, TRASH a DRAW. Finál s přípravou ZIP a potvrzenými cestami. |
 | 0.7.110 | checkpoint/v0.7.110-export-fin | Hromadný export PNG z vybraných kategorií a označení FIN s úpravami ve Finálu |
 | 0.7.109 | checkpoint/v0.7.109-lookbook-karty | Papírové karty v Lookbooku s vlastními obrázky, traity, variantami a poznámkami k vývoji |
 | 0.7.108 | checkpoint/v0.7.108-landscape-comparison | Duplicita jako čtvrtá položka na šířku, s kompaktními ikonami a popisky |
