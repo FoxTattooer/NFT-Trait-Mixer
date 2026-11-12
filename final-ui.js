@@ -166,8 +166,8 @@ async function openFinalArchives() {
   });
 }
 
-async function saveToFinal(categoryId, folderId) {
-  const snapshot = TraitFinal.snapshot(M, state, categoryId, folderId);
+async function saveToFinal(categoryId) {
+  const snapshot = TraitFinal.snapshot(M, state, categoryId);
   if (!snapshot.project.cats.length) {
     $('finalStatus').textContent = 'Projekt ještě nemá žádné kategorie.';
     return;

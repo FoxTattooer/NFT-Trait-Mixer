@@ -43,6 +43,13 @@
     const next = isPlanningGroup(node) ? path : path ? `${path} / ${node.name}` : node.name;
     return { ...node, path:next, ...(isBranch(node) ? { children:pathNodes(node.children,next) } : {}) };
   });
+  function confirmedTree(nodes) {
+    return nodes.flatMap(node => {
+      if (!isBranch(node)) return node.kind === 'layer' ? [node] : [];
+      const children = confirmedTree(node.children);
+      return isPlanningGroup(node) ? children : [{ ...node,children }];
+    });
+  }
   function locate(nodes,id,parent = null) {
     for (const item of nodes) {
       if (item.id === id) return { item, siblings:nodes,parent };
@@ -204,7 +211,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, textLines, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
+  const api = { format, normalize, textLines, pathNodes, confirmedTree, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);

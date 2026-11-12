@@ -28,7 +28,7 @@
       model.includeSuggestions(base,window.TraitInventoryReview.defaultSuggestions);
       showStatus('');
       if (!view) view = window.TraitInventory.mount(baseRoot,{
-        read: () => model.pathNodes(base.nodes), manage:true, initialOpen:['cat-facemask'],
+        read: () => model.pathNodes(model.confirmedTree(base.nodes)), manage:true, showPlans:false, initialOpen:['cat-facemask'],
         update: (ids,field,value) => { mutate(nodes => model.setField(nodes,ids,field,value)); },
         edit: editItem, preview: node => addPreview(node,'base'),
         propose: node => { void propose(node); },
@@ -164,9 +164,9 @@
     $('inventoryItemError').textContent = '';
     const choices = item && model.isBranch(item) ? [[item.kind,'Složka']]
       : !item && !parentId ? [['category','Kategorie']]
-      : [...(!item ? [['folder','Podsložka']] : []),['layer','Doložená vrstva'],['plan','Plánovaná vrstva'],['option','Volba bez vrstvy']];
+      : [...(!item ? [['folder','Podsložka']] : []),['layer','Doložená vrstva']];
     field('kind').replaceChildren(...choices.map(([value,name]) => new Option(name,value)));
-    field('kind').value = item?.kind || (parentId ? 'plan' : 'category');
+    field('kind').value = item?.kind || (parentId ? 'layer' : 'category');
     $('inventoryItemKind').hidden = choices.length === 1;
     editor.showModal();
     field('name').focus();

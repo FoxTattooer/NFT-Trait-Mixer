@@ -799,8 +799,7 @@ function openLayerContext(trigger, id) {
     const excluded = organizerDescendants(folders, id);
     edits += layerMenuButton('add-organizer-subfolder', 'Přidat podsložku', id, 'folder-plus', 'arrange', attributes) +
       layerMenuMove('Přesunout složku', `<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">${esc(c.name)} · hlavní úroveň</option>${folders.filter(folder => !excluded.has(folder.id)).map(folder => `<option value="${esc(folder.id)}" ${item.parentId === folder.id ? 'selected' : ''}>${esc(fullPath(folder.id))}</option>`).join('')}</select>`, fullPath(id));
-    other = layerMenuButton('save-folder-final', 'Uložit do Finálu', id, 'check-circle', 'finish', attributes) +
-      layerMenuButton('delete-organizer-folder', 'Smazat složku', id, 'trash', 'delete', attributes, true);
+    other = layerMenuButton('delete-organizer-folder', 'Smazat složku', id, 'trash', 'delete', attributes, true);
   } else if (kind === 'trait') {
     const siblings = M.traitSiblings(state, c.id, id);
     const index = siblings.findIndex(trait => trait.id === id);
@@ -2084,7 +2083,6 @@ async function handleAction(action, id, element) {
     case 'open-layer-menu': openLayerContext(element, id); break;
     case 'open-final': await openFinalDialog(); break;
     case 'save-category-final': await saveToFinal(id); break;
-    case 'save-folder-final': await saveToFinal(element.dataset.category, id); break;
     case 'reorder-trait-up': case 'reorder-trait-down': {
       if (!located) break;
       const siblings = M.traitSiblings(state, located.cat.id, id);

@@ -19,7 +19,7 @@
         <button type="button" class="inv-expand-all" data-inv="expand-all"></button>
         <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false" aria-label="Vybrat položky" title="Vybrat položky">${glyph('select-items')}</button>
         <details class="inv-filter-menu"><summary aria-label="Filtry" title="Filtry">${glyph('sliders')}</summary><div>
-        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Vrstvy</option><option value="plan">Plán</option><option value="option">Volby</option><option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
+        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Vrstvy</option>${showPlans ? '<option value="plan">Plán</option><option value="option">Volby</option>' : ''}<option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
         ${manage ? `<label class="inv-decisions"><span>Rozhodnutí</span><select><option value="">Všechna</option><option value="keep">Ponechat</option><option value="todo">Dodělat</option><option value="skip">Není třeba</option><option value="undecided">Nerozhodnuto</option></select></label>` : ''}
         </div></details></div>
       <div class="inv-bulk" aria-label="Akce pro vybrané položky" hidden></div><div class="inv-tree"></div>`;
@@ -29,9 +29,6 @@
     const mode = root.querySelector('.inv-mode');
     const expandAll = root.querySelector('.inv-expand-all');
     const filterMenu = root.querySelector('.inv-filter-menu');
-
-    root.querySelector('.inv-filter option[value=plan]').hidden = !showPlans;
-    root.querySelector('.inv-filter option[value=option]').hidden = !showPlans;
 
     function matches(node) {
       if (node.kind === 'group') return !query && !filter && !decision;
