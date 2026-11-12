@@ -971,7 +971,10 @@ assert.deepEqual([...get('inventoryTextItems').children].map(item=>item.textCont
 click('#inventoryProjectTab');
 click('#layerInventory [data-inv="expand"][data-id="export-b"]');
 click('#layerInventory [data-inv="mode"]');
+assert(!find('#layerInventory [data-inv-id="export-a"]').checked);
+assert(find('#layerInventory [data-inv-id="export-a"] + .bulk-pick-mark use'));
 click('#layerInventory [data-inv-id="export-a"]');
+assert(find('#layerInventory [data-inv-id="export-a"]').checked);
 click('#layerInventory [data-inv-id="export-hair"]');
 assert.match(find('#layerInventory .inv-bulk-main').textContent,/Vybráno 2/);
 find('#layerInventory [data-inv-bulk]').value='draw:add';

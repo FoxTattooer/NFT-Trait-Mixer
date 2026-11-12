@@ -52,7 +52,7 @@
       return [layers && countText(layers,'vrstva','vrstvy','vrstev'), folders && countText(folders,'složka','složky','složek'), planned && `${planned} v plánu`].filter(Boolean).join(' · ') || '0 vrstev';
     }
     function checkbox(node) {
-      return `<label class="inv-check" ${selectionMode || selected.size ? '' : 'hidden'}><input type="checkbox" data-inv-id="${escape(node.id)}" aria-label="Vybrat ${escape(node.name)}" ${selected.has(node.id) ? 'checked' : ''}></label>`;
+      return `<label class="inv-check" ${selectionMode || selected.size ? '' : 'hidden'}><span class="bulk-pick"><input type="checkbox" data-inv-id="${escape(node.id)}" aria-label="Vybrat ${escape(node.name)}" ${selected.has(node.id) ? 'checked' : ''}><span class="bulk-pick-mark" aria-hidden="true">${glyph('check')}</span></span></label>`;
     }
     function menu(node) {
       const id = escape(node.id);

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.117 | checkpoint/v0.7.117-hromadny-vyber | Kulaté značky výběru s fajfkou. |
 | 0.7.116 | checkpoint/v0.7.116-dolozene-vrstvy | Doložené vrstvy a složky v Základu dripd. Nabídka složky bez uložení do Finálu. |
 | 0.7.115 | checkpoint/v0.7.115-textovy-seznam | Textový seznam v soupisu vrstev a neutrální menu s jemně tónovanými ikonami. |
 | 0.7.114 | checkpoint/v0.7.114-pocty-vrstev | Kratší souhrny a opravené označení prázdných složek. |

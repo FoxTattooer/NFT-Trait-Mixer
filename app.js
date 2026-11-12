@@ -1539,7 +1539,7 @@ function openCategoryExport() {
   if (!state.cats.some(category => category.traits.length) || exporting) return;
   $('categoryExportChoices').innerHTML = state.cats.map(category => `
     <label class="category-export-choice">
-      <input type="checkbox" value="${esc(category.id)}" ${layerBulkSelection.has(category.id) ? 'checked' : ''}>
+      <span class="bulk-pick"><input type="checkbox" value="${esc(category.id)}" ${layerBulkSelection.has(category.id) ? 'checked' : ''}><span class="bulk-pick-mark" aria-hidden="true">${icon('check')}</span></span>
       <span>${esc(category.name)}</span><small>${category.traits.length} PNG</small>
     </label>`).join('');
   clearCategoryExportDownload();
