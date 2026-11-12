@@ -52,7 +52,7 @@
       const layers = all.filter(item => item.kind === 'layer').length;
       const folders = all.filter(item => item.kind === 'folder').length;
       const planned = all.filter(item => item.kind === 'plan').length;
-      return [countText(layers,'vrstva','vrstvy','vrstev'), folders && countText(folders,'složka','složky','složek'), planned && `${planned} v plánu`].filter(Boolean).join(' · ');
+      return [layers && countText(layers,'vrstva','vrstvy','vrstev'), folders && countText(folders,'složka','složky','složek'), planned && `${planned} v plánu`].filter(Boolean).join(' · ') || '0 vrstev';
     }
     function checkbox(node) {
       return `<label class="inv-check" ${selectionMode || selected.size ? '' : 'hidden'}><input type="checkbox" data-inv-id="${escape(node.id)}" aria-label="Vybrat ${escape(node.name)}" ${selected.has(node.id) ? 'checked' : ''}></label>`;
