@@ -250,7 +250,7 @@ body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) 
   border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
   box-shadow:inset 0 1px var(--scheme-sheen)!important;
 }
-body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.app-header summary .icon,.layer-context :where(button:not(.danger)) .icon,#quickUploadPng .icon) {
+body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(.app-header summary .icon,#quickUploadPng .icon) {
   color:var(--scheme-text)!important;
 }
 body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(select,input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea) {

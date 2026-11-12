@@ -21,6 +21,23 @@
   function mount(root, read, write) {
     let editing = '', pending = false;
     function tree() { return model.pathNodes(read().nodes); }
+    function folders(nodes) {
+      return nodes.filter(model.isBranch).flatMap(node => model.isPlanningGroup(node)
+        ? folders(node.children) : [{ ...node, children:folders(node.children) }]);
+    }
+    function folderPicker(nodes) {
+      return `<ul>${nodes.map(node => `<li><button type="button" data-review-parent="${esc(node.id)}" aria-pressed="false">${icon('folder')}<span>${esc(node.name)}</span></button>${node.children.length ? folderPicker(node.children) : ''}</li>`).join('')}</ul>`;
+    }
+    function syncPaths(form) {
+      const branches = tree();
+      const parent = form.elements.namedItem('parent').value;
+      const target = form.elements.namedItem('target').value;
+      form.querySelector('[data-review-path="parent"]').textContent = model.locate(branches,parent)?.item.path || '—';
+      form.querySelector('[data-review-path="target"]').textContent = model.locate(branches,target)?.item.path || 'Nová položka';
+      for (const button of form.querySelectorAll('[data-review-parent]')) {
+        button.setAttribute('aria-pressed',String(button.dataset.reviewParent === parent));
+      }
+    }
     function leaves(parentId, suggestedId) {
       const branches = tree();
       const parent = model.locate(branches,parentId)?.item;
@@ -37,20 +54,26 @@
       const base = read();
       if (!base) { root.textContent = 'Načítám návrhy…'; return; }
       const branches = tree();
-      const parents = flatten(branches).filter(model.isBranch);
+      const folderTree = folders(branches);
+      const parents = flatten(folderTree);
       const proposals = base.suggestions.filter(item => item.status === 'pending');
       if (!proposals.some(item => item.id === editing)) editing = '';
       root.innerHTML = proposals.length ? `<p class="inventory-review-count">Čeká na schválení <strong>${proposals.length}</strong></p>` + proposals.map(item => {
-        const parent = parents.find(node => node.id === item.parentId);
+        let location = model.locate(branches,item.parentId);
+        while (location && model.isPlanningGroup(location.item)) location = model.locate(branches,location.parent?.id);
+        const parent = parents.find(node => node.id === location?.item.id);
         const selectedParent = parent?.id || branches[0]?.id || '';
         const target = model.locate(branches,item.targetId)?.item;
         const art = item.image || target?.image;
-        return `<article class="inventory-review-card"><div class="inventory-review-head">${art ? `<img src="${esc(art)}" alt="" loading="lazy">` : ''}<div><h3>${esc(item.name)}</h3>${parent ? `<span>${esc(parent.path)}</span>` : ''}</div>
+        return `<article class="inventory-review-card"><div class="inventory-review-head"><div class="inv-art${art ? ' has-art' : ''}" aria-hidden="true">${art ? `<img src="${esc(art)}" alt="" loading="lazy" decoding="async">` : icon('layers')}</div><div class="inventory-review-name"><h3>${esc(item.name)}</h3>${parent ? `<span>${esc(parent.path)}</span>` : ''}</div>
           ${item.id !== editing ? `<button type="button" class="subtle" data-review-open="${esc(item.id)}">Posoudit</button>` : ''}</div>
-          <p>${esc(item.reason)}</p>${item.id === editing ? `<form data-review-form="${esc(item.id)}" class="inventory-review-form">
+          <p>${esc(item.reason)}</p>${item.id === editing ? `<form data-review-form="${esc(item.id)}" class="inventory-review-form" data-parent="${esc(selectedParent)}">
             <label>Název po schválení<input name="name" value="${esc(item.name)}" maxlength="200" required></label>
-            <label>Kategorie nebo složka<select name="parent" required>${option('','Vybrat kategorii…',selectedParent)}${parents.map(node => option(node.id,node.path,selectedParent)).join('')}</select></label>
-            <label>Přiřadit k položce<select name="target">${targetOptions(selectedParent,item,target?.id || '')}</select></label>
+            <label>Cílová složka<select name="parent" required aria-describedby="inventoryReviewParentPath">${option('','Vybrat složku…',selectedParent)}${parents.map(node => option(node.id,node.path,selectedParent)).join('')}</select></label>
+            <p class="inventory-review-path" id="inventoryReviewParentPath">${icon('folder')}<span data-review-path="parent"></span></p>
+            <details class="inventory-review-folders"><summary>${icon('folder-tree')}<span>Strom složek</span>${icon('chevron')}</summary>${folderPicker(folderTree)}</details>
+            <label>Přiřadit k položce<select name="target" aria-describedby="inventoryReviewTargetPath">${targetOptions(selectedParent,item,target?.id || '')}</select></label>
+            <p class="inventory-review-path" id="inventoryReviewTargetPath">${icon('layers')}<span data-review-path="target"></span></p>
             <div class="inventory-review-actions"><button type="button" class="subtle" data-review-dismiss="${esc(item.id)}">Zamítnout</button><button type="submit" class="primary">Schválit a uložit</button></div>
           </form>` : ''}</article>`;
       }).join('') : '<p class="helper">Žádné návrhy ke schválení. Nový návrh můžeš připravit přes ••• u položky v Základu dripd.</p>';
@@ -59,8 +82,9 @@
         const proposal = proposals.find(item => item.id === editing);
         const parent = form.elements.namedItem('parent');
         const target = form.elements.namedItem('target');
-        parent.value = parents.some(node => node.id === proposal.parentId) ? proposal.parentId : branches[0]?.id || '';
+        parent.value = form.dataset.parent;
         target.value = [...target.options].some(item => item.value === proposal.targetId) ? proposal.targetId : '';
+        syncPaths(form);
       }
     }
     function open(id) { editing = id; render(); }
@@ -69,18 +93,26 @@
       if (!button || pending) return;
       if (button.dataset.reviewOpen) open(button.dataset.reviewOpen);
       else if (button.dataset.reviewDismiss) void save(button.dataset.reviewDismiss,null);
+      else if (button.dataset.reviewParent) {
+        const parent = button.form.elements.namedItem('parent');
+        parent.value = button.dataset.reviewParent;
+        parent.dispatchEvent(new Event('change',{ bubbles:true }));
+        button.closest('details').open = false;
+        parent.focus({ preventScroll:true });
+      }
     });
     root.addEventListener('change',event => {
       const control = event.target;
-      if (control.name !== 'parent') return;
+      if (!['parent','target'].includes(control.name)) return;
       const form = control.closest('form');
-      const item = read().suggestions.find(entry => entry.id === form.dataset.reviewForm);
-      const target = form.elements.namedItem('target');
-      if (item) {
+      if (control.name === 'parent') {
+        const item = read().suggestions.find(entry => entry.id === form.dataset.reviewForm);
+        const target = form.elements.namedItem('target');
         const selection = target.value;
         target.innerHTML = targetOptions(control.value,item,selection);
         target.value = [...target.options].some(option => option.value === selection) ? selection : '';
       }
+      syncPaths(form);
     });
     root.addEventListener('submit',event => {
       const form = event.target;

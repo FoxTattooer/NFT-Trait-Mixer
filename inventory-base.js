@@ -5,6 +5,7 @@
   const decisions = ['keep','todo','skip'];
   const kinds = ['category','folder','group','layer','plan','option'];
   const isBranch = node => ['category','folder','group'].includes(node.kind);
+  const isPlanningGroup = node => node.kind === 'group' && node.name.startsWith('Z plánu ·');
   const nameKey = value => value.normalize('NFC').trim().toLocaleLowerCase('cs');
   const label = (value, max) => typeof value === 'string' ? value.trim().slice(0,max) : '';
   const isThumbnail = value => typeof value === 'string' && /^data:image\/(jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(value);
@@ -36,7 +37,7 @@
     return { format, nodes, suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
   }
   const pathNodes = (nodes, path = '') => nodes.map(node => {
-    const next = path ? `${path} / ${node.name}` : node.name;
+    const next = isPlanningGroup(node) ? path : path ? `${path} / ${node.name}` : node.name;
     return { ...node, path:next, ...(isBranch(node) ? { children:pathNodes(node.children,next) } : {}) };
   });
   function locate(nodes,id,parent = null) {
@@ -176,7 +177,7 @@
     };
     function descendants(node, prefix = '') {
       const used = new Set();
-      return node.children.filter(child => isBranch(child) && !(child.kind === 'group' && child.name.startsWith('Z plánu'))).flatMap(child => {
+      return node.children.filter(child => isBranch(child) && !isPlanningGroup(child)).flatMap(child => {
         const name = unique(child.name,used);
         const path = prefix ? `${prefix}/${name}` : name;
         return [path,...descendants(child,path)];
@@ -200,7 +201,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
+  const api = { format, normalize, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);

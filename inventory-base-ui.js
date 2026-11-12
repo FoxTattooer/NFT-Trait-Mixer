@@ -55,6 +55,10 @@
     return task;
   }
   function show(nextMode) {
+    if (mode !== nextMode) {
+      dialog.scrollTop = 0;
+      if (!loading && !importing && !status.classList.contains('is-error')) showStatus('');
+    }
     mode = nextMode;
     for (const [tab,kind] of [['inventoryBaseTab','base'],['inventoryProjectTab','project'],['inventoryPreviewTab','preview'],['inventoryReviewTab','review']]) {
       $(tab).setAttribute('aria-pressed',String(mode === kind));

@@ -1,12 +1,13 @@
 (() => {
   'use strict';
   const marks = { wip: 'WIP', fin: 'FIN', trash: 'TRASH', draw: 'DRAW' };
-  const kinds = { category: 'Kategorie', folder: 'Podsložka', layer: 'Vrstva', plan: 'K ověření', option: 'Volba' };
+  const glyph = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+  const markIcons = { wip:'clock', fin:'check', trash:'trash', draw:'brush' };
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const flatten = nodes => nodes.flatMap(node => [node, ...flatten(node.children || [])]);
   const countText = (count, singular, plural, many) => `${count} ${count === 1 ? singular : count < 5 ? plural : many}`;
   const markPills = node => Object.entries(marks).filter(([key]) => node[key]).map(([key, label]) => `<span class="inv-mark" data-mark="${key}">${label}</span>`).join('');
-  const folderIcon = '<span class="inv-folder-icon" aria-hidden="true"></span>';
+  const folderIcon = `<span class="inv-folder-icon">${glyph('folder')}</span>`;
 
   function mount(root, options) {
     const { read, update, selected = new Set(), thumbnail, onRender, edit, preview, propose, manage, showPlans = manage } = options;
@@ -14,15 +15,20 @@
     let query = '', filter = '', decision = '', activeMenu = '', selectionMode = false;
     let branches = [], entries = [], current = new Map();
     root.innerHTML = `<div class="inv-metrics" aria-label="Počty položek"></div>
-      <div class="inv-controls"><label class="inv-search"><span>Hledat v soupisu</span><input type="search" placeholder="Název, třeba Cowboy…"></label>
-        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Doložené</option><option value="plan">K ověření</option><option value="option">Volby</option><option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
+      <div class="inv-controls"><label class="inv-search">${glyph('search')}<input type="search" aria-label="Hledat v soupisu" placeholder="Hledat vrstvu…"></label>
+        <button type="button" class="inv-expand-all" data-inv="expand-all"></button>
+        <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false" aria-label="Vybrat položky" title="Vybrat položky">${glyph('select-items')}</button>
+        <details class="inv-filter-menu"><summary aria-label="Filtry" title="Filtry">${glyph('sliders')}</summary><div>
+        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Vrstvy</option><option value="plan">Plán</option><option value="option">Volby</option><option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
         ${manage ? `<label class="inv-decisions"><span>Rozhodnutí</span><select><option value="">Všechna</option><option value="keep">Ponechat</option><option value="todo">Dodělat</option><option value="skip">Není třeba</option><option value="undecided">Nerozhodnuto</option></select></label>` : ''}
-        <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false">Vybrat položky</button></div>
+        </div></details></div>
       <div class="inv-bulk" aria-label="Akce pro vybrané položky" hidden></div><div class="inv-tree"></div>`;
     const metrics = root.querySelector('.inv-metrics');
     const bulk = root.querySelector('.inv-bulk');
     const tree = root.querySelector('.inv-tree');
     const mode = root.querySelector('.inv-mode');
+    const expandAll = root.querySelector('.inv-expand-all');
+    const filterMenu = root.querySelector('.inv-filter-menu');
 
     root.querySelector('.inv-filter option[value=plan]').hidden = !showPlans;
     root.querySelector('.inv-filter option[value=option]').hidden = !showPlans;
@@ -46,7 +52,7 @@
       const layers = all.filter(item => item.kind === 'layer').length;
       const folders = all.filter(item => item.kind === 'folder').length;
       const planned = all.filter(item => item.kind === 'plan').length;
-      return [layers && countText(layers,'vrstva','vrstvy','vrstev'), folders && countText(folders,'podsložka','podsložky','podsložek'), planned && `${planned} k ověření`].filter(Boolean).join(' · ');
+      return [countText(layers,'vrstva','vrstvy','vrstev'), folders && countText(folders,'složka','složky','složek'), planned && `${planned} v plánu`].filter(Boolean).join(' · ');
     }
     function checkbox(node) {
       return `<label class="inv-check" ${selectionMode || selected.size ? '' : 'hidden'}><input type="checkbox" data-inv-id="${escape(node.id)}" aria-label="Vybrat ${escape(node.name)}" ${selected.has(node.id) ? 'checked' : ''}></label>`;
@@ -55,7 +61,7 @@
       const id = escape(node.id);
       const isOpen = activeMenu === node.id;
       const group = node.kind === 'group';
-      const actions = group ? '' : `<span>Označit jako…</span><div class="inv-mark-palette">${Object.entries(marks).map(([key, label]) => `<button type="button" data-inv="mark" data-id="${id}" data-mark="${key}" aria-pressed="${!!node[key]}">${label}</button>`).join('')}</div><button type="button" data-inv="select" data-id="${id}">${selected.has(node.id) ? 'Odebrat z výběru' : 'Přidat do výběru'}</button>`;
+      const actions = group ? '' : `<span>Označit jako…</span><div class="inv-mark-palette">${Object.entries(marks).map(([key, label]) => `<button type="button" data-inv="mark" data-id="${id}" data-mark="${key}" aria-pressed="${!!node[key]}">${glyph(markIcons[key])}${label}</button>`).join('')}</div><button type="button" data-inv="select" data-id="${id}">${selected.has(node.id) ? 'Odebrat z výběru' : 'Vybrat položku'}</button>${manage ? decisionControl(node) : ''}`;
       const edits = edit ? `<button type="button" data-inv="edit" data-id="${id}">Upravit položku</button>${['category','folder','group'].includes(node.kind) ? `<button type="button" data-inv="add" data-id="${id}">Přidat do složky</button>` : ''}` : '';
       const previewAction = preview && node.kind === 'layer' && (node.image || node.categoryId) ? `<button type="button" data-inv="preview" data-id="${id}">Přidat do náhledu</button>` : '';
       const proposalAction = propose && ['layer','plan','option'].includes(node.kind) ? `<button type="button" data-inv="propose" data-id="${id}">Navrhnout změnu</button>` : '';
@@ -63,7 +69,7 @@
     }
     function image(node) {
       if (node.image) return `<img alt="" loading="lazy" decoding="async" src="${escape(node.image)}">`;
-      return thumbnail?.(node) || (node.kind === 'folder' ? folderIcon : '');
+      return thumbnail?.(node) || '';
     }
     const decisions = [['','Nerozhodnuto'],['keep','Ponechat'],['todo','Dodělat'],['skip','Není třeba']];
     function decisionControl(node) {
@@ -72,28 +78,29 @@
     function card(node) {
       const art = image(node);
       const details = [node.note, (node.aliases || []).length && `Jiné názvy · ${node.aliases.join(' / ')}`].filter(Boolean).join(' ');
-      return `<article class="inv-card ${art ? 'has-art' : 'text-card'} ${selected.has(node.id) ? 'inv-selected' : ''}" data-kind="${node.kind}">
-        ${art ? `<div class="inv-art">${art}</div>` : ''}<div class="inv-card-copy"><div class="inv-card-title">${checkbox(node)}<h3>${escape(node.name)}</h3>${menu(node)}</div>
-        <div class="inv-card-meta"><span>${kinds[node.kind]}</span>${edit && node.kind === 'layer' && !art ? '<span>Bez miniatury</span>' : ''}${markPills(node)}</div>
-        ${details ? `<p>${escape(details)}</p>` : ''}
-        ${manage ? decisionControl(node) : ''}</div></article>`;
+      const stateLabel = node.kind === 'plan' ? 'Plán' : node.kind === 'option' ? 'Volba' : '';
+      return `<article class="inv-card ${selected.has(node.id) ? 'inv-selected' : ''}" data-kind="${node.kind}">
+        ${checkbox(node)}<div class="inv-art ${art ? 'has-art' : ''}" aria-hidden="true">${art || glyph(node.kind === 'plan' ? 'clock' : 'layers')}</div>
+        <div class="inv-card-copy"><h3>${escape(node.name)}</h3>${details ? `<p>${escape(details)}</p>` : ''}</div>
+        <div class="inv-card-meta">${stateLabel ? `<span class="inv-evidence" data-evidence="${node.kind}">${stateLabel}</span>` : ''}${markPills(node)}${node.decision ? `<span>${decisions.find(([key]) => key === node.decision)?.[1] || ''}</span>` : ''}</div>${menu(node)}</article>`;
     }
     function branch(node, depth) {
       const { id, kind, name, note, children } = node;
       const focused = query || filter || decision;
       const open = expanded.get(id) ?? (!!focused || kind === 'category' && branches.length === 1);
       const isGroup = kind === 'group';
+      const planned = window.TraitInventoryBase.isPlanningGroup(node);
+      const title = planned ? name.replace(/^Z plánu ·\s*|\s*k ověření$/gi,'').trim() || 'Plánované vrstvy' : name;
       const caption = counts(current.get(id)?.children || children);
-      const review = manage && !isGroup ? decisionControl(node) : '';
       return `<section class="inv-branch" data-depth="${Math.min(depth, 4)}">
-        <div class="inv-node ${selected.has(id) ? 'inv-selected' : ''}">${isGroup ? '' : checkbox(node)}<button type="button" class="inv-toggle" data-inv="expand" data-id="${escape(id)}" aria-expanded="${open}"><span class="inv-chevron" aria-hidden="true">${open ? '▾' : '›'}</span>${isGroup ? '' : folderIcon}<strong>${escape(name)}</strong>${caption ? `<small>${caption}</small>` : ''}</button>${markPills(node)}${isGroup && !edit ? '' : menu(node)}</div>
-        ${open ? `<div class="inv-children">${note ? `<p class="inv-note">${escape(note)}</p>` : ''}${review}${children.length ? renderNodes(children,depth+1) : '<p class="inv-note">Žádné zobrazené vrstvy.</p>'}</div>` : ''}</section>`;
+        <div class="inv-node ${selected.has(id) ? 'inv-selected' : ''}">${isGroup ? '' : checkbox(node)}<button type="button" class="inv-toggle" data-inv="expand" data-id="${escape(id)}" aria-expanded="${open}"><span class="inv-chevron">${glyph('chevron')}</span>${planned ? `<span class="inv-folder-icon inv-plan-icon">${glyph('clock')}</span>` : folderIcon}<span class="inv-branch-copy"><strong>${escape(title)}</strong><small>${caption}</small></span></button>${markPills(node)}${isGroup && !edit ? '' : menu(node)}</div>
+        ${open ? `<div class="inv-children">${note ? `<p class="inv-note">${escape(note)}</p>` : ''}${children.length ? renderNodes(children,depth+1) : '<p class="inv-note">Prázdná složka</p>'}</div>` : ''}</section>`;
     }
     function renderNodes(nodes, depth) {
       let output = '', cards = [];
       const flush = () => { if (cards.length) { output += `<div class="inv-grid">${cards.join('')}</div>`; cards = []; } };
       for (const node of nodes) {
-        if (['category','group','folder'].includes(node.kind) && (node.kind !== 'folder' || node.children.length)) {
+        if (window.TraitInventoryBase.isBranch(node)) {
           flush(); output += branch(node, depth);
         } else cards.push(card(node));
       }
@@ -112,14 +119,20 @@
       const folders = entries.filter(node => node.kind === 'folder').length;
       const planned = entries.filter(node => node.kind === 'plan').length;
       const todo = entries.filter(node => node.decision === 'todo').length;
-      metrics.innerHTML = metric(branches.length, 'Kategorie') + metric(layers, 'Doložené vrstvy') + metric(folders, 'Podsložky') + (showPlans ? metric(planned, 'Z plánu k ověření','warm') : '') + (manage ? metric(todo, 'K dodělání','warm') : '');
-      const allCounts = Object.entries(marks).map(([key,label]) => `<span class="inv-mark" data-mark="${key}">${label} <strong>${entries.filter(node => node[key]).length}</strong></span>`).join('');
-      metrics.insertAdjacentHTML('beforeend', `<div class="inv-totals">${allCounts}</div>`);
+      const allCounts = Object.entries(marks).map(([key,label]) => {
+        const count = entries.filter(node => node[key]).length;
+        return count ? `<span class="inv-mark" data-mark="${key}">${label} <strong>${count}</strong></span>` : '';
+      }).join('');
+      metrics.innerHTML = metric(branches.length, 'Kategorie') + metric(layers, 'Vrstvy') + metric(folders, 'Podsložky') +
+        (showPlans && planned ? metric(planned, 'Plán','warm') : '') + (manage && todo ? metric(todo, 'Dodělat','warm') : '') + allCounts;
       mode.setAttribute('aria-pressed', String(selectionMode || !!selected.size));
       bulk.hidden = !selectionMode && !selected.size;
       bulk.innerHTML = `<div class="inv-bulk-main"><strong aria-live="polite">Vybráno ${selected.size}</strong><button type="button" data-inv="all">Vybrat zobrazené</button><button type="button" data-inv="clear">Zrušit výběr</button></div><div class="inv-bulk-actions"><label><span>Označit výběr</span><select data-inv-bulk><option value="">Vyber označení…</option>${Object.entries(marks).flatMap(([key,label]) => [`<option value="${key}:add">Přidat ${label}</option>`,`<option value="${key}:remove">Odebrat ${label}</option>`]).join('')}${manage ? `<optgroup label="Rozhodnutí">${decisions.map(([key,label]) => `<option value="decision:${key}">${label}</option>`).join('')}</optgroup>` : ''}</select></label><button type="button" class="inv-apply" data-inv="apply" ${selected.size ? '' : 'disabled'}>Použít</button></div>`;
       const visible = branches.map(project).filter(Boolean);
       tree.innerHTML = visible.length ? renderNodes(visible,0) : `<p class="inv-empty">${branches.length ? 'Tomuto výběru neodpovídá žádná položka.' : 'Otevři projekt nebo importuj vrstvy. Soupis se naplní podle jeho stromu.'}</p>`;
+      expandAll.disabled = !visible.length;
+      expandAll.innerHTML = `${glyph('folder-tree')}${tree.querySelector('.inv-toggle[aria-expanded=false]') ? 'Rozbalit strom' : 'Sbalit strom'}`;
+      filterMenu.classList.toggle('has-filters',!!(filter || decision));
       if (focusedAction && focusedId) [...root.querySelectorAll('[data-inv]')].find(el => el.dataset.id === focusedId && el.dataset.inv === focusedAction)?.focus({ preventScroll: true });
       const popup = tree.querySelector('.inv-menu');
       if (popup) {
@@ -142,6 +155,9 @@
       const node = current.get(id);
       if (action === 'expand' && node) {
         expanded.set(id, button.getAttribute('aria-expanded') !== 'true');
+      } else if (action === 'expand-all') {
+        const open = !!tree.querySelector('.inv-toggle[aria-expanded=false]');
+        for (const branch of current.values()) if (window.TraitInventoryBase.isBranch(branch)) expanded.set(branch.id,open);
       } else if (action === 'menu') {
         activeMenu = activeMenu === id ? '' : id;
         render(); return;
@@ -175,7 +191,7 @@
       if (input.matches('.inv-filter select')) { filter = input.value; expanded.clear(); }
       else if (input.matches('.inv-decisions select')) { decision = input.value; expanded.clear(); }
       else if (input.dataset.invId) setSelected(input.dataset.invId,input.checked);
-      else if (input.dataset.invDecision) update([input.dataset.invDecision],'decision',input.value);
+      else if (input.dataset.invDecision) { update([input.dataset.invDecision],'decision',input.value); activeMenu = ''; }
       else return;
       render();
     });
