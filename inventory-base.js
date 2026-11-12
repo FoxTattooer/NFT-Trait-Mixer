@@ -10,6 +10,7 @@
   const label = (value, max) => typeof value === 'string' ? value.trim().slice(0,max) : '';
   const isThumbnail = value => typeof value === 'string' && /^data:image\/(jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(value);
   const newId = () => root.TraitProject?.uid() || root.crypto.randomUUID();
+  const textLines = text => text.split(/\r\n?|\n/).map(line => line.trim()).filter(Boolean);
 
   function normalize(raw) {
     if (raw?.format !== format || !Array.isArray(raw.nodes)) throw new Error('Soubor neobsahuje soupis vrstev.');
@@ -34,7 +35,9 @@
     }
     const nodes = visit(raw.nodes);
     const suggestions = (Array.isArray(raw.suggestions) ? raw.suggestions : []).map(normalizeSuggestion).filter(Boolean);
-    return { format, nodes, suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
+    const textItems = Array.isArray(raw.textItems)
+      ? raw.textItems.filter(item => typeof item === 'string').flatMap(textLines) : [];
+    return { format, nodes, textItems, suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
   }
   const pathNodes = (nodes, path = '') => nodes.map(node => {
     const next = isPlanningGroup(node) ? path : path ? `${path} / ${node.name}` : node.name;
@@ -201,7 +204,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
+  const api = { format, normalize, textLines, pathNodes, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);

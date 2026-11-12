@@ -155,6 +155,16 @@
 #inventoryBaseStatus:empty, #layerInventoryDialog [hidden], #inventoryItemDialog [hidden] { display:none !important; }
 #inventoryBaseStatus { margin:0 0 5px; font-size:11px; }
 #inventoryBaseStatus.is-error, #inventoryItemError { color:#ffb6b3; }
+.inv-text-read, .inv-text-form { display:grid; gap:8px; min-width:0; }
+.inv-text-read > button { justify-self:start; }
+.inv-text-read ul { display:grid; gap:5px; margin:0; padding:9px 10px 9px 28px; border:1px solid var(--scheme-stroke,#555967); border-radius:8px; font-size:14px; line-height:1.45; }
+.inv-text-read li { overflow-wrap:anywhere; white-space:pre-wrap; }
+.inv-text-read li::marker { color:var(--scheme-muted,#b7bac3); }
+.inv-text-form label { margin:0; font-size:13px; font-weight:650; }
+.inv-text-form p { margin:0; color:var(--scheme-muted,#b7bac3); font-size:12px; }
+.inv-text-form textarea { width:100%; min-width:0; min-height:112px; max-height:48dvh; resize:vertical; border-radius:8px; border:1px solid var(--scheme-stroke,#555967); background:var(--scheme-control,#22252a); color:inherit; padding:8px; font-family:inherit; font-size:16px; line-height:1.5; }
+.inv-text-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:6px; }
+.inv-text-actions button, .inv-text-read button { min-height:40px; padding:5px 9px; font-size:13px; }
 #inventoryItemDialog { width:min(92vw,480px); max-height:88dvh; overflow:auto; }
 .inv-item-form, .inv-item-form label { display:grid; gap:7px; min-width:0; }
 .inv-item-form textarea { width:100%; resize:vertical; border-radius:8px; border:1px solid var(--scheme-stroke,#555967); background:var(--scheme-control,#22252a); color:inherit; padding:8px; font:inherit; }

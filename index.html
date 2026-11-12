@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=0768">
   <link rel="stylesheet" href="design.css?build=0798">
-  <link rel="stylesheet" href="compact.css?build=07113">
-  <link rel="stylesheet" href="schemes.css?build=07113">
+  <link rel="stylesheet" href="compact.css?build=07115">
+  <link rel="stylesheet" href="schemes.css?build=07115">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
@@ -23,13 +23,13 @@
   <script src="project.js?build=07111" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07114" defer></script>
+  <script src="diagnostics.js?build=07115" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <link rel="stylesheet" href="layer-inventory.css?build=07113">
+  <link rel="stylesheet" href="layer-inventory.css?build=07115">
   <script src="layer-inventory.js?build=07114" defer></script>
-  <script src="inventory-base.js?build=07113" defer></script>
+  <script src="inventory-base.js?build=07115" defer></script>
   <script src="app.js?build=07113" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
@@ -38,7 +38,7 @@
   <script src="final-builder.js?build=07112" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
-  <script src="inventory-base-ui.js?build=07113" defer></script>
+  <script src="inventory-base-ui.js?build=07115" defer></script>
   <script src="drag.js?build=0760" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
@@ -131,8 +131,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.114" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.114</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.115" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.115</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -484,6 +484,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.115-textovy-seznam" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.115 – Textový seznam</strong><small>Odrážky v soupisu vrstev a tlumené ikony akcí.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.114-pocty-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.114 – Počty ve stromu</strong><small>Kratší souhrny u složek a správný popisek u prázdných složek.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.113-kompaktni-soupis" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.113 – Kompaktní soupis</strong><small>Barevné ikony akcí, rozbalovací přesuny, přehlednější strom vrstev a celé cesty při schvalování.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.112-menu-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.112 – Menu vrstev</strong><small>Sjednocené menu vrstev, Soupis s kompozicí a návrhy ke schválení. Finál se stromem složek a náhledem.</small></span><span class="version-tag">Uloženo</span></a>
@@ -595,8 +596,9 @@
   <aside id="editorLayerBulk" class="editor-inv-bulk" aria-label="Hromadné označení vrstev" hidden></aside>
   <dialog id="layerInventoryDialog" class="layer-inventory-dialog" aria-labelledby="layerInventoryTitle">
     <header class="inv-dialog-head"><div><h2 id="layerInventoryTitle">Soupis vrstev</h2><span id="layerInventoryProject"></span></div><form method="dialog"><button type="submit" class="subtle" aria-label="Zavřít" title="Zavřít"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></form></header>
-    <div class="inv-source-tabs" role="group" aria-label="Zdroj soupisu">
+    <div class="inv-source-tabs" role="group" aria-label="Pohled soupisu">
       <button id="inventoryBaseTab" type="button" class="subtle" aria-pressed="true">Základ dripd</button>
+      <button id="inventoryTextTab" type="button" class="subtle" aria-pressed="false">Textový seznam</button>
       <button id="inventoryProjectTab" type="button" class="subtle" aria-pressed="false">Otevřený projekt</button>
       <button id="inventoryPreviewTab" type="button" class="subtle" aria-pressed="false">Náhled a vrstvy</button>
       <button id="inventoryReviewTab" type="button" class="subtle" aria-pressed="false">Návrhy</button>
@@ -613,6 +615,21 @@
       </div>
       <input id="inventorySourceFile" type="file" accept=".psd,.psb,.procreate,.json,.html,.htm" hidden>
       <div id="layerInventoryBase" class="layer-inventory"></div>
+    </section>
+    <section id="inventoryTextPanel" aria-label="Textový seznam" hidden>
+      <div id="inventoryTextRead" class="inv-text-read">
+        <ul id="inventoryTextItems" aria-label="Uložené body"></ul>
+        <button id="inventoryTextEdit" type="button" class="subtle" disabled>Přidat body</button>
+      </div>
+      <form id="inventoryTextForm" class="inv-text-form" hidden>
+        <label for="inventoryTextInput">Body seznamu</label>
+        <p id="inventoryTextHelp">Každý řádek je jedna odrážka.</p>
+        <textarea id="inventoryTextInput" rows="7" aria-describedby="inventoryTextHelp"></textarea>
+        <div class="inv-text-actions">
+          <button id="inventoryTextCancel" type="button" class="subtle">Zrušit</button>
+          <button id="inventoryTextSave" type="submit" class="primary">Uložit seznam</button>
+        </div>
+      </form>
     </section>
     <div id="layerInventory" class="layer-inventory" hidden></div>
     <section id="inventoryPreview" aria-label="Náhled a vrstvy" hidden></section>

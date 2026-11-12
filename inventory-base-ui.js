@@ -5,7 +5,9 @@
   const dialog = $('layerInventoryDialog'), baseRoot = $('layerInventoryBase');
   const editor = $('inventoryItemDialog'), form = $('inventoryItemForm'), source = $('inventorySourceFile');
   const status = $('inventoryBaseStatus');
+  const textForm = $('inventoryTextForm'), textInput = $('inventoryTextInput'), textEdit = $('inventoryTextEdit');
   let base, loading, writing = Promise.resolve(), view, edit, importing = false, mode = 'base';
+  let textSaving = false;
   const preview = window.TraitInventoryPreview.mount($('inventoryPreview'),id => base && model.locate(base.nodes,id)?.item);
   const review = window.TraitInventoryReview.mount($('inventoryReview'),() => base,write);
   const showStatus = (message, error = false) => { status.textContent = message; status.classList.toggle('is-error',error); };
@@ -32,6 +34,7 @@
         propose: node => { void propose(node); },
       });
       else view.render();
+      if (mode === 'text') renderText();
       if (mode === 'review') review.render();
       if (mode === 'preview') preview.render();
     })().catch(error => showStatus(`${error.message} Zkus znovu otevřít soupis.`,true))
@@ -48,6 +51,7 @@
       await TraitFinal.saveWorkspace(await finalDatabase(),next,key);
       base = next;
       view?.render();
+      if (mode === 'text') renderText();
       showStatus(typeof message === 'function' ? message(result) : message);
       return result;
     });
@@ -60,11 +64,12 @@
       if (!loading && !importing && !status.classList.contains('is-error')) showStatus('');
     }
     mode = nextMode;
-    for (const [tab,kind] of [['inventoryBaseTab','base'],['inventoryProjectTab','project'],['inventoryPreviewTab','preview'],['inventoryReviewTab','review']]) {
+    for (const [tab,kind] of [['inventoryBaseTab','base'],['inventoryTextTab','text'],['inventoryProjectTab','project'],['inventoryPreviewTab','preview'],['inventoryReviewTab','review']]) {
       $(tab).setAttribute('aria-pressed',String(mode === kind));
     }
     $('layerInventory').hidden = mode !== 'project';
     $('inventoryBasePanel').hidden = mode !== 'base';
+    $('inventoryTextPanel').hidden = mode !== 'text';
     $('inventoryPreview').hidden = mode !== 'preview';
     $('inventoryReview').hidden = mode !== 'review';
     $('layerInventoryTitle').textContent = mode === 'review' ? 'Návrhy ke schválení' : 'Soupis vrstev';
@@ -72,6 +77,7 @@
     preview.render();
     if (mode === 'project') showInventoryProject();
     else {
+      if (mode === 'text') renderText();
       if (mode === 'review') review.render();
       updateButtons(); void load();
     }
@@ -85,6 +91,7 @@
   }
   dialog.addEventListener('close',preview.clear);
   $('inventoryBaseTab').addEventListener('click',() => show('base'));
+  $('inventoryTextTab').addEventListener('click',() => show('text'));
   $('inventoryProjectTab').addEventListener('click',() => show('project'));
   $('inventoryPreviewTab').addEventListener('click',() => show('preview'));
   $('inventoryReviewTab').addEventListener('click',() => show('review'));
@@ -93,6 +100,53 @@
     if (base) download(new Blob([JSON.stringify(base)],{ type:'application/json' }),'dripd-soupis.json');
   });
   $('inventoryFromFile').addEventListener('click',() => { $('inventoryFromFile').closest('details').open = false; source.click(); });
+
+  function renderText() {
+    const items = base?.textItems || [];
+    const list = $('inventoryTextItems');
+    const lines = document.createDocumentFragment();
+    for (const item of items) {
+      const line = document.createElement('li');
+      line.textContent = item;
+      lines.append(line);
+    }
+    list.replaceChildren(lines);
+    list.hidden = !items.length;
+    $('inventoryTextRead').hidden = !textForm.hidden;
+    textEdit.disabled = !base;
+    textEdit.textContent = items.length ? 'Upravit seznam' : 'Přidat body';
+  }
+  function closeTextEditor() {
+    textForm.hidden = true;
+    renderText();
+    if (mode === 'text' && dialog.open) textEdit.focus();
+  }
+  textEdit.addEventListener('click',() => {
+    if (!base) return;
+    textInput.value = base.textItems.join('\n');
+    textForm.hidden = false;
+    $('inventoryTextRead').hidden = true;
+    textInput.focus();
+  });
+  $('inventoryTextCancel').addEventListener('click',closeTextEditor);
+  textForm.addEventListener('submit',async event => {
+    event.preventDefault();
+    if (!base || textSaving || textForm.hidden) return;
+    textSaving = true;
+    const buttons = [...textForm.querySelectorAll('button')];
+    buttons.forEach(button => { button.disabled = true; });
+    textInput.readOnly = true;
+    const items = model.textLines(textInput.value);
+    try {
+      await write(next => { next.textItems = items; },'Textový seznam uložen.');
+      closeTextEditor();
+    } catch { /* Keep the draft for retry. The shared status shows the error. */ }
+    finally {
+      textSaving = false;
+      textInput.readOnly = false;
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  });
 
   function editItem(action,node) {
     if (!base || importing || editor.open) return;
@@ -218,11 +272,17 @@
     if (!base || importing) return;
     importing = true; updateButtons(); showStatus(`Načítám ${label}…`);
     try {
-      const { nodes,suggestions = [],skipped = 0 } = await read();
-      if (!nodes.length) throw new Error('V dokumentu nebyly nalezeny vrstvy.');
-      const normalized = model.normalize({ format:model.format,nodes });
-      await write(next => { model.includeSuggestions(next,suggestions); return model.merge(next.nodes,normalized.nodes); }, ({ added,matched }) =>
-        `Přidáno ${added} · už v soupisu ${matched}${skipped ? ` · ${skipped} vrstev bez miniatury` : ''}`);
+      const { nodes,suggestions,textItems,skipped = 0 } = await read();
+      const normalized = model.normalize({ format:model.format,nodes,suggestions,textItems });
+      if (!normalized.nodes.length && !normalized.textItems.length) throw new Error('V dokumentu nebyly nalezeny vrstvy ani textové body.');
+      await write(next => {
+        model.includeSuggestions(next,normalized.suggestions);
+        const known = new Set(next.textItems);
+        const imported = normalized.textItems.filter(item => !known.has(item));
+        next.textItems.push(...imported);
+        return { ...model.merge(next.nodes,normalized.nodes), textAdded:imported.length };
+      }, ({ added,matched,textAdded }) =>
+        `Přidáno ${added} · už v soupisu ${matched}${textAdded ? ` · textové body +${textAdded}` : ''}${skipped ? ` · ${skipped} vrstev bez miniatury` : ''}`);
     } catch (error) { showStatus(error.message,true); }
     finally { importing = false; updateButtons(); }
   }
@@ -243,7 +303,7 @@
         return { nodes:JSON.parse(match[1]) };
       }
       const payload = JSON.parse(content);
-      return payload.format === model.format ? model.normalize(payload) : fromProject(M.normalize(payload));
+      return payload.format === model.format ? payload : fromProject(M.normalize(payload));
     },file.name);
   });
   window.TraitInventoryBaseUI = {

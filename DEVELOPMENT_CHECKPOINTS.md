@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.115 | checkpoint/v0.7.115-textovy-seznam | Textový seznam v soupisu vrstev a neutrální menu s jemně tónovanými ikonami. |
 | 0.7.114 | checkpoint/v0.7.114-pocty-vrstev | Kratší souhrny a opravené označení prázdných složek. |
 | 0.7.113 | checkpoint/v0.7.113-kompaktni-soupis | Barevné ikony akcí, rozbalovací přesuny, kompaktní strom a celé cesty při schvalování. |
 | 0.7.112 | checkpoint/v0.7.112-menu-vrstev | Sjednocené menu vrstev, Soupis s kompozicí a návrhy ke schválení, strom složek a náhled Finálu |
