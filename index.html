@@ -20,21 +20,21 @@
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
   <link rel="stylesheet" href="lookbook.css?build=07109">
-  <script src="project.js?build=07111" defer></script>
+  <script src="project.js?build=07118" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07117" defer></script>
+  <script src="diagnostics.js?build=07118" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <link rel="stylesheet" href="layer-inventory.css?build=07117">
+  <link rel="stylesheet" href="layer-inventory.css?build=07118">
   <script src="layer-inventory.js?build=07117" defer></script>
   <script src="inventory-base.js?build=07116" defer></script>
   <script src="app.js?build=07117" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
-  <script src="lookbook.js?build=07109" defer></script>
-  <script src="final-ui.js?build=07116" defer></script>
+  <script src="lookbook.js?build=07118" defer></script>
+  <script src="final-ui.js?build=07118" defer></script>
   <script src="final-builder.js?build=07112" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
@@ -130,8 +130,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.117" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.117</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.118" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.118</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" aria-label="Panel možností">
@@ -483,6 +483,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.118-rarity" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.118 – Rarity ve Finálu</strong><small>Rozdělení šancí podle složky, rychlé volby procent a simulace počtu traitů.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.117-hromadny-vyber" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.117 – Hromadný výběr</strong><small>Kulaté značky výběru s fajfkou v soupisu a při výběru kategorií.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.116-dolozene-vrstvy" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.116 – Doložené vrstvy</strong><small>Základ dripd zobrazuje doložené vrstvy a složky. Ukládání do Finálu odebráno z nabídky složky.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.115-textovy-seznam" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.115 – Textový seznam</strong><small>Odrážky v soupisu vrstev a tlumené ikony akcí.</small></span><span class="version-tag">Uloženo</span></a>
@@ -581,6 +582,7 @@
     <div id="finalViews" class="final-views" role="group" aria-label="Obsah Finálu">
       <button type="button" data-final-action="show-compose" aria-pressed="true">Sestavit export</button>
       <button type="button" data-final-action="show-marked" aria-pressed="false">Označeno FIN</button>
+      <button type="button" data-final-action="show-rarities" aria-pressed="false">Rarity</button>
       <button type="button" data-final-action="show-archives" aria-pressed="false">Zamčené kopie</button>
     </div>
     <input id="finalDraftRootInput" type="file" webkitdirectory multiple hidden>

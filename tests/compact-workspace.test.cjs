@@ -1038,6 +1038,45 @@ get('finalMarkedForm').dispatchEvent(new w.Event('submit', { bubbles: true, canc
 assert.equal(M.locate(w.inspectState(), 'export-hair').trait.fin, undefined);
 assert(!find('#finalRows [data-id="export-b"]'), 'removing the last mark clears that category from the FIN index');
 click('[data-final-action="close"]');
+const rarityProject = M.empty();
+const rarityAsset = w.inspectState().cats.flatMap(category=>category.traits)[0].data;
+rarityProject.cats = [{id:'rarity-cat',name:'Heads',visible:true,traits:Array.from({length:5},(_,index)=>({
+  id:'rarity-'+index,name:'Trait '+(index+1),data:rarityAsset,
+}))}];
+rarityProject.organizer['rarity-cat'] = {
+  folders:[{id:'rarity-folder',name:'Cowboy hats',parentId:null}],
+  assignments:Object.fromEntries(Array.from({length:4},(_,index)=>['rarity-'+index,'rarity-folder'])),
+};
+w.useTestProject(rarityProject);
+finalEntry.click();
+click('[data-final-action="show-rarities"]');
+changeControl('#finalRarityFolder','rarity-folder');
+const rarityShares = () => [...get('finalRows').querySelectorAll('[data-rarity-row] strong')].map(node=>Number.parseFloat(node.textContent.replace(',','.')));
+assert.deepEqual(rarityShares(),[25,25,25,25]);
+click('[data-rarity-row="0"]');
+click('[data-rarity-percent="80"]');
+assert.deepEqual(rarityShares(),[80,6.67,6.67,6.66]);
+click('[data-rarity-row="1"]');
+click('[data-rarity-percent="10"]');
+assert.deepEqual(rarityShares(),[80,10,5,5]);
+click('[data-rarity-row="2"]');
+click('[data-rarity-percent="25"]');
+assert.match(get('finalStatus').textContent,/100/);
+assert.deepEqual(rarityShares(),[80,10,5,5]);
+click('[data-rarity-save]');
+const rarityWeights = () => w.inspectState().cats[0].traits.map(M.rarityWeight);
+assert.deepEqual(rarityWeights(),[320,40,20,20,100]);
+changeControl('#finalRarityCount','8');
+assert.deepEqual(rarityShares(),[12.5,12.5,12.5,12.5]);
+assert(find('[data-rarity-save]').disabled);
+changeControl('#finalRarityCount','');
+assert.deepEqual(rarityShares(),[80,10,5,5]);
+click('[data-final-action="close"]');
+assert(await w.waitSave());
+const rarityDatabase = await S.open();
+const savedRarities = M.normalize(await S.read(rarityDatabase,undefined,{lazy:true}),{allowStoredAssets:true});
+rarityDatabase.close();
+assert.deepEqual(savedRarities.cats[0].traits.map(M.rarityWeight),[320,40,20,20,100]);
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

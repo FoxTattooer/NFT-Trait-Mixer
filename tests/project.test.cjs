@@ -28,6 +28,21 @@ test('hidden duplicates retain their identity and are skipped by rules and shuff
   M.randomize(restored, () => 0);
   assert.equal(restored.selected.a, 'copy');
 });
+test('rarity shares preserve a folder’s share of its category and skip zero weights', () => {
+  const p = project();
+  p.rulesEnabled = false;
+  const cat = p.cats[0];
+  cat.traits = Array.from({length:5},(_,index) => ({ id:'a'+index,name:'Trait '+index,data:png,rarityWeight:1000 }));
+  const folder = cat.traits.slice(0,4);
+  const shares = M.distributeRarity(4,new Map([[0,8000],[1,0],[2,1000]]));
+  assert.deepEqual(shares,[.8,0,.1,.1]);
+  M.applyRarityShares(cat,folder,shares);
+  assert.equal(M.rarityTotal(folder) / M.rarityTotal(cat.traits),.8);
+  const saved = M.normalize(p);
+  assert.equal(saved.cats[0].traits[1].rarityWeight,0);
+  M.randomize(saved,() => .65);
+  assert.equal(saved.selected.a,'a2');
+});
 test('Lookbook titles, stories and rarity round-trip without renaming source traits', () => {
   const p = project();
   Object.assign(p.cats[0].traits[0], { lookbookName: ' Redline ', story: ' Příběh ', rarityWeight: 25 });

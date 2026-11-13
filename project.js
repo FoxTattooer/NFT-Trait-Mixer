@@ -87,9 +87,35 @@
   const DEFAULT_RARITY_WEIGHT = 100;
   const MAX_RARITY_WEIGHT = 1000;
   const normalizeLookbookText = (value, limit) => typeof value === 'string' ? value.trim().slice(0, limit).trimEnd() : '';
-  const validRarityWeight = value => Number.isInteger(value) && value >= 1 && value <= MAX_RARITY_WEIGHT;
+  const validRarityWeight = value => Number.isFinite(value) && value >= 0 && value <= MAX_RARITY_WEIGHT;
   const rarityWeight = trait => validRarityWeight(trait.rarityWeight) ? trait.rarityWeight : DEFAULT_RARITY_WEIGHT;
   const rarityTotal = traits => traits.reduce((sum, trait) => sum + (trait.hidden ? 0 : rarityWeight(trait)), 0);
+  function distributeRarity(count, fixed) {
+    if (!Number.isSafeInteger(count) || count < 1 || fixed.size > count ||
+        [...fixed].some(([index,value]) => !Number.isInteger(index) || index < 0 || index >= count || !Number.isInteger(value) || value < 0)) return null;
+    const remaining = 10000 - [...fixed.values()].reduce((sum,value) => sum + value, 0);
+    const free = count - fixed.size;
+    if (remaining < 0 || (!free && remaining !== 0)) return null;
+    const share = free ? Math.floor(remaining / free) : 0;
+    let extra = remaining - share * free;
+    return Array.from({length:count}, (_,index) => {
+      if (fixed.has(index)) return fixed.get(index) / 10000;
+      if (extra > 0) { extra--; return (share + 1) / 10000; }
+      return share / 10000;
+    });
+  }
+  function applyRarityShares(category, traits, shares) {
+    const total = rarityTotal(traits) || DEFAULT_RARITY_WEIGHT * traits.length;
+    const weights = new Map(traits.map((trait,index) => [trait, shares[index] * total]));
+    const max = category.traits.reduce((value,trait) => Math.max(value, weights.get(trait) ?? rarityWeight(trait)), MAX_RARITY_WEIGHT);
+    const scale = MAX_RARITY_WEIGHT / max;
+    for (const trait of category.traits) {
+      if (scale === 1 && !weights.has(trait)) continue;
+      const weight = Math.min(MAX_RARITY_WEIGHT, (weights.get(trait) ?? rarityWeight(trait)) * scale);
+      if (weight === DEFAULT_RARITY_WEIGHT) delete trait.rarityWeight;
+      else trait.rarityWeight = weight;
+    }
+  }
   function lookbookFields(item) {
     const lookbookName = normalizeLookbookText(item.lookbookName, LOOKBOOK_NAME_LIMIT);
     const story = normalizeLookbookText(item.story, LOOKBOOK_STORY_LIMIT);
@@ -292,7 +318,7 @@
     p.selectedExtras = {};
     const pools = p.cats.map(cat => {
       let total = 0;
-      const choices = cat.traits.filter(trait => !trait.hidden).map(trait => ({
+      const choices = cat.traits.filter(trait => !trait.hidden && rarityWeight(trait) > 0).map(trait => ({
         id: trait.id, upper: total += rarityWeight(trait),
       }));
       return { id: cat.id, choices, total };
@@ -377,7 +403,7 @@
     return merge;
   }
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText,
-    DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
+    DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

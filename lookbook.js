@@ -18,7 +18,7 @@
   const customCards = window.TraitLookbookCards?.mount({ content, scroll, mast });
 
   function chance(trait, total, weight = M.rarityWeight(trait)) {
-    if (trait.hidden || !total) return percent.format(0);
+    if (trait.hidden || !total || !weight) return percent.format(0);
     const fraction = weight / total;
     return fraction < 0.00005 ? '< 0,01 %' : percent.format(fraction);
   }
@@ -45,7 +45,7 @@
       <label>Rarita<select name="rarity">${[...rarities].map(([value, title]) =>
         `<option value="${value}" ${value === weight ? 'selected' : ''}>${title}</option>`).join('')}
         <option value="custom" ${rarities.has(weight) ? '' : 'selected'}>Vlastní</option></select></label>
-      <label>Váha losování<input name="weight" type="number" min="1" max="${M.MAX_RARITY_WEIGHT}" step="1" inputmode="numeric" value="${weight}"></label>
+      <label>Váha losování<input name="weight" type="number" min="0" max="${M.MAX_RARITY_WEIGHT}" step="any" inputmode="decimal" value="${weight}"></label>
     </div><p class="lookbook-help">Základní šanci v kategorii ovlivňuje váha. Výsledný výběr může změnit pravidlo.</p>` : '';
     return `<details class="lookbook-edit"><summary>Upravit kartu</summary><form>
       <label>Název v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>
