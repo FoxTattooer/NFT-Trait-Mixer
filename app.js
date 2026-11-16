@@ -325,6 +325,7 @@ function showPanel(panel) {
   if (changed) {
     closeWorkspaceToolMenus();
     workspaceTabsCollapsed = false;
+    workspaceTabsCompactFromScroll = false;
     if (panel !== 'snapshots') workspaceComparisonSelected = false;
   }
   mobilePanel = panel;
@@ -1909,6 +1910,7 @@ function chooseControlAccent(accent) {
 const portraitWorkspace = window.matchMedia('(max-width:900px) and (orientation:portrait)');
 const landscapeWorkspace = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)');
 let workspaceTabSelected = false, workspaceTabsCollapsed = false;
+let workspaceTabsCompactFromScroll = false;
 let workspaceComparisonSelected = false;
 let workspaceScrollTop = 0, workspaceScrollDistance = 0;
 function resetWorkspaceScroll() {
@@ -1917,7 +1919,7 @@ function resetWorkspaceScroll() {
 }
 function syncWorkspaceTabs() {
   const portrait = portraitWorkspace.matches;
-  const compact = portrait && workspaceTabSelected;
+  const compact = portrait && (workspaceTabSelected || workspaceTabsCompactFromScroll);
   const collapsed = portrait && workspaceTabsCollapsed;
   const showComparison = compact || landscapeWorkspace.matches;
   const tabs = $('workspaceTabs'), toggle = $('workspaceTabsToggle');
@@ -1931,7 +1933,7 @@ function syncWorkspaceTabs() {
   }
   dock.hidden = !portrait;
   const previous = layerBrowseHistory.at(-1);
-  const back = mobilePanel === 'layers' && (previous || !$('layerTree').hidden) && (!portrait || compact);
+  const back = mobilePanel === 'layers' && (previous || !$('layerTree').hidden) && (!portrait || workspaceTabSelected);
   document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
   tabs.toggleAttribute('data-compact', compact);
   tabs.hidden = collapsed;
@@ -1942,7 +1944,7 @@ function syncWorkspaceTabs() {
   toggle.querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
   const selectedPanel = showComparison && workspaceComparisonSelected ? 'comparison' : mobilePanel;
   for (const tab of tabs.querySelectorAll('[data-panel]')) {
-    const selected = (!portrait || compact) && tab.dataset.panel === selectedPanel;
+    const selected = (!portrait || workspaceTabSelected) && tab.dataset.panel === selectedPanel;
     tab.classList.toggle('is-active', selected);
     tab.setAttribute('aria-pressed', String(selected));
   }
@@ -1964,6 +1966,7 @@ function setWorkspaceTabsCollapsed(collapsed, focus = false) {
 }
 function selectWorkspaceTab(selected) {
   workspaceTabSelected = selected;
+  workspaceTabsCompactFromScroll = false;
   workspaceComparisonSelected = false;
   setWorkspaceTabsCollapsed(false);
 }
@@ -1980,12 +1983,21 @@ workspaceScroll.addEventListener('scroll', () => {
     return;
   }
   if (delta > 0) workspaceScrollDistance += delta;
-  if (workspaceScrollDistance >= 24 && !$('workspaceTabs').hidden) {
-    const focused = document.activeElement;
-    setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(focused) && focused.matches(':focus-visible'));
+  const compact = workspaceTabSelected || workspaceTabsCompactFromScroll;
+  if (workspaceScrollDistance < (compact ? 160 : 24)) return;
+  if (!compact) {
+    workspaceTabsCompactFromScroll = true;
+    syncWorkspaceTabs();
+    resetWorkspaceScroll();
+    return;
   }
+  const focused = document.activeElement;
+  setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(focused) && focused.matches(':focus-visible'));
 }, { passive: true });
-portraitWorkspace.addEventListener('change', () => setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle')));
+portraitWorkspace.addEventListener('change', () => {
+  workspaceTabsCompactFromScroll = false;
+  setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle'));
+});
 landscapeWorkspace.addEventListener('change', syncWorkspaceTabs);
 $('showroomDialog').addEventListener('close', () => selectWorkspaceTab(false));
 window.addEventListener('resize', resetWorkspaceScroll);
