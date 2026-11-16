@@ -235,8 +235,6 @@ body.compact-workspace .app-header .icon {width:21px!important;height:21px!impor
 }
 
 /* Vrstvy: folders and traits share a compact, ordered list. */
-body.compact-workspace #categoryOverview[hidden],
-body.compact-workspace #layerTree[hidden],
 body.compact-workspace #layerCategoryPicker[hidden],
 body.compact-workspace .layer-context[hidden],
 body.compact-workspace .layer-tree-check[hidden] {display:none!important}
@@ -279,6 +277,26 @@ body.compact-workspace #categoryOverview {padding:0 2px 2px}
 .layer-tree-tools {display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) 44px;gap:4px;margin-top:6px}
 .layer-tree-tools button {min-width:0;min-height:44px;padding:4px;gap:5px;font-size:12px}
 .layer-tree-tools .icon {width:16px;height:16px;flex:none}
+#layerTree .layer-category {min-width:0}
+#layerTree .category-pick > .icon:first-child {width:12px;height:12px;flex:none;color:var(--scheme-muted,var(--muted))}
+#layerTree .category-pick[aria-expanded=true] > .icon:first-child {transform:rotate(90deg)}
+#layerTree .category-branch[hidden] {display:none}
+#layerTree .category-branch {
+  gap:3px;margin:4px 0 6px 9px;padding-inline-start:6px;
+  border-inline-start:1px solid var(--scheme-stroke,#524958);
+}
+#layerTree .category-branch .layer-tree-row {margin-inline-start:calc(var(--depth,0) * 8px);border-radius:7px}
+#layerTree .category-branch .layer-tree-row::before {inset-block-start:-3px;left:-5px}
+#layerTree .layer-tree-row .layer-tree-main {gap:6px;min-height:44px;padding:1px 5px;border-radius:6px}
+#layerTree .layer-tree-trait {grid-template-columns:minmax(0,1fr) 38px 38px}
+#layerTree .layer-tree-folder {grid-template-columns:minmax(0,1fr) 38px}
+#layerTree .layer-tree-label {
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  white-space:normal;overflow-wrap:anywhere;font-size:15px;line-height:1.18;
+}
+#layerTree .category-branch .layer-thumb {flex:0 0 54px;height:44px}
+body.compact-workspace[data-color-scheme] #layerTree .category-branch .layer-thumb,
+#layerTree .category-branch .layer-thumb {background:none}
 /* Layer, folder and category actions use one menu surface and icon treatment. */
 .layer-context {
   --layer-menu-surface:color-mix(in srgb,var(--scheme-panel,#202128) 95%,var(--scheme-text,#f0edf2));

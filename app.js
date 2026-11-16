@@ -95,7 +95,8 @@ async function restoreLastProject() {
       active = record.categoryId;
       layerBrowseHistory.length = 0;
       inspectedTrait = null;
-      layerOverview = false;
+      openLayerCategories.clear();
+      organizerExpanded = {};
       wipFilter = 0;
       imageCache.clear();
     }, 'Poslední projekt obnoven');
@@ -338,9 +339,9 @@ function showPanel(panel) {
   if (inspectorPanel === 'snapshots') window.TraitComparison?.render();
   if (changed) resetWorkspaceScroll();
 }
-let layerOverview = false;
 const LAYER_BATCH = 48;
 let layerLimit = LAYER_BATCH;
+let openLayerCategories = new Map();
 const layerBrowseHistory = [];
 const layerScrollPanes = [$('catsPanel'), $('traitsPanel').closest('.inspector'), $('traitSearchResults')];
 const workspaceScroll = $('workspaceScroll');
@@ -356,38 +357,26 @@ function scrollWorkspaceTo({ x, y }) {
 }
 
 function captureLayerView(source) {
-  const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults');
+  const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
-    panel: mobilePanel, overview: layerOverview, active, layerLimit, wipFilter,
-    expanded: new Set(organizerExpanded[active]),
+    panel: mobilePanel, active, layerLimit, wipFilter,
+    categories: new Map(openLayerCategories),
+    expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
     tabSelected: workspaceTabSelected, portrait: portraitWorkspace.matches,
     workspacePosition: workspaceScrollPosition(),
     paneTops: layerScrollPanes.map(pane => pane.scrollTop),
-    origin: list && { list, ...source.dataset },
+    origin: list && { list, element: source, ...source.dataset },
   };
 }
 
-function returnToLayerView(categoriesOnly = false) {
-  const index = categoriesOnly
-    ? layerBrowseHistory.findLastIndex(view => view.panel === 'layers' && view.overview)
-    : layerBrowseHistory.length - 1;
-  if (index < 0) {
-    layerBrowseHistory.length = 0;
-    layerOverview = true;
-    selectWorkspaceTab(false);
-    showPanel('layers');
-    const row = $('cats').querySelector('[data-action="select-category"][aria-pressed="true"]');
-    row?.scrollIntoView({ block: 'nearest' });
-    resetWorkspaceScroll();
-    return;
-  }
-  const view = layerBrowseHistory[index];
-  layerBrowseHistory.length = index;
+function returnToLayerView() {
+  const view = layerBrowseHistory.pop();
+  if (!view) return;
   active = view.active;
-  layerOverview = view.overview;
   layerLimit = view.layerLimit;
   wipFilter = view.wipFilter;
-  if (active) organizerExpanded[active] = view.expanded;
+  openLayerCategories = view.categories;
+  organizerExpanded = view.expanded;
   selectWorkspaceTab(view.tabSelected);
   showPanel(view.panel);
   render(true);
@@ -395,10 +384,10 @@ function returnToLayerView(categoriesOnly = false) {
   renderSnapshotThumbnails();
 
   const origin = view.origin;
-  const trigger = origin && [...origin.list.querySelectorAll('[data-action]')].find(({ dataset }) =>
+  const trigger = origin && (origin.element.isConnected ? origin.element : [...origin.list.querySelectorAll('[data-action]')].find(({ dataset }) =>
     dataset.action === origin.action && dataset.id === origin.id &&
     dataset.kind === origin.kind && dataset.category === origin.category
-  );
+  ));
   trigger?.focus({ preventScroll: true });
   layerScrollPanes.forEach((pane, i) => { pane.scrollTop = view.paneTops[i]; });
   scrollWorkspaceTo(view.workspacePosition);
@@ -600,31 +589,39 @@ function renderLayerTree() {
   if (!busy) renderLayerReview();
   const category = M.category(state, active), c = category && categoryPassesWip(category) ? category : null;
   const manage = mobilePanel === 'traits';
-  const tree = $(manage ? 'traits' : 'layerTree');
-  const inactive = $(manage ? 'layerTree' : 'traits');
-  if (inactive.firstChild) { inactive.replaceChildren(); treeMarkup.delete(inactive); }
-  const overview = !c || layerOverview;
   $('layerPanelHeading').hidden = !state.cats.length;
-  $('categoryOverview').hidden = !overview;
   const grid = $('compactToggle');
-  const gridLabel = !overview ? 'Zobrazit kategorie' : compactView ? 'Zobrazit podrobné karty' : 'Zobrazit kompaktní seznam';
+  const gridLabel = compactView ? 'Zobrazit podrobné karty' : 'Zobrazit strom vrstev';
   grid.title = gridLabel;
   grid.setAttribute('aria-label', gridLabel);
-  grid.setAttribute('aria-pressed', String(overview && compactView));
-  $('layerTree').hidden = overview || manage;
+  grid.setAttribute('aria-pressed', String(compactView));
   syncWorkspaceTabs();
-  if (!c || (!manage && (overview || mobilePanel !== 'layers'))) {
-    tree.replaceChildren(); treeMarkup.delete(tree); mountThumbnails(); return;
-  }
   if (busy) return;
+  const { hidden } = M.conflicts(state);
+  const manageTree = $('traits');
+  if (manage && c) renderLayerBranch(manageTree, c, layerLimit, !hidden.has(c.id), true);
+  else if (manageTree.firstChild) { manageTree.replaceChildren(); treeMarkup.delete(manageTree); }
+  const categories = new Map(state.cats.map(item => [item.id, item]));
+  for (const branch of $('cats').querySelectorAll('.category-branch')) {
+    const { category: id } = branch.dataset;
+    const limit = openLayerCategories.get(id);
+    branch.hidden = limit === undefined;
+    if (limit !== undefined && mobilePanel === 'layers') {
+      renderLayerBranch(branch, categories.get(id), limit, !hidden.has(id));
+    } else if (branch.firstChild) { branch.replaceChildren(); treeMarkup.delete(branch); }
+  }
+  mountThumbnails();
+}
+
+function renderLayerBranch(tree, c, limit, visible, manage = false) {
   const rows = mixedLayerRows(c);
   tree.setAttribute('aria-label', `Vrstvy · ${c.name}`);
   const { assignments } = organizerFolders(c.id);
-  const entries = rows.slice(0, layerLimit).map(({ item, kind, depth }) => {
+  const entries = rows.slice(0, limit).map(({ item, kind, depth }) => {
     const id = esc(item.id), folder = kind === 'folders';
     const expanded = folder && !!organizerExpanded[c.id]?.has(item.id);
     const indent = Math.min(7, depth);
-    const image = folder || safeMode ? '' : layerThumbnail(c, item);
+    const image = folder || safeMode ? '' : layerThumbnail(c, item, manage ? '' : 'layer-cropped-thumbnail');
     return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${item.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
@@ -632,19 +629,22 @@ function renderLayerTree() {
         <span class="layer-tree-label">${esc(item.name)}</span>${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
-      <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
+      <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
       ${manage && !folder ? traitNoteEditor(item) : ''}
     </div>`;
   }).join('');
-  const more = rows.length > layerLimit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', 'class="outline full-width"') : '';
+  const more = rows.length > limit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', `class="outline full-width"${manage ? '' : ` data-category="${esc(c.id)}"`}`) : '';
   const empty = rows.length ? '' : `<p class="empty-list">${wipFilter ? 'Tomuto filtru neodpovídají žádné vrstvy.' : 'Tato kategorie je zatím prázdná.'}</p>`;
-  const tools = `<div class="layer-tree-tools">${button('add-traits', 'PNG', '', 'upload', 'aria-label="Přidat PNG" title="Přidat PNG"')}${button('add-organizer-folder', 'Složka', '', 'folder', 'aria-label="Přidat složku" title="Přidat složku"')}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
-  const markup = entries + more + empty + (manage ? '' : tools);
+  const tools = manage ? '' : `<div class="layer-tree-tools">${button('add-traits', 'PNG', '', 'upload', `data-category="${esc(c.id)}" aria-label="Přidat PNG" title="Přidat PNG"`)}${button('add-organizer-folder', 'Složka', '', 'folder', `data-category="${esc(c.id)}" aria-label="Přidat složku" title="Přidat složku"`)}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
+  const markup = entries + more + empty + tools;
   // Keep existing thumbnail elements and the focused row on selection changes.
-  if (treeMarkup.get(tree) !== markup) { closeLayerContext(); tree.innerHTML = markup; treeMarkup.set(tree, markup); }
+  if (treeMarkup.get(tree) !== markup) {
+    if (layerContextTrigger && tree.contains(layerContextTrigger)) closeLayerContext();
+    tree.innerHTML = markup;
+    treeMarkup.set(tree, markup);
+  }
   const selected = new Set(M.selectedIds(state, c.id));
   const hiddenTraits = new Set(c.traits.filter(trait => trait.hidden).map(trait => trait.id));
-  const visible = !M.conflicts(state).hidden.has(c.id);
   for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
     const picked = selected.has(row.dataset.id);
     const enabled = picked && !hiddenTraits.has(row.dataset.id);
@@ -658,7 +658,6 @@ function renderLayerTree() {
     eye.title = enabled && c.visible !== false && !visible ? 'Vrstva je zapnutá, ale skrývá ji pravidlo' : label;
     eye.querySelector('use').setAttribute('href', shown ? '#i-eye' : '#i-eye-off');
   }
-  mountThumbnails();
 }
 const treeMarkup = new WeakMap();
 function closeLayerContext(focus = false) {
@@ -970,36 +969,66 @@ function scrollQuickTraits(direction) {
 }
 function renderCategories(hidden, categories) {
   const list = $('cats');
-  const previews = () => list.querySelectorAll('.category-trait-previews');
-  const scrollPositions = new Map(Array.from(previews(), strip => [strip.dataset.category, strip.scrollLeft]));
-  const cardControls = ':is(.category-trait-previews, .category-trait-details) button, .category-top button[data-action="open-layer-menu"]';
-  const focused = list.contains(document.activeElement) ? document.activeElement.closest(cardControls) : null;
+  const focused = list.contains(document.activeElement) ? document.activeElement : null;
+  const existing = new Map(Array.from(list.children, group => [group.dataset.category, group]));
   document.body.classList.toggle('compact-categories', compactView);
   list.dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
   $('catCountLabel').textContent = state.cats.length;
   $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
-  list.innerHTML = categories.map(c => {
+  if (!categories.length) {
+    list.innerHTML = `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
+    return;
+  }
+  let nextGroup = list.firstElementChild;
+  for (const c of categories) {
     const id = esc(c.id), name = esc(c.name), current = c.id === active;
     const traits = listedTraits(c);
+    const expanded = openLayerCategories.has(c.id);
+    let group = existing.get(c.id);
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'layer-category';
+      group.dataset.category = c.id;
+      group.innerHTML = '<div class="category-card"></div><section class="layer-tree category-branch" hidden></section>';
+      group.firstElementChild.dataset.category = c.id;
+      group.lastElementChild.id = `layer-branch-${c.id}`;
+      group.lastElementChild.dataset.category = c.id;
+    }
+    const card = group.firstElementChild;
+    card.classList.toggle('is-active', current);
+    card.classList.toggle('is-hidden', hidden.has(c.id));
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
-    return `<div class="category-card ${current ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${id}">
+    const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
-        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}" data-category="${id}"` : ''} data-action="select-category" data-id="${id}" aria-pressed="${current}" title="Otevřít vrstvy · ${name}">${icon(compactView ? 'folder' : 'folder-tree')}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
           <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
       </div>
-      ${compactView ? '' : renderCategoryPreviews(c, traits, hidden.has(c.id))}
-    </div>`;
-  }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
-  for (const strip of previews()) {
-    if (scrollPositions.get(strip.dataset.category)) strip.scrollLeft = scrollPositions.get(strip.dataset.category);
+      ${compactView ? '' : renderCategoryPreviews(c, traits, hidden.has(c.id))}`;
+    if (treeMarkup.get(card) !== markup) {
+      const scrollLeft = card.querySelector('.category-trait-previews')?.scrollLeft || 0;
+      if (layerContextTrigger && card.contains(layerContextTrigger)) closeLayerContext();
+      card.innerHTML = markup;
+      treeMarkup.set(card, markup);
+      const strip = card.querySelector('.category-trait-previews');
+      if (strip) strip.scrollLeft = scrollLeft;
+    }
+    if (group !== nextGroup) list.insertBefore(group, nextGroup);
+    nextGroup = group.nextElementSibling;
   }
-  if (focused) {
-    [...list.querySelectorAll(cardControls)]
-      .find(button => button.dataset.id === focused.dataset.id && button.dataset.action === focused.dataset.action)?.focus({ preventScroll: true });
+  while (nextGroup) {
+    const stale = nextGroup;
+    nextGroup = stale.nextElementSibling;
+    if (layerContextTrigger && stale.contains(layerContextTrigger)) closeLayerContext();
+    stale.remove();
+  }
+  if (focused && document.activeElement !== focused) {
+    const restored = focused.isConnected ? focused : [...list.querySelectorAll('button[data-action]')].find(({ dataset }) =>
+      dataset.id === focused.dataset.id && dataset.action === focused.dataset.action && dataset.category === focused.dataset.category);
+    restored?.focus({ preventScroll: true });
   }
 }
 function organizerFolders(categoryId) {
@@ -1231,12 +1260,12 @@ function revealLayerRow(cat, kind, id, parentId, view) {
   layerBrowseHistory.push(view);
   $('traitSearch').blur();
   active = cat.id;
-  layerOverview = false;
-  layerLimit = Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH;
+  openLayerCategories.set(cat.id, Math.max(openLayerCategories.get(cat.id) || 0, Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH));
   selectWorkspaceTab(true);
   showPanel('layers');
   render(true);
-  const row = Array.from($('layerTree').querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === id);
+  const branch = $(`layer-branch-${cat.id}`);
+  const row = branch && Array.from(branch.querySelectorAll('.layer-tree-main')).find(item => item.dataset.id === id);
   if (!row) return;
   const target = row.closest('.layer-tree-row');
   target?.classList.add('layer-review-target');
@@ -1343,27 +1372,63 @@ function mountThumbnails() {
   pumpThumbnails();
 }
 const smallThumbnailCache = new Map();
-async function thumbnailBlob(source, managed, valid) {
-  if (!TraitStorage.isAsset(source)) return null;
-  if (managed && smallThumbnailCache.has(source)) return smallThumbnailCache.get(source);
+function visibleImageBounds(image, canvas) {
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scan = Math.min(1, 512 / Math.max(sourceWidth, sourceHeight));
+  const width = canvas.width = Math.max(1, Math.ceil(sourceWidth * scan));
+  const height = canvas.height = Math.max(1, Math.ceil(sourceHeight * scan));
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0, width, height);
+  const { data } = ctx.getImageData(0, 0, width, height);
+  let left = width, right = -1, top = height, bottom = -1;
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    if (data[(y * width + x) * 4 + 3] < 4) continue;
+    left = Math.min(left, x); right = Math.max(right, x);
+    top = Math.min(top, y); bottom = Math.max(bottom, y);
+  }
+  if (right < left) return null;
+  const x = Math.floor(Math.max(0, left - 1) * sourceWidth / width);
+  const y = Math.floor(Math.max(0, top - 1) * sourceHeight / height);
+  return {
+    x, y,
+    width: Math.ceil(Math.min(width, right + 2) * sourceWidth / width) - x,
+    height: Math.ceil(Math.min(height, bottom + 2) * sourceHeight / height) - y,
+  };
+}
+async function thumbnailBlob(source, managed, valid, crop) {
+  const asset = TraitStorage.isAsset(source);
+  if (!asset && !crop) return null;
+  const cacheKey = asset && (crop ? `crop:${source}` : source);
+  if (managed && cacheKey && smallThumbnailCache.has(cacheKey)) return smallThumbnailCache.get(cacheKey);
   const blob = await TraitStorage.imageBlob(db, source);
   if (!managed || !valid()) return blob;
   const url = URL.createObjectURL(blob);
   const canvas = document.createElement('canvas');
+  const scan = crop ? document.createElement('canvas') : null;
   canvas.width = canvas.height = 96;
   let image;
   try {
     image = await decodeImage(url);
     if (!valid()) return blob;
-    canvas.getContext('2d').drawImage(image, 0, 0, 96, 96);
+    const ctx = canvas.getContext('2d');
+    const bounds = scan && visibleImageBounds(image, scan);
+    if (bounds) {
+      const scale = 94 / Math.max(bounds.width, bounds.height);
+      const width = bounds.width * scale, height = bounds.height * scale;
+      ctx.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, (96 - width) / 2, (96 - height) / 2, width, height);
+    } else ctx.drawImage(image, 0, 0, 96, 96);
     const thumbnail = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!thumbnail) return blob;
-    smallThumbnailCache.set(source, thumbnail);
-    if (smallThumbnailCache.size > 64) smallThumbnailCache.delete(smallThumbnailCache.keys().next().value);
+    if (cacheKey) {
+      smallThumbnailCache.set(cacheKey, thumbnail);
+      if (smallThumbnailCache.size > 64) smallThumbnailCache.delete(smallThumbnailCache.keys().next().value);
+    }
     return thumbnail;
   } catch { return blob; }
   finally {
     if (image) image.src = '';
+    if (scan) scan.width = scan.height = 1;
     canvas.width = canvas.height = 1;
     URL.revokeObjectURL(url);
   }
@@ -1380,7 +1445,7 @@ function pumpThumbnails() {
     thumbnailJobs++;
     const valid = () => img.isConnected && (!managed || !thumbnailObserver || nearbyThumbnails.has(img));
     const lookbookRenderer = img.classList.contains('lookbook-thumbnail') && window.TraitLookbook?.thumbnail;
-    const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid);
+    const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid, img.classList.contains('layer-cropped-thumbnail'));
     pending.then(blob => {
       if (!valid()) return;
       if (managed && source !== layerThumbnailSource(img)) { thumbnailQueue.add(img); return; }
@@ -1656,10 +1721,9 @@ async function exportSelectedCategories() {
 function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Soubor nelze přečíst.')); reader.onabort = () => reject(new Error('Načítání bylo přerušeno.')); reader.readAsDataURL(new Blob([file], { type: 'image/png' })); });
 }
-async function uploadFiles(files) {
+async function uploadFiles(files, categoryId = active) {
   if (busy || !files.length) return;
   if (files.length > 500) { toast('Vyber nejvýše 500 PNG souborů najednou.', true); return; }
-  const categoryId = active;
   if (!M.category(state, categoryId)) { toast('Nejdřív přidej kategorii.', true); return; }
   const finishLog = window.TraitDiagnostics?.start('png-import');
   busy = true; render();
@@ -1696,11 +1760,13 @@ async function loadProject(file) {
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     layerBrowseHistory.length = 0;
     inspectedTrait = null;
+    openLayerCategories.clear();
+    organizerExpanded = {};
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     const recentId = recent?.record(file, undefined, fallback);
     if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
     showProjectSource('Otevřeno ze zálohy JSON');
-    layerOverview = false; showPanel('layers');
+    showPanel('layers');
   } catch (error) { window.TraitDiagnostics?.error('json-open', error); toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
   finally { finishLog?.(); busy = false; $('projectFile').value = ''; render(); }
 }
@@ -1933,7 +1999,7 @@ function syncWorkspaceTabs() {
   }
   dock.hidden = !portrait;
   const previous = layerBrowseHistory.at(-1);
-  const back = mobilePanel === 'layers' && (previous || !$('layerTree').hidden) && (!portrait || workspaceTabSelected);
+  const back = mobilePanel === 'layers' && !!previous && (!portrait || workspaceTabSelected);
   document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
   tabs.toggleAttribute('data-compact', compact);
   tabs.hidden = collapsed;
@@ -1950,9 +2016,7 @@ function syncWorkspaceTabs() {
   }
   $('layersTab').toggleAttribute('data-back', back);
   $('layersTabIcon').setAttribute('href', back && !portrait ? '#i-back' : '#i-layers');
-  const backToCategories = !previous || (previous.panel === 'layers' && previous.overview);
-  $('layersTab').setAttribute('aria-label', !back ? 'Vrstvy' : backToCategories
-    ? 'Vrstvy · zpět na kategorie' : 'Vrstvy · zpět do předchozího pohledu');
+  $('layersTab').setAttribute('aria-label', back ? 'Vrstvy · zpět do předchozího pohledu' : 'Vrstvy');
   if (!collapsed && movedTab && !movedTab.hidden) movedTab.focus({ preventScroll: true });
 }
 function setWorkspaceTabsCollapsed(collapsed, focus = false) {
@@ -2054,8 +2118,6 @@ async function handleAction(action, id, element) {
       const returnToSnapshots = !compare && panel === 'snapshots' && workspaceComparisonSelected;
       if (panel === 'layers' && mobilePanel === 'layers') {
         if ($('layersTab').hasAttribute('data-back')) { returnToLayerView(); break; }
-        if (layerOverview) layerBrowseHistory.length = 0;
-        layerOverview = false;
       }
       selectWorkspaceTab(panel !== 'rules');
       workspaceComparisonSelected = compare;
@@ -2082,7 +2144,6 @@ async function handleAction(action, id, element) {
       } else {
         layerBrowseHistory.push(captureLayerView(element));
         active = category.id;
-        layerOverview = true;
         selectWorkspaceTab(true);
         showPanel('layers');
         render(true);
@@ -2194,12 +2255,32 @@ async function handleAction(action, id, element) {
       if (target) change(() => M.reorderTrait(state, located.cat.id, id, target.id, after), 'Pořadí traitů změněno');
       break;
     }
-    case 'show-more-layers': layerLimit += LAYER_BATCH; renderLayerTree(); break;
-    case 'toggle-tree-folder': {
-      const expanded = organizerExpanded[active] ||= new Set();
-      if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+    case 'show-more-layers': {
+      const categoryId = element.dataset.category;
+      const branch = element.parentElement;
+      const count = branch.querySelectorAll('.layer-tree-main').length;
+      if (categoryId) openLayerCategories.set(categoryId, (openLayerCategories.get(categoryId) ?? LAYER_BATCH) + LAYER_BATCH);
+      else layerLimit += LAYER_BATCH;
       renderLayerTree();
-      Array.from($(mobilePanel === 'traits' ? 'traits' : 'layerTree').querySelectorAll('[data-action="toggle-tree-folder"]')).find(b => b.dataset.id === id)?.focus();
+      branch.querySelectorAll('.layer-tree-main')[count]?.focus({ preventScroll: true });
+      break;
+    }
+    case 'toggle-tree-folder': {
+      const categoryId = element.dataset.category || active;
+      const expanded = organizerExpanded[categoryId] ||= new Set();
+      const branch = element.closest('.layer-tree');
+      if (expanded.has(id)) expanded.delete(id);
+      else {
+        expanded.add(id);
+        const limit = branch?.dataset.category ? openLayerCategories.get(categoryId) : layerLimit;
+        // A folder on the final rendered row needs room to show its children.
+        if (branch?.querySelectorAll('.layer-tree-main')[limit - 1] === element) {
+          if (branch.dataset.category) openLayerCategories.set(categoryId, limit + LAYER_BATCH);
+          else layerLimit += LAYER_BATCH;
+        }
+      }
+      renderLayerTree();
+      [...(branch?.querySelectorAll('[data-action="toggle-tree-folder"]') || [])].find(b => b.dataset.id === id)?.focus({ preventScroll: true });
       break;
     }
     case 'cycle-category': {
@@ -2219,18 +2300,30 @@ async function handleAction(action, id, element) {
     case 'library-next': libraryPages[id] = (libraryPages[id] || 0) + 1; renderSnapshotLayerLibrary(); break;
     case 'enable-previews': safeMode = false; $('recoveryNotice').hidden = true; render(); break;
     case 'open-traits':
-      if (mobilePanel !== 'layers' || layerOverview) layerBrowseHistory.push(captureLayerView(element));
-      layerOverview = false;
+      if (mobilePanel !== 'layers') layerBrowseHistory.push(captureLayerView(element));
+      if (active && !openLayerCategories.has(active)) openLayerCategories.set(active, LAYER_BATCH);
       selectWorkspaceTab(true);
       showPanel('layers');
+      render(true);
       break;
     case 'select-category': {
       if (!c) break;
-      if (mobilePanel === 'layers' && (layerOverview || active !== id)) layerBrowseHistory.push(captureLayerView(element));
-      layerLimit = LAYER_BATCH; layerOverview = false; active = id;
-      organizerSelection[id] = null;
-      selectWorkspaceTab(true);
+      const picker = element === $('layerCategory');
+      if (!picker && element?.classList.contains('category-pick') && openLayerCategories.has(id)) {
+        openLayerCategories.delete(id);
+      } else {
+        if (picker && active !== id) layerBrowseHistory.push(captureLayerView(element));
+        if (active !== id) layerLimit = LAYER_BATCH;
+        active = id;
+        if (!openLayerCategories.has(id)) openLayerCategories.set(id, LAYER_BATCH);
+        if (picker) selectWorkspaceTab(true);
+      }
       render(true);
+      const row = $(`layer-branch-${id}`)?.previousElementSibling.querySelector('.category-pick');
+      if (picker) {
+        row?.scrollIntoView({ block: 'nearest' });
+        resetWorkspaceScroll();
+      } else if (element?.classList.contains('category-pick')) row?.focus({ preventScroll: true });
       break;
     }
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
@@ -2271,7 +2364,7 @@ async function handleAction(action, id, element) {
       const name = await ask({ title: 'Nová kategorie', description: 'Například Pozadí, Tělo, Oči nebo Doplňky.', submit: 'Přidat kategorii' });
       if (name) {
         const nextId = M.uid();
-        layerOverview = false;
+        openLayerCategories.set(nextId, LAYER_BATCH);
         selectWorkspaceTab(true);
         if (wipFilter === 1) wipFilter = 0;
         change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána');
@@ -2301,7 +2394,7 @@ async function handleAction(action, id, element) {
       if (i >= 0 && j >= 0 && j < state.cats.length) change(() => { [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; }, 'Pořadí kategorií změněno');
       break;
     }
-    case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); $('traitFiles').click(); } break;
+    case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); openTraitFiles(id); } break;
     case 'export-package': await exportPackage(); break;
     case 'open-category-export': openCategoryExport(); break;
     case 'close-category-export': categoryExportDialog.close(); break;
@@ -2313,7 +2406,12 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'export-selected-categories': await exportSelectedCategories(); break;
-    case 'add-traits': if (!M.category(state, active)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); } else { $('traitFiles').click(); } break;
+    case 'add-traits': {
+      const categoryId = element?.dataset.category || active;
+      if (!M.category(state, categoryId)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); }
+      else openTraitFiles(categoryId);
+      break;
+    }
     case 'toggle-trait-visibility': {
       if (located) toggleTraitInPreview(located.cat, id);
       break;
@@ -2360,6 +2458,8 @@ async function handleAction(action, id, element) {
         recoveryDismissed = true;
         layerBrowseHistory.length = 0;
         inspectedTrait = null;
+        openLayerCategories.clear();
+        organizerExpanded = {};
         selectWorkspaceTab(false);
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');
@@ -2396,8 +2496,7 @@ async function handleAction(action, id, element) {
     case 'export': await exportPNG(); break;
     case 'random': change(() => M.randomize(state)); break;
     case 'toggle-compact':
-      if (!layerOverview && active) { returnToLayerView(true); break; }
-      compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); toast(compactView ? 'Kompaktní zobrazení kategorií' : 'Rozbalené zobrazení kategorií'); break;
+      compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); break;
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
@@ -2478,7 +2577,12 @@ async function handleAction(action, id, element) {
         for (const c of state.cats) if (c.id in snapshot.visibility) c.visible = snapshot.visibility[c.id];
         state.rulesEnabled = snapshot.rulesEnabled;
       }, 'Sestava použita');
-      if (action === 'edit-snapshot') { layerOverview = false; selectWorkspaceTab(true); showPanel('layers'); }
+      if (action === 'edit-snapshot') {
+        if (active && !openLayerCategories.has(active)) openLayerCategories.set(active, LAYER_BATCH);
+        selectWorkspaceTab(true);
+        showPanel('layers');
+        render(true);
+      }
       break;
     }
     case 'rename-snapshot': {
@@ -2651,7 +2755,17 @@ $('traitSearch').addEventListener('keydown', event => {
     renderSnapshotLayerLibrary();
   }
 });
-$('traitFiles').addEventListener('change', event => uploadFiles(event.target.files));
+function openTraitFiles(categoryId) {
+  const input = $('traitFiles');
+  input.dataset.category = categoryId;
+  input.click();
+}
+$('traitFiles').addEventListener('change', event => {
+  const input = event.target;
+  const categoryId = input.dataset.category || active;
+  delete input.dataset.category;
+  uploadFiles(input.files, categoryId);
+});
 $('projectFile').addEventListener('change', event => loadProject(event.target.files[0]));
 $('ruleSource').addEventListener('change', updateRuleTargets);
 $('ruleTargetCat').addEventListener('change', updateTargetTraits);

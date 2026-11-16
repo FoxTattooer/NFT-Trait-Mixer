@@ -276,33 +276,16 @@
     try {
       image = await decodeImage(url);
       if (!valid()) return blob;
-      const { naturalWidth, naturalHeight } = image;
-      // Scan alpha on a bounded canvas, then sample the crop from the original PNG.
-      const scan = Math.min(1, 512 / Math.max(naturalWidth, naturalHeight));
-      const width = canvas.width = Math.max(1, Math.ceil(naturalWidth * scan));
-      const height = canvas.height = Math.max(1, Math.ceil(naturalHeight * scan));
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(image, 0, 0, width, height);
-      const { data } = ctx.getImageData(0, 0, width, height);
-      let left = width, right = -1, top = height, bottom = -1;
-      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-        if (data[(y * width + x) * 4 + 3] < 4) continue;
-        left = Math.min(left, x); right = Math.max(right, x);
-        top = Math.min(top, y); bottom = Math.max(bottom, y);
-      }
-      if (right < left) return blob;
-      const sourceLeft = Math.floor(Math.max(0, left - 1) * naturalWidth / width);
-      const sourceTop = Math.floor(Math.max(0, top - 1) * naturalHeight / height);
-      const sourceWidth = Math.ceil(Math.min(width, right + 2) * naturalWidth / width) - sourceLeft;
-      const sourceHeight = Math.ceil(Math.min(height, bottom + 2) * naturalHeight / height) - sourceTop;
+      const bounds = visibleImageBounds(image, canvas);
+      if (!bounds) return blob;
       output.width = 480;
       output.height = 300;
-      const scale = Math.min(432 / sourceWidth, 260 / sourceHeight);
-      const artWidth = sourceWidth * scale, artHeight = sourceHeight * scale;
+      const scale = Math.min(432 / bounds.width, 260 / bounds.height);
+      const artWidth = bounds.width * scale, artHeight = bounds.height * scale;
       const render = output.getContext('2d');
       render.imageSmoothingEnabled = true;
       render.imageSmoothingQuality = 'high';
-      render.drawImage(image, sourceLeft, sourceTop, sourceWidth, sourceHeight,
+      render.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height,
         (480 - artWidth) / 2, (300 - artHeight) / 2, artWidth, artHeight);
       const result = await new Promise(resolve => output.toBlob(resolve, 'image/png'));
       if (!result) return blob;

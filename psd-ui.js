@@ -327,7 +327,8 @@
       status('Import dokončen.');
       await pause(350);
       if (current !== epoch) return;
-      close(); layerOverview = false; showPanel('layers');
+      if (active && !openLayerCategories.has(active)) openLayerCategories.set(active, LAYER_BATCH);
+      close(); showPanel('layers');
       toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {

@@ -47,6 +47,7 @@ async function test(worker) {
   await choose(psd);$('psdConfirm').click();
   await waitFor(()=>!$('psdDialog').hasAttribute('open')||$('psdStatus').textContent.includes('nebyl proveden'));
   assert(!$('psdDialog').hasAttribute('open'),$('psdStatus').textContent);assert.equal($('cats').querySelectorAll('.category-card').length,1);assert(w.testFolders().some(folder => folder.name === 'Dreads'));assert.equal(w.testActiveCategory().traits.length,1);
+  assert(!$('layer-branch-' + w.testActiveCategory().id).hidden, 'an imported category opens inline');
   await waitFor(()=>$('toast').textContent.includes('Importováno'));$('undo').click();assert.equal($('cats').querySelectorAll('.category-card').length,0);
   await choose(new Uint8Array(26),'broken.psd');assert($('psdStatus').textContent.includes('nepodařilo'));assert($('psdConfirm').disabled);$('psdCancel').click();assert.equal($('cats').querySelectorAll('.category-card').length,0);
   const warned=ag.writePsd({width:4,height:4,children:[{name:'Multiply',blendMode:'multiply',imageData:{width:1,height:1,data:new Uint8ClampedArray([255,0,0,255])}}]});
