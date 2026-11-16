@@ -796,7 +796,13 @@ function openLayerContext(trigger, id) {
   const fullPath = folderId => [c.name, organizerPath(folders, folderId)].filter(Boolean).join(' / ');
   let edits = layerMenuButton(rename, 'Přejmenovat', id, 'edit', 'edit', kind === 'folder' ? attributes : '');
   let other = '';
-  if (kind === 'folder') {
+  if (kind === 'category') {
+    const index = state.cats.indexOf(c);
+    edits += `<div class="layer-menu-pair" role="group" aria-label="Pořadí kategorie">${
+      layerMenuButton('move-up', 'Výš', id, 'up', 'arrange', `aria-label="Posunout kategorii výš" ${index === 0 ? 'disabled' : ''}`)}${
+      layerMenuButton('move-down', 'Níž', id, 'down', 'arrange', `aria-label="Posunout kategorii níž" ${index === state.cats.length - 1 ? 'disabled' : ''}`)}</div>`;
+    other = layerMenuButton('delete-category', 'Smazat celou kategorii', id, 'trash', 'delete', '', true);
+  } else if (kind === 'folder') {
     const excluded = organizerDescendants(folders, id);
     edits += layerMenuButton('add-organizer-subfolder', 'Přidat podsložku', id, 'folder-plus', 'arrange', attributes) +
       layerMenuMove('Přesunout složku', `<select data-action="move-organizer-folder" ${attributes} data-folder-id="${esc(id)}"><option value="">${esc(c.name)} · hlavní úroveň</option>${folders.filter(folder => !excluded.has(folder.id)).map(folder => `<option value="${esc(folder.id)}" ${item.parentId === folder.id ? 'selected' : ''}>${esc(fullPath(folder.id))}</option>`).join('')}</select>`, fullPath(id));
@@ -954,37 +960,33 @@ function renderCategories(hidden, categories) {
   const list = $('cats');
   const previews = () => list.querySelectorAll('.category-trait-previews');
   const scrollPositions = new Map(Array.from(previews(), strip => [strip.dataset.category, strip.scrollLeft]));
-  const focused = document.activeElement?.closest('#cats :is(.category-trait-previews, .category-trait-details) button');
+  const cardControls = ':is(.category-trait-previews, .category-trait-details) button, .category-top button[data-action="open-layer-menu"]';
+  const focused = list.contains(document.activeElement) ? document.activeElement.closest(cardControls) : null;
   document.body.classList.toggle('compact-categories', compactView);
   list.dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
   $('catCountLabel').textContent = state.cats.length;
   $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
-  const positions = new Map(state.cats.map((cat, index) => [cat.id, index]));
   list.innerHTML = categories.map(c => {
     const id = esc(c.id), name = esc(c.name), current = c.id === active;
-    const index = positions.get(c.id), marks = wipFilter ? M.workInProgress(state, c) : null;
-    const traits = listedTraits(c, marks), { folders, assignments } = organizerFolders(c.id);
+    const traits = listedTraits(c);
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
     return `<div class="category-card ${current ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${id}">
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
-        <button class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}" data-category="${id}"` : ''} data-action="select-category" data-id="${id}" aria-pressed="${current}">${icon('folder')}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}" data-category="${id}"` : ''} data-action="select-category" data-id="${id}" aria-pressed="${current}" title="Otevřít vrstvy · ${name}">${icon(compactView ? 'folder' : 'folder-tree')}
           <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
-        ${compactView ? '' : tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}
       </div>
-      ${current && folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, folders, assignments, marks)}</div>` : ''}
       ${compactView ? '' : renderCategoryPreviews(c, traits, hidden.has(c.id))}
-      ${current && !compactView ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}</div>` : ''}
     </div>`;
   }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
   for (const strip of previews()) {
     if (scrollPositions.get(strip.dataset.category)) strip.scrollLeft = scrollPositions.get(strip.dataset.category);
   }
   if (focused) {
-    [...list.querySelectorAll('.category-trait-previews button, .category-trait-details button')]
+    [...list.querySelectorAll(cardControls)]
       .find(button => button.dataset.id === focused.dataset.id && button.dataset.action === focused.dataset.action)?.focus({ preventScroll: true });
   }
 }
@@ -1003,22 +1005,6 @@ function organizerDescendants(folders, folderId) {
     for (const folder of folders) if (folder.parentId && ids.has(folder.parentId) && !ids.has(folder.id)) { ids.add(folder.id); changed = true; }
   }
   return ids;
-}
-function renderOrganizerFolderRows(category, folders, assignments, marks, parentId = null, depth = 0) {
-  return folders.filter(f => f.parentId === parentId && folderPassesWip(marks, f.id)).map(folder => {
-    const nestedIds = organizerDescendants(folders, folder.id);
-    const count = Object.values(assignments).filter(id => nestedIds.has(id)).length;
-    const selected = organizerSelection[category.id] === folder.id;
-    const hasChildren = folders.some(f => f.parentId === folder.id);
-    const canDelete = count === 0 && !hasChildren;
-    const expanded = organizerExpanded[category.id]?.has(folder.id);
-    return `<div class="organizer-folder-row drop-row ${selected ? 'is-selected' : ''}" data-drop-kind="folder" data-drop-id="${esc(folder.id)}" data-category="${esc(category.id)}" style="padding-left:${Math.min(depth, 6)*12}px">${dragHandle('folder', folder.id, category.id, folder.name)}
-      ${hasChildren ? `<button class="organizer-folder-toggle" data-action="organizer-toggle-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} ${esc(folder.name)}" aria-expanded="${!!expanded}">${expanded ? '⌄' : '›'}</button>` : '<span class="organizer-folder-spacer"></span>'}
-      <button class="organizer-folder-pick" data-action="organizer-select-folder" data-category="${esc(category.id)}" data-id="${esc(folder.id)}" aria-pressed="${selected}"><span class="folder-label">${icon('folder')}${esc(folder.name)}</span>${layerMarkBadges(folder)}<span class="folder-count">${count}</span></button>
-      ${button('open-layer-menu', '', folder.id, 'more', `type="button" class="icon-button subtle" data-kind="folder" data-category="${esc(category.id)}" aria-label="Akce · ${esc(folder.name)}" aria-expanded="false" aria-controls="layerContext"`)}
-      ${canDelete ? `<span class="organizer-folder-tools">${tool('delete-organizer-folder', `Smazat prázdnou složku ${folder.name}`, folder.id, 'trash', false, true)}</span>` : ''}
-    </div>${!hasChildren || expanded ? renderOrganizerFolderRows(category, folders, assignments, marks, folder.id, depth + 1) : ''}`;
-  }).join('');
 }
 function traitCategorySelect(trait, categoryId, placeholder = 'Přesunout do…') {
   const targets = state.cats.filter(c => c.id !== categoryId);
@@ -2213,18 +2199,6 @@ async function handleAction(action, id, element) {
       render(true);
       break;
     }
-    case 'organizer-toggle-folder': {
-      const categoryId = element?.dataset.category || active;
-      const expanded = organizerExpanded[categoryId] ||= new Set();
-      if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
-      render();
-      break;
-    }
-    case 'organizer-select-folder': {
-      const categoryId = element?.dataset.category || active, cat = M.category(state, categoryId);
-      if (cat && (!id || organizerFolders(categoryId).folders.some(f => f.id === id))) { active = categoryId; organizerSelection[categoryId] = id || null; render(); }
-      break;
-    }
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
       const categoryId = element?.dataset.category || active, cat = M.category(state, categoryId);
       if (!cat) break;
@@ -2290,7 +2264,8 @@ async function handleAction(action, id, element) {
     case 'toggle-category': if (c) change(() => { c.visible = c.visible === false; }); break;
     case 'move-up': case 'move-down': {
       const i = state.cats.findIndex(cat => cat.id === id), j = i + (action === 'move-up' ? -1 : 1);
-      if (i >= 0 && j >= 0 && j < state.cats.length) change(() => { [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; }); break;
+      if (i >= 0 && j >= 0 && j < state.cats.length) change(() => { [state.cats[i], state.cats[j]] = [state.cats[j], state.cats[i]]; }, 'Pořadí kategorií změněno');
+      break;
     }
     case 'add-library-trait': if (M.category(state, id)) { active = id; showPanel('snapshots'); $('traitFiles').click(); } break;
     case 'export-package': await exportPackage(); break;

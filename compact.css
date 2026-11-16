@@ -242,7 +242,6 @@ body.compact-workspace .layer-context[hidden],
 body.compact-workspace .layer-tree-check[hidden] {display:none!important}
 body.compact-workspace .layers-panel {padding:9px!important}
 body.compact-workspace #categoryOverview {padding:0 2px 2px}
-body.compact-workspace #categoryOverview .layer-folder-tree {display:none!important}
 .layer-tree {display:grid;gap:5px;min-width:0}
 .layer-tree-row {
   position:relative;display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;
@@ -486,7 +485,9 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
 #cats .category-trait-details button {width:44px;min-height:44px;padding:0;justify-content:center}
 #cats .category-trait-details button .icon {width:17px;height:17px}
 #cats .category-card.is-active .category-trait-eye[aria-pressed=true] .icon {color:var(--workspace-accent-icon)!important}
-#cats[data-view="expanded"] .category-top > [data-action="delete-category"] {width:44px;min-height:44px;flex:0 0 44px;padding:4px}
+#cats[data-view="expanded"] .category-top > .category-pick {box-shadow:none!important}
+#cats[data-view="expanded"] .category-top > .category-pick > .icon {color:var(--scheme-muted,#c3bdc7)}
+#cats[data-view="expanded"] .category-top > .icon-button {width:44px;min-height:44px;flex:0 0 44px;padding:4px}
 
 body.compact-workspace .app-header #refreshApp {
   --refresh-width:clamp(70px,25vw,112px);
