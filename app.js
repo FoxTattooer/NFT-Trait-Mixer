@@ -97,7 +97,7 @@ async function restoreLastProject() {
       inspectedTrait = null;
       openLayerCategories.clear();
       organizerExpanded = {};
-      wipFilter = 0;
+      categoryFilter = 'all';
       imageCache.clear();
     }, 'Poslední projekt obnoven');
     showPanel('layers');
@@ -360,7 +360,7 @@ function scrollWorkspaceTo({ x, y }) {
 function captureLayerView(source) {
   const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
-    panel: mobilePanel, active, layerLimit, wipFilter,
+    panel: mobilePanel, active, layerLimit, categoryFilter,
     categories: new Map(openLayerCategories),
     expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
     tabSelected: workspaceTabSelected, portrait: portraitWorkspace.matches,
@@ -375,7 +375,7 @@ function returnToLayerView() {
   if (!view) return;
   active = view.active;
   layerLimit = view.layerLimit;
-  wipFilter = view.wipFilter;
+  categoryFilter = view.categoryFilter;
   openLayerCategories = view.categories;
   organizerExpanded = view.expanded;
   selectWorkspaceTab(view.tabSelected);
@@ -402,31 +402,44 @@ const layerReviewHosts = {
   traits: ['layerReviewManage', 'managePanelActions'],
   snapshots: ['layerReviewSnapshots', 'snapshotPanelActions'],
 };
-const wipFilters = [
-  { label: 'Vše', icon: 'eye' },
-  { label: 'Jen WIP', icon: 'eye-half' },
-  { label: 'Bez WIP', icon: 'eye-off' },
+const categoryViewModes = [
+  { id: 'all', label: 'Vše', icon: 'eye' },
+  { id: 'visible', label: 'Zapnuté', icon: 'eye-half' },
+  { id: 'hidden', label: 'Skryté', icon: 'eye-off' },
+  { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
-let wipFilter = 0;
+let categoryFilter = 'all';
 let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', layerReviewLimit = PAGE_SIZE;
 let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
 let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
-function matchesWipFilter(marked) {
-  return wipFilter === 0 || (wipFilter === 1 ? marked : !marked);
+function categoryPassesFilter(category) {
+  switch (categoryFilter) {
+    case 'all': return true;
+    case 'visible': return category.visible !== false;
+    case 'hidden': return category.visible === false;
+    case 'unmarked': return !Object.keys(layerStatusLabels).some(mark => category[mark]);
+    default: return !!category[categoryFilter];
+  }
 }
-function categoryPassesWip(category) {
-  if (!wipFilter || category.wip || wipFilter === 2) return matchesWipFilter(!!category.wip);
-  return category.traits.some(trait => trait.wip) || organizerFolders(category.id).folders.some(folder => folder.wip);
+function nextCategoryView() {
+  const index = categoryViewModes.findIndex(mode => mode.id === categoryFilter);
+  return categoryViewModes[(index + 1) % categoryViewModes.length];
 }
-function folderPassesWip(marks, id) {
-  return !marks || matchesWipFilter((wipFilter === 1 ? marks.paths : marks.folders).has(id));
-}
-function listedTraits(category, marks) {
-  if (!wipFilter) return category.traits;
-  if (category.wip) return matchesWipFilter(true) ? category.traits : [];
-  const { traits } = marks || M.workInProgress(state, category);
-  return category.traits.filter(trait => matchesWipFilter(traits.has(trait.id)));
+function renderCategoryFilters() {
+  const eye = $('layerReviewFilter');
+  const mode = categoryViewModes.find(mode => mode.id === categoryFilter);
+  const label = mode?.label || layerStatusLabels[categoryFilter];
+  eye.querySelector('use').setAttribute('href', '#i-' + (mode?.icon || 'eye'));
+  eye.title = `Zobrazení kategorií · ${label}`;
+  eye.setAttribute('aria-label', `${eye.title}. Přepnout na ${nextCategoryView().label}`);
+  eye.toggleAttribute('data-filtered', !!mode && mode.id !== 'all');
+  const badges = $('categoryStatusFilters');
+  badges.hidden = !state.cats.length;
+  for (const control of badges.querySelectorAll('button')) {
+    control.setAttribute('aria-pressed', String(control.dataset.id === categoryFilter));
+  }
+  $('categoryFilterStatus').textContent = `Zobrazení kategorií · ${label}`;
 }
 function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
@@ -447,13 +460,13 @@ function reviewLink({ cat, trait }, label, showFlag = false) {
     <span class="layer-review-copy"><strong>${esc(label)}${showFlag ? flagIcon(trait.flag, true) : ''}</strong><small>${esc(path)}</small></span>${icon('chevron')}`,
     trait.id, '', 'type="button" class="layer-review-link"');
 }
-function renderMatchScope(categories, marksByCategory) {
+function renderMatchScope(categories) {
   const category = M.category(state, matchCategory);
   if (!category) { matchCategory = ''; matchFolder = ''; }
   const org = category && organizerFolders(category.id);
   if (matchFolder && !org?.folders.some(folder => folder.id === matchFolder)) matchFolder = '';
   const scopeCategory = categories.includes(category) ? category : null;
-  const folders = scopeCategory ? org.folders.filter(folder => folderPassesWip(marksByCategory.get(category.id), folder.id)) : [];
+  const folders = scopeCategory ? org.folders : [];
   const scopeFolder = folders.find(folder => folder.id === matchFolder);
   const categoryChoices = [['', 'Celý projekt'], ...categories.map(cat => [cat.id, cat.name])];
   const folderChoices = [['', 'Všechny složky'], ...folders.map(folder => [folder.id, organizerPath(org.folders, folder.id)])];
@@ -498,35 +511,25 @@ function renderLayerReview() {
   }
   if (review.hidden) return;
   if (review.parentElement !== $(host)) $(host).append(review);
-  const filter = $('layerReviewFilter'), mode = wipFilters[wipFilter];
-  filter.querySelector('span').textContent = mode.label;
-  filter.querySelector('use').setAttribute('href', '#i-' + mode.icon);
-  filter.title = `WIP · ${mode.label}`;
-  filter.setAttribute('aria-label', `Filtr WIP · ${mode.label}. Přepnout na ${wipFilters[(wipFilter + 1) % wipFilters.length].label}`);
-  filter.toggleAttribute('data-filtered', wipFilter !== 0);
   $('layerReviewToggle').setAttribute('aria-expanded', String(layerReviewOpen));
   $('layerReviewPanel').hidden = !layerReviewOpen;
   if (!layerReviewOpen) return;
 
   const treeOrder = layerReviewSection === 'matches' && matchOrder === 'tree';
-  const categories = state.cats.filter(categoryPassesWip);
-  const marksByCategory = new Map(wipFilter ? categories.map(cat => [cat.id, M.workInProgress(state, cat)]) : []);
-  const rows = categories.flatMap(cat => {
-    const traits = listedTraits(cat, marksByCategory.get(cat.id));
-    if (!treeOrder) return traits.map(trait => ({ cat, trait }));
-    const ids = wipFilter && new Set(traits.map(trait => trait.id));
-    return mixedLayerRows(cat, true).filter(row => row.kind === 'traits' && (!ids || ids.has(row.item.id))).map(({ item }) => ({ cat, trait: item }));
-  });
+  const categories = state.cats.filter(categoryPassesFilter);
+  const rows = categories.flatMap(cat => treeOrder
+    ? mixedLayerRows(cat, true).filter(row => row.kind === 'traits').map(({ item }) => ({ cat, trait:item }))
+    : cat.traits.map(trait => ({ cat, trait })));
   const notes = rows.filter(({ trait }) => trait.note);
   const flags = categories.flatMap(cat => [
-    ...(cat.flag && matchesWipFilter(!!cat.wip) ? [{ cat, item: cat, kind: 'category' }] : []),
+    ...(cat.flag ? [{ cat, item: cat, kind: 'category' }] : []),
     ...organizerFolders(cat.id).folders
-      .filter(folder => folder.flag && folderPassesWip(marksByCategory.get(cat.id), folder.id))
+      .filter(folder => folder.flag)
       .map(item => ({ cat, item, kind: 'folder' })),
   ]).concat(rows.filter(({ trait }) => trait.flag));
   const scope = $('layerReviewScope');
   scope.hidden = layerReviewSection !== 'matches';
-  const inScope = renderMatchScope(categories, marksByCategory);
+  const inScope = renderMatchScope(categories);
   const matches = M.exactMatches(rows).filter(group => group.some(inScope));
   const counts = {
     matches: counted(matches.length, 'shoda', 'shody', 'shod'),
@@ -580,15 +583,11 @@ function mixedLayerRows(category, includeAll = false) {
       for (let i = children.length - 1; i >= 0; i--) stack.push({ ...children[i], depth: row.depth + 1 });
     }
   }
-  if (includeAll || !wipFilter) return visible;
-  const marks = M.workInProgress(state, category);
-  return visible.filter(({ kind, item }) => kind === 'folders'
-    ? folderPassesWip(marks, item.id)
-    : matchesWipFilter(marks.traits.has(item.id)));
+  return visible;
 }
 function renderLayerTree() {
   if (!busy) renderLayerReview();
-  const category = M.category(state, active), c = category && categoryPassesWip(category) ? category : null;
+  const category = M.category(state, active), c = category && categoryPassesFilter(category) ? category : null;
   const manage = mobilePanel === 'traits';
   $('layerPanelHeading').hidden = !state.cats.length;
   const grid = $('compactToggle');
@@ -635,7 +634,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     </div>`;
   }).join('');
   const more = rows.length > limit ? button('show-more-layers', 'Zobrazit další vrstvy', '', 'down', `class="outline full-width"${manage ? '' : ` data-category="${esc(c.id)}"`}`) : '';
-  const empty = rows.length ? '' : `<p class="empty-list">${wipFilter ? 'Tomuto filtru neodpovídají žádné vrstvy.' : 'Tato kategorie je zatím prázdná.'}</p>`;
+  const empty = rows.length ? '' : `<p class="empty-list">Tato kategorie je zatím prázdná.</p>`;
   const tools = manage ? '' : `<div class="layer-tree-tools">${button('add-traits', 'PNG', '', 'upload', `data-category="${esc(c.id)}" aria-label="Přidat PNG" title="Přidat PNG"`)}${button('add-organizer-folder', 'Složka', '', 'folder', `data-category="${esc(c.id)}" aria-label="Přidat složku" title="Přidat složku"`)}${tool('save-category-final', 'Uložit kategorii do Finálu', c.id, 'lock')}</div>`;
   const markup = entries + more + empty + tools;
   // Keep existing thumbnail elements and the focused row on selection changes.
@@ -922,7 +921,7 @@ function renderQuickTraits() {
  toggle.hidden = window.innerWidth > window.innerHeight;
  toggle.setAttribute('aria-expanded', String(quickTraitsVisible));
  toggle.querySelector('span').textContent = quickTraitsVisible ? 'Skrýt rychlý výběr' : 'Zobrazit rychlý výběr';
- const traits = quickTraitsVisible && c && !safeMode && !busy && mobilePanel === 'layers' && window.innerWidth <= window.innerHeight ? listedTraits(c) : [];
+ const traits = quickTraitsVisible && c && categoryPassesFilter(c) && !safeMode && !busy && mobilePanel === 'layers' && window.innerWidth <= window.innerHeight ? c.traits : [];
  strip.hidden = !traits.length;
  if (strip.hidden) { list.replaceChildren(); list.dataset.ids = ''; quickCategoryId = null; return; }
  const ids = traits.map(t => t.id).join('|');
@@ -985,7 +984,7 @@ function renderCategories(hidden, categories) {
   let nextGroup = list.firstElementChild;
   for (const c of categories) {
     const id = esc(c.id), name = esc(c.name), current = c.id === active;
-    const traits = listedTraits(c);
+    const traits = c.traits;
     const expanded = openLayerCategories.has(c.id);
     let group = existing.get(c.id);
     if (!group) {
@@ -1062,8 +1061,8 @@ function traitNoteEditor(trait) {
     </form>
   </details>`;
 }
-function renderTraits(categories = state.cats.filter(categoryPassesWip)) {
-  const c = categories.find(cat => cat.id === active), traits = c ? listedTraits(c) : [];
+function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
+  const c = categories.find(cat => cat.id === active), traits = c ? c.traits : [];
   const selected = c && traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
   $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerMarkBadges(c)}` : '';
@@ -1077,7 +1076,7 @@ function renderTraits(categories = state.cats.filter(categoryPassesWip)) {
   $('categoryNext').disabled = categories.length < 2 || busy;
   $('addTrait').disabled = !c || busy;
   $('manageEmpty').hidden = !!c;
-  $('manageEmpty').textContent = wipFilter && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
+  $('manageEmpty').textContent = categoryFilter !== 'all' && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
   const addFolder = $('manageAddFolder');
   addFolder.disabled = !c || busy;
   addFolder.dataset.category = c?.id || '';
@@ -1225,7 +1224,7 @@ function renderTraitSearch() {
   let markup = '';
   if (searching) {
     const prefix = [], other = [];
-    for (const cat of state.cats) for (const trait of listedTraits(cat)) {
+    for (const cat of state.cats.filter(categoryPassesFilter)) for (const trait of cat.traits) {
       const name = foldTraitName(trait.name);
       if (terms.every(term => name.includes(term))) {
         (name.startsWith(terms[0]) ? prefix : other).push({ cat, trait });
@@ -1249,7 +1248,7 @@ function renderTraitSearch() {
 }
 function revealTrait({ cat, trait }, source) {
   const view = captureLayerView(source);
-  if (wipFilter && !matchesWipFilter(M.workInProgress(state, cat).traits.has(trait.id))) wipFilter = 0;
+  if (!categoryPassesFilter(cat)) categoryFilter = 'all';
   revealLayerRow(cat, 'traits', trait.id, organizerFolders(cat.id).assignments[trait.id], view);
 }
 function revealLayerRow(cat, kind, id, parentId, view) {
@@ -1281,9 +1280,9 @@ function renderSnapshotLayerLibrary() {
   const searching = renderTraitSearch();
   const canShow = !safeMode && !searching && mobilePanel === 'snapshots';
   const shownTraits = new Map();
-  const categories = state.cats.filter(categoryPassesWip);
+  const categories = state.cats.filter(categoryPassesFilter);
   const markup = categories.length ? categories.map((c, i) => {
-    const traits = canShow ? listedTraits(c) : c.traits;
+    const traits = c.traits;
     if (canShow) shownTraits.set(c.id, traits);
     const cover = canShow && (traits.find(t => t.id === state.selected[c.id]) || traits[0]);
     return `<details class="library-category" data-category="${esc(c.id)}">
@@ -1561,6 +1560,7 @@ function render(keepPreview = false) {
   syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
   $('exportPackage').disabled = !state.cats.length || busy || exporting;
+  renderCategoryFilters();
   $('openCategoryExport').disabled = busy || exporting || !state.cats.some(category => category.traits.length);
   $('warnings').innerHTML = warnings.map(w => `<p class="conflict-warning">${esc(w.message)}. Uprav výběr před exportem.</p>`).join('');
   $('canvasEmpty').hidden = !!layers.length;
@@ -1578,7 +1578,7 @@ function render(keepPreview = false) {
   if (busy) return;
   renderProjectRecovery();
   $('emptyOpenBackup').hidden = !!state.cats.length || (!!projectRecovery && !recoveryDismissed);
-  const categories = state.cats.filter(categoryPassesWip);
+  const categories = state.cats.filter(categoryPassesFilter);
   if (categories.length && !categories.some(c => c.id === active)) {
     active = categories[0].id;
     layerLimit = LAYER_BATCH;
@@ -1764,6 +1764,7 @@ async function loadProject(file) {
     inspectedTrait = null;
     openLayerCategories.clear();
     organizerExpanded = {};
+    categoryFilter = 'all';
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     const recentId = recent?.record(file, undefined, fallback);
     if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
@@ -2139,7 +2140,7 @@ async function handleAction(action, id, element) {
     case 'reveal-trait': if (located) revealTrait(located, element); break;
     case 'reveal-flagged-group': {
       const category = M.category(state, element.dataset.category);
-      if (!category || !categoryPassesWip(category)) break;
+      if (!category || !categoryPassesFilter(category)) break;
       if (element.dataset.kind === 'folder') {
         const folder = organizerFolders(category.id).folders.find(item => item.id === id);
         if (folder) revealLayerRow(category, 'folders', id, folder.parentId, captureLayerView(element));
@@ -2161,8 +2162,14 @@ async function handleAction(action, id, element) {
       renderLayerReview();
       mountThumbnails();
       break;
-    case 'cycle-wip-filter':
-      wipFilter = (wipFilter + 1) % wipFilters.length;
+    case 'filter-category-mark':
+      if (!Object.hasOwn(layerStatusLabels, id)) break;
+      categoryFilter = categoryFilter === id ? 'all' : id;
+      layerLimit = LAYER_BATCH;
+      render(true);
+      break;
+    case 'cycle-category-view':
+      categoryFilter = nextCategoryView().id;
       layerLimit = LAYER_BATCH;
       render(true);
       break;
@@ -2286,7 +2293,7 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'cycle-category': {
-      const categories = state.cats.filter(categoryPassesWip);
+      const categories = state.cats.filter(categoryPassesFilter);
       if (!categories.length) break;
       const current = categories.findIndex(cat => cat.id === active);
       const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
@@ -2368,7 +2375,7 @@ async function handleAction(action, id, element) {
         const nextId = M.uid();
         openLayerCategories.set(nextId, LAYER_BATCH);
         selectWorkspaceTab(true);
-        if (wipFilter === 1) wipFilter = 0;
+        categoryFilter = 'all';
         change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána');
         showPanel('layers');
       }
@@ -2462,6 +2469,7 @@ async function handleAction(action, id, element) {
         inspectedTrait = null;
         openLayerCategories.clear();
         organizerExpanded = {};
+        categoryFilter = 'all';
         selectWorkspaceTab(false);
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');

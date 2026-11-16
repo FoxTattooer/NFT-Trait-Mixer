@@ -526,14 +526,17 @@ click('#layerContext summary[data-tone="mark"]');
 click('#layerContext [data-action="toggle-layer-status"][data-mark="wip"]');
 assert(find('#cats .layer-wip-mark'));
 assert.equal(w.inspectState().selected.a,'t1');
-click('#layerReviewFilter');
-assert(find('#cats .category-card'),'the marked category is listed in Jen WIP');
-click('#layerReviewFilter');
-assert(!find('#cats .category-card'),'the marked category is hidden in Bez WIP');
-assert(!get('layerPanelHeading').hidden,'the filter remains available when all categories are hidden');
+const categoryBadge = mark => `#categoryStatusFilters [data-id="${mark}"]`;
+click(categoryBadge('wip'));
+assert(find('#cats .category-card'),'the WIP badge shows the marked category');
+assert.equal(find(categoryBadge('wip')).getAttribute('aria-pressed'),'true');
+click(categoryBadge('trash'));
+assert(!find('#cats .category-card'),'an empty badge filter shows no categories');
+assert(!get('layerPanelHeading').hidden,'the eye remains available for empty results');
 assert.equal(get('layerCategory').disabled,true);
 click('#layerReviewFilter');
 assert(find('#cats .category-card'));
+assert.equal(find(categoryBadge('trash')).getAttribute('aria-pressed'),'false');
 click(categoryMenu);
 click('#layerContext summary[data-tone="mark"]');
 click('#layerContext [data-action="toggle-layer-status"][data-mark="wip"]');
@@ -969,8 +972,32 @@ exportProject.organizer['export-a'] = {
   assignments: { 'export-hidden': 'export-folder' },
 };
 exportProject.selected['export-b'] = 'export-hair';
-w.useTestProject(exportProject);
+const filterProject = M.clone(exportProject);
+filterProject.cats[0].draw = true;
+filterProject.cats[1].fin = true;
+filterProject.cats[2].traits[0].draw = true;
+w.useTestProject(filterProject);
 click('#layersTab');
+const categoryIds = () => [...get('cats').querySelectorAll('.layer-category')].map(row => row.dataset.category);
+const beforeFilters = JSON.stringify(w.inspectState());
+click(categoryBadge('draw'));
+assert.deepEqual(categoryIds(),['export-a'],'DRAW matches categories by their own badges');
+click(categoryBadge('fin'));
+assert.deepEqual(categoryIds(),['export-b']);
+click(categoryBadge('fin'));
+assert.deepEqual(categoryIds(),['export-a','export-b','export-c'],'tapping the active badge clears the filter');
+for (const [label,ids] of [
+  ['Zapnuté',['export-b','export-c']],
+  ['Skryté',['export-a']],
+  ['Bez označení',['export-c']],
+  ['Vše',['export-a','export-b','export-c']],
+]) {
+  click('#layerReviewFilter');
+  assert.equal(get('layerReviewFilter').title,`Zobrazení kategorií · ${label}`);
+  assert.deepEqual(categoryIds(),ids);
+}
+assert.equal(JSON.stringify(w.inspectState()),beforeFilters,'filtering leaves the project and composition unchanged');
+w.useTestProject(exportProject);
 click('#compactToggle');
 const hairThumb = '#cats [data-action="inspect-category-trait"][data-id="export-hair"]';
 assert(!find(hairThumb).closest('.category-card').classList.contains('is-active'));

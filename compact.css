@@ -75,7 +75,16 @@ body.compact-workspace .app-header {
 }
 .final-actions [hidden] { display:none !important; }
 .final-actions a { border:1px solid var(--line); border-radius:10px; text-decoration:none; color:inherit; }
-.category-export-trigger { min-height:44px; margin-bottom:6px; }
+.category-filter-bar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+.category-filter-bar #openCategoryExport { flex:0 0 44px; width:44px; min-height:44px; padding:0; }
+.category-status-filters:not([hidden]) { display:flex; flex-wrap:wrap; gap:4px; }
+.category-status-filters button { min-width:44px; min-height:44px; padding:3px 5px; flex-direction:column; gap:2px; font-size:10px; line-height:1; }
+.category-status-filters .icon { width:16px; height:16px; color:var(--category-mark-color); }
+.category-status-filters [data-id=draw] { --category-mark-color:#dfb4ff; }
+.category-status-filters [data-id=fin] { --category-mark-color:#a9f4d5; }
+.category-status-filters [data-id=wip] { --category-mark-color:#ffcf91; }
+.category-status-filters [data-id=trash] { --category-mark-color:#ffb6b3; }
+.category-status-filters button[aria-pressed=true] { border-color:var(--category-mark-color)!important; color:var(--category-mark-color)!important; background:color-mix(in srgb,var(--scheme-control,#22242b) 88%,var(--category-mark-color))!important; }
 #categoryExportDialog[open] { width:min(420px, calc(100vw - 24px)); }
 .category-export-dialog .final-header { justify-content:space-between; }
 .category-export-dialog h2, .category-export-dialog p { margin:0; }
@@ -467,7 +476,6 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
 .workspace-tools {display:flex;align-items:center;gap:4px;flex:none}
 .workspace-tools :is(.layer-panel-utility,.manage-panel-utility,.layer-review-tools) {display:contents}
 .workspace-tool-overflow summary::-webkit-details-marker {display:none}
-.workspace-tools #layerReviewFilter span {display:none}
 .workspace-tool-overflow[open] + :is(.layer-panel-utility,.manage-panel-utility) {
   display:flex;position:absolute;z-index:10;inset-inline-end:0;top:calc(100% + 3px);gap:4px;padding:5px;
   border:1px solid var(--scheme-stroke);border-radius:12px;background:var(--scheme-panel);box-shadow:0 8px 22px #0008;
