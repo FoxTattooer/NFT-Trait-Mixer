@@ -530,13 +530,14 @@ const categoryBadge = mark => `#categoryStatusFilters [data-id="${mark}"]`;
 click(categoryBadge('wip'));
 assert(find('#cats .category-card'),'the WIP badge shows the marked category');
 assert.equal(find(categoryBadge('wip')).getAttribute('aria-pressed'),'true');
-click(categoryBadge('trash'));
-assert(!find('#cats .category-card'),'an empty badge filter shows no categories');
+click(categoryBadge('wip'));
+assert.equal(find(categoryBadge('wip')).dataset.filterMode,'exclude');
+assert(!find('#cats .category-card'),'the second tap excludes the marked category');
 assert(!get('layerPanelHeading').hidden,'the eye remains available for empty results');
 assert.equal(get('layerCategory').disabled,true);
 click('#layerReviewFilter');
 assert(find('#cats .category-card'));
-assert.equal(find(categoryBadge('trash')).getAttribute('aria-pressed'),'false');
+assert.equal(find(categoryBadge('wip')).getAttribute('aria-pressed'),'false');
 click(categoryMenu);
 click('#layerContext summary[data-tone="mark"]');
 click('#layerContext [data-action="toggle-layer-status"][data-mark="wip"]');
@@ -976,16 +977,35 @@ const filterProject = M.clone(exportProject);
 filterProject.cats[0].draw = true;
 filterProject.cats[1].fin = true;
 filterProject.cats[2].traits[0].draw = true;
+filterProject.cats[2].traits.push({ id:'filter-clean',name:'Bez označení',data:pngA });
+filterProject.organizer['export-c'] = {
+  folders:[{ id:'filter-folder',name:'Podsložka filtru',parentId:null }],
+  assignments:{ 'export-bg':'filter-folder', 'filter-clean':'filter-folder' },
+};
 w.useTestProject(filterProject);
 click('#layersTab');
 const categoryIds = () => [...get('cats').querySelectorAll('.layer-category')].map(row => row.dataset.category);
 const beforeFilters = JSON.stringify(w.inspectState());
+const filterCategory = '#cats [data-action="select-category"][data-id="export-c"]';
+if (get('layer-branch-export-c').hidden) click(filterCategory);
 click(categoryBadge('draw'));
-assert.deepEqual(categoryIds(),['export-a'],'DRAW matches categories by their own badges');
+assert.deepEqual(categoryIds(),['export-a','export-c'],'DRAW includes parent categories of marked traits');
+click('#layer-branch-export-c [data-action="toggle-tree-folder"][data-id="filter-folder"]');
+const shownFilterTraits = () => [...get('layer-branch-export-c').querySelectorAll('[data-action="choose-trait"]')].map(row=>row.dataset.id);
+assert.deepEqual(shownFilterTraits(),['export-bg'],'the marked trait is shown with its folder path');
 click(categoryBadge('fin'));
-assert.deepEqual(categoryIds(),['export-b']);
+assert.deepEqual(categoryIds(),['export-a','export-b','export-c'],'included badges are combined');
+click(categoryBadge('draw'));
+assert.deepEqual(categoryIds(),['export-b'],'excluding DRAW preserves the FIN inclusion');
 click(categoryBadge('fin'));
-assert.deepEqual(categoryIds(),['export-a','export-b','export-c'],'tapping the active badge clears the filter');
+for (const mark of ['wip','trash']) { click(categoryBadge(mark)); click(categoryBadge(mark)); }
+assert.deepEqual(categoryIds(),['export-c'],'four excluded badges leave unmarked entries');
+assert.deepEqual(shownFilterTraits(),['filter-clean']);
+click(categoryBadge('draw'));
+assert.equal(find(categoryBadge('draw')).dataset.filterMode,'off','the third tap clears only that badge');
+assert.deepEqual(categoryIds(),['export-a','export-c']);
+click('#layerReviewFilter');
+assert.deepEqual(categoryIds(),['export-a','export-b','export-c']);
 for (const [label,ids] of [
   ['Zapnuté',['export-b','export-c']],
   ['Skryté',['export-a']],
@@ -997,6 +1017,7 @@ for (const [label,ids] of [
   assert.deepEqual(categoryIds(),ids);
 }
 assert.equal(JSON.stringify(w.inspectState()),beforeFilters,'filtering leaves the project and composition unchanged');
+if (!get('layer-branch-export-c').hidden) click(filterCategory);
 w.useTestProject(exportProject);
 click('#compactToggle');
 const hairThumb = '#cats [data-action="inspect-category-trait"][data-id="export-hair"]';

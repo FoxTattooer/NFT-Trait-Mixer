@@ -97,7 +97,7 @@ async function restoreLastProject() {
       inspectedTrait = null;
       openLayerCategories.clear();
       organizerExpanded = {};
-      categoryFilter = 'all';
+      resetCategoryFilters();
       imageCache.clear();
     }, 'Poslední projekt obnoven');
     showPanel('layers');
@@ -360,7 +360,7 @@ function scrollWorkspaceTo({ x, y }) {
 function captureLayerView(source) {
   const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
-    panel: mobilePanel, active, layerLimit, categoryFilter,
+    panel: mobilePanel, active, layerLimit, categoryFilter, statusFilters: new Map(categoryStatusFilters),
     categories: new Map(openLayerCategories),
     expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
     tabSelected: workspaceTabSelected, portrait: portraitWorkspace.matches,
@@ -376,6 +376,8 @@ function returnToLayerView() {
   active = view.active;
   layerLimit = view.layerLimit;
   categoryFilter = view.categoryFilter;
+  categoryStatusFilters = view.statusFilters;
+  filteredLayerIds.clear();
   openLayerCategories = view.categories;
   organizerExpanded = view.expanded;
   selectWorkspaceTab(view.tabSelected);
@@ -408,38 +410,79 @@ const categoryViewModes = [
   { id: 'hidden', label: 'Skryté', icon: 'eye-off' },
   { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
-let categoryFilter = 'all';
+let categoryFilter = 'all', categoryStatusFilters = new Map();
+const filteredLayerIds = new Map();
 let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', layerReviewLimit = PAGE_SIZE;
 let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
 let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
-function categoryPassesFilter(category) {
-  switch (categoryFilter) {
-    case 'all': return true;
-    case 'visible': return category.visible !== false;
-    case 'hidden': return category.visible === false;
-    case 'unmarked': return !Object.keys(layerStatusLabels).some(mark => category[mark]);
-    default: return !!category[categoryFilter];
+function resetCategoryFilters() {
+  categoryFilter = 'all';
+  categoryStatusFilters.clear();
+  filteredLayerIds.clear();
+}
+function matchingLayerIds(category) {
+  if (!categoryStatusFilters.size && categoryFilter !== 'unmarked') return null;
+  if (filteredLayerIds.has(category.id)) return filteredLayerIds.get(category.id);
+
+  const included = [], excluded = [];
+  for (const [mark, mode] of categoryStatusFilters) (mode === 'include' ? included : excluded).push(mark);
+  if (categoryFilter === 'unmarked') excluded.push(...Object.keys(layerStatusLabels));
+  const ids = new Set();
+  const children = M.layerChildren(state, category);
+  function visit(item, inherited, parentId) {
+    if (excluded.some(mark => item[mark])) return false;
+    const matched = inherited || included.some(mark => item[mark]);
+    let hasMatch = !included.length || matched;
+    if (parentId !== undefined) {
+      for (const { kind, item: child } of children(parentId)) {
+        if (visit(child, matched, kind === 'folders' ? child.id : undefined)) hasMatch = true;
+      }
+    }
+    if (hasMatch) ids.add(item.id);
+    return hasMatch;
   }
+  visit(category, false, null);
+  filteredLayerIds.set(category.id, ids);
+  return ids;
+}
+function categoryPassesFilter(category) {
+  if (categoryFilter === 'visible') return category.visible !== false;
+  if (categoryFilter === 'hidden') return category.visible === false;
+  return matchingLayerIds(category)?.has(category.id) ?? true;
+}
+function listedTraits(category) {
+  const ids = matchingLayerIds(category);
+  return ids ? category.traits.filter(trait => ids.has(trait.id)) : category.traits;
 }
 function nextCategoryView() {
+  if (categoryStatusFilters.size) return categoryViewModes[0];
   const index = categoryViewModes.findIndex(mode => mode.id === categoryFilter);
   return categoryViewModes[(index + 1) % categoryViewModes.length];
 }
 function renderCategoryFilters() {
   const eye = $('layerReviewFilter');
   const mode = categoryViewModes.find(mode => mode.id === categoryFilter);
-  const label = mode?.label || layerStatusLabels[categoryFilter];
-  eye.querySelector('use').setAttribute('href', '#i-' + (mode?.icon || 'eye'));
-  eye.title = `Zobrazení kategorií · ${label}`;
+  eye.querySelector('use').setAttribute('href', '#i-' + mode.icon);
+  eye.title = `Zobrazení kategorií · ${categoryStatusFilters.size ? 'Podle označení' : mode.label}`;
   eye.setAttribute('aria-label', `${eye.title}. Přepnout na ${nextCategoryView().label}`);
-  eye.toggleAttribute('data-filtered', !!mode && mode.id !== 'all');
+  eye.toggleAttribute('data-filtered', mode.id !== 'all');
   const badges = $('categoryStatusFilters');
   badges.hidden = !state.cats.length;
+  const summaries = [];
   for (const control of badges.querySelectorAll('button')) {
-    control.setAttribute('aria-pressed', String(control.dataset.id === categoryFilter));
+    const mark = control.dataset.id;
+    const status = categoryStatusFilters.get(mark) || 'off';
+    const label = layerStatusLabels[mark];
+    const current = { off:'Vypnuto', include:'Jen označené', exclude:'Označené skryté' }[status];
+    const next = { off:'Zobrazit označené', include:'Skrýt označené', exclude:'Zrušit filtr' }[status];
+    control.dataset.filterMode = status;
+    control.setAttribute('aria-pressed', String(status !== 'off'));
+    control.title = `${label} · ${current}. ${next}`;
+    control.setAttribute('aria-label', control.title);
+    if (status !== 'off') summaries.push(`${label}: ${current}`);
   }
-  $('categoryFilterStatus').textContent = `Zobrazení kategorií · ${label}`;
+  $('categoryFilterStatus').textContent = summaries.join(' · ') || eye.title;
 }
 function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
@@ -466,7 +509,8 @@ function renderMatchScope(categories) {
   const org = category && organizerFolders(category.id);
   if (matchFolder && !org?.folders.some(folder => folder.id === matchFolder)) matchFolder = '';
   const scopeCategory = categories.includes(category) ? category : null;
-  const folders = scopeCategory ? org.folders : [];
+  const ids = scopeCategory && matchingLayerIds(scopeCategory);
+  const folders = scopeCategory ? org.folders.filter(folder => !ids || ids.has(folder.id)) : [];
   const scopeFolder = folders.find(folder => folder.id === matchFolder);
   const categoryChoices = [['', 'Celý projekt'], ...categories.map(cat => [cat.id, cat.name])];
   const folderChoices = [['', 'Všechny složky'], ...folders.map(folder => [folder.id, organizerPath(org.folders, folder.id)])];
@@ -519,12 +563,12 @@ function renderLayerReview() {
   const categories = state.cats.filter(categoryPassesFilter);
   const rows = categories.flatMap(cat => treeOrder
     ? mixedLayerRows(cat, true).filter(row => row.kind === 'traits').map(({ item }) => ({ cat, trait:item }))
-    : cat.traits.map(trait => ({ cat, trait })));
+    : listedTraits(cat).map(trait => ({ cat, trait })));
   const notes = rows.filter(({ trait }) => trait.note);
   const flags = categories.flatMap(cat => [
     ...(cat.flag ? [{ cat, item: cat, kind: 'category' }] : []),
     ...organizerFolders(cat.id).folders
-      .filter(folder => folder.flag)
+      .filter(folder => folder.flag && (matchingLayerIds(cat)?.has(folder.id) ?? true))
       .map(item => ({ cat, item, kind: 'folder' })),
   ]).concat(rows.filter(({ trait }) => trait.flag));
   const scope = $('layerReviewScope');
@@ -572,11 +616,13 @@ function layerThumbnail(category, trait, className = '') {
 }
 function mixedLayerRows(category, includeAll = false) {
   const merge = M.layerChildren(state, category);
+  const ids = matchingLayerIds(category);
   const visible = [];
   const stack = merge(null).reverse().map(row => ({ ...row, depth: 0 }));
   const expanded = organizerExpanded[category.id];
   while (stack.length) {
     const row = stack.pop();
+    if (ids && !ids.has(row.item.id)) continue;
     visible.push(row);
     if (row.kind === 'folders' && (includeAll || expanded?.has(row.item.id))) {
       const children = merge(row.item.id);
@@ -921,7 +967,7 @@ function renderQuickTraits() {
  toggle.hidden = window.innerWidth > window.innerHeight;
  toggle.setAttribute('aria-expanded', String(quickTraitsVisible));
  toggle.querySelector('span').textContent = quickTraitsVisible ? 'Skrýt rychlý výběr' : 'Zobrazit rychlý výběr';
- const traits = quickTraitsVisible && c && categoryPassesFilter(c) && !safeMode && !busy && mobilePanel === 'layers' && window.innerWidth <= window.innerHeight ? c.traits : [];
+ const traits = quickTraitsVisible && c && categoryPassesFilter(c) && !safeMode && !busy && mobilePanel === 'layers' && window.innerWidth <= window.innerHeight ? listedTraits(c) : [];
  strip.hidden = !traits.length;
  if (strip.hidden) { list.replaceChildren(); list.dataset.ids = ''; quickCategoryId = null; return; }
  const ids = traits.map(t => t.id).join('|');
@@ -984,7 +1030,7 @@ function renderCategories(hidden, categories) {
   let nextGroup = list.firstElementChild;
   for (const c of categories) {
     const id = esc(c.id), name = esc(c.name), current = c.id === active;
-    const traits = c.traits;
+    const traits = listedTraits(c);
     const expanded = openLayerCategories.has(c.id);
     let group = existing.get(c.id);
     if (!group) {
@@ -1062,7 +1108,7 @@ function traitNoteEditor(trait) {
   </details>`;
 }
 function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
-  const c = categories.find(cat => cat.id === active), traits = c ? c.traits : [];
+  const c = categories.find(cat => cat.id === active), traits = c ? listedTraits(c) : [];
   const selected = c && traits.find(t => t.id === state.selected[c.id]);
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
   $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerMarkBadges(c)}` : '';
@@ -1076,7 +1122,7 @@ function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
   $('categoryNext').disabled = categories.length < 2 || busy;
   $('addTrait').disabled = !c || busy;
   $('manageEmpty').hidden = !!c;
-  $('manageEmpty').textContent = categoryFilter !== 'all' && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
+  $('manageEmpty').textContent = (categoryFilter !== 'all' || categoryStatusFilters.size) && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
   const addFolder = $('manageAddFolder');
   addFolder.disabled = !c || busy;
   addFolder.dataset.category = c?.id || '';
@@ -1224,7 +1270,7 @@ function renderTraitSearch() {
   let markup = '';
   if (searching) {
     const prefix = [], other = [];
-    for (const cat of state.cats.filter(categoryPassesFilter)) for (const trait of cat.traits) {
+    for (const cat of state.cats.filter(categoryPassesFilter)) for (const trait of listedTraits(cat)) {
       const name = foldTraitName(trait.name);
       if (terms.every(term => name.includes(term))) {
         (name.startsWith(terms[0]) ? prefix : other).push({ cat, trait });
@@ -1248,7 +1294,7 @@ function renderTraitSearch() {
 }
 function revealTrait({ cat, trait }, source) {
   const view = captureLayerView(source);
-  if (!categoryPassesFilter(cat)) categoryFilter = 'all';
+  if (!categoryPassesFilter(cat) || matchingLayerIds(cat)?.has(trait.id) === false) resetCategoryFilters();
   revealLayerRow(cat, 'traits', trait.id, organizerFolders(cat.id).assignments[trait.id], view);
 }
 function revealLayerRow(cat, kind, id, parentId, view) {
@@ -1282,7 +1328,7 @@ function renderSnapshotLayerLibrary() {
   const shownTraits = new Map();
   const categories = state.cats.filter(categoryPassesFilter);
   const markup = categories.length ? categories.map((c, i) => {
-    const traits = c.traits;
+    const traits = listedTraits(c);
     if (canShow) shownTraits.set(c.id, traits);
     const cover = canShow && (traits.find(t => t.id === state.selected[c.id]) || traits[0]);
     return `<details class="library-category" data-category="${esc(c.id)}">
@@ -1546,6 +1592,7 @@ async function draw() {
   }
 }
 function render(keepPreview = false) {
+  filteredLayerIds.clear();
   if (!M.category(state, active)) active = state.cats[0]?.id || null;
   const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state);
   $('projectNameText').textContent = state.name;
@@ -1764,7 +1811,7 @@ async function loadProject(file) {
     inspectedTrait = null;
     openLayerCategories.clear();
     organizerExpanded = {};
-    categoryFilter = 'all';
+    resetCategoryFilters();
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     const recentId = recent?.record(file, undefined, fallback);
     if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
@@ -2164,12 +2211,15 @@ async function handleAction(action, id, element) {
       break;
     case 'filter-category-mark':
       if (!Object.hasOwn(layerStatusLabels, id)) break;
-      categoryFilter = categoryFilter === id ? 'all' : id;
+      categoryFilter = 'all';
+      if (categoryStatusFilters.get(id) === 'exclude') categoryStatusFilters.delete(id);
+      else categoryStatusFilters.set(id, categoryStatusFilters.has(id) ? 'exclude' : 'include');
       layerLimit = LAYER_BATCH;
       render(true);
       break;
     case 'cycle-category-view':
       categoryFilter = nextCategoryView().id;
+      categoryStatusFilters.clear();
       layerLimit = LAYER_BATCH;
       render(true);
       break;
@@ -2375,7 +2425,7 @@ async function handleAction(action, id, element) {
         const nextId = M.uid();
         openLayerCategories.set(nextId, LAYER_BATCH);
         selectWorkspaceTab(true);
-        categoryFilter = 'all';
+        resetCategoryFilters();
         change(() => { state.cats.push({ id: nextId, name, visible: true, traits: [] }); state.selected[nextId] = null; active = nextId; }, 'Kategorie přidána');
         showPanel('layers');
       }
@@ -2469,7 +2519,7 @@ async function handleAction(action, id, element) {
         inspectedTrait = null;
         openLayerCategories.clear();
         organizerExpanded = {};
-        categoryFilter = 'all';
+        resetCategoryFilters();
         selectWorkspaceTab(false);
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');
