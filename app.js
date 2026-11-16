@@ -496,9 +496,13 @@ function layerMarkBadges(item) {
     (item.trash ? '<span class="layer-trash-mark">TRASH</span>' : '') +
     (item.draw ? '<span class="layer-draw-mark">DRAW</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
-function layerTagMarker(item) {
-  const count = item.lookbookTags?.length || 0;
-  return count ? `<span class="layer-tag-marker" role="img" aria-label="${counted(count, 'štítek', 'štítky', 'štítků')}">${icon('tag')}${count > 1 ? `<span aria-hidden="true">${count}</span>` : ''}</span>` : '';
+function layerTagMarker(item, previews = false) {
+  const tags = item.lookbookTags || [];
+  const count = tags.length;
+  if (!count) return '';
+  const compact = `<span class="layer-tag-fallback" aria-hidden="true">${icon('tag')}${count > 1 ? `<span>${count}</span>` : ''}</span>`;
+  const labels = previews ? `<span class="layer-tag-previews" aria-hidden="true">${tags.slice(0, 2).map(tagSample).join('')}${count > 2 ? `<span>+${count - 2}</span>` : ''}</span>` : '';
+  return `<span class="layer-tag-marker${previews ? ' has-previews' : ''}" role="img" aria-label="Štítky: ${esc(tags.join(', '))}">${compact}${labels}</span>`;
 }
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
@@ -679,7 +683,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label">${esc(item.name)}</span>${layerTagMarker(item)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label">${esc(item.name)}</span>${layerTagMarker(item, !folder)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -1122,7 +1126,7 @@ function categoryTraitDetails(category, trait, categoryHidden, picked) {
   }
   const visibility = enabled ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
   const name = esc(trait.name);
-  return `<div class="category-trait-copy"><strong title="${name}">${name}${layerTagMarker(trait)}</strong><small>${status}</small></div>
+  return `<div class="category-trait-copy"><strong title="${name}"><span>${name}</span>${layerTagMarker(trait, true)}</strong><small>${status}</small></div>
     ${button('toggle-trait-visibility', '', trait.id, shown ? 'eye' : 'eye-off', `type="button" class="icon-button subtle category-trait-eye" aria-pressed="${shown}" aria-label="${visibility} · ${name}" title="${visibility}"`)}
     ${tool('rename-trait', `Přejmenovat ${trait.name}`, trait.id, 'edit')}
     ${button('open-layer-menu', '', trait.id, 'more', `type="button" class="icon-button subtle" data-kind="trait" data-category="${esc(category.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${name}" title="Další akce"`)}`;
@@ -2516,6 +2520,11 @@ async function handleAction(action, id, element) {
       if (menu) menu.open = false;
       openShowroom ||= window.TraitShowroom.mount($('showroomDialog'), {
         model: M, paintLayers, visibleLayers, download,
+        confirmReset: () => ask({
+          title: 'Začít od začátku?',
+          description: 'Vymažou se všechny výběry této postavy v Showroomu.',
+          confirm: true, submit: 'Začít od začátku', danger: true,
+        }),
         onError: (area, error) => window.TraitDiagnostics?.error(area, error),
       });
       openShowroom(state, safeMode, menu?.querySelector('summary'));

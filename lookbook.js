@@ -24,6 +24,22 @@
     }
     return [...options].sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
   }
+  function illustratedTagPicker(options) {
+    if (!options.length) return '';
+    return `<details class="lookbook-tag-picker">
+      <summary>Přiřadit existující štítek…</summary>
+      <div class="tag-grid tag-picker-options" role="group" aria-label="Existující štítky">${options.map(([, tag]) =>
+        `<button type="button" data-tag-option value="${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span></button>`
+      ).join('')}</div>
+    </details>`;
+  }
+  function revealTagOptions(event) {
+    if (event.target.matches?.('.lookbook-tag-picker[open]')) {
+      event.target.querySelector('.tag-picker-options').scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }
+  content.addEventListener('toggle', revealTagOptions, true);
+  layerTagsDialog.addEventListener('toggle', revealTagOptions, true);
   const visibleTraits = cat => tagFilters.traits.size
     ? cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait)))
     : cat.traits;
@@ -65,8 +81,8 @@
     const options = $('layerTagsOptions');
     const keys = new Set([...draftLayerTags, ...inherited].map(M.lookbookTagKey));
     const available = availableTagOptions().filter(([key]) => !keys.has(key));
-    options.replaceChildren(new Option('Přiřadit existující štítek…', ''), ...available.map(([, label]) => new Option(label, label)));
-    options.disabled = !available.length;
+    options.innerHTML = illustratedTagPicker(available);
+    options.hidden = !available.length;
   }
 
   function openLayerTags(kind, catId, id, onSave) {
@@ -103,9 +119,12 @@
     field.focus({ preventScroll: true });
   }
 
-  $('layerTagsOptions').addEventListener('change', event => {
-    addLayerDraftTag(event.target.value);
+  $('layerTagsOptions').addEventListener('click', event => {
+    const control = event.target.closest('[data-tag-option]');
+    if (!control) return;
+    addLayerDraftTag(control.value);
     renderLayerTagDraft();
+    ($('layerTagsOptions').querySelector('summary') || $('layerTagsNew')).focus({ preventScroll: true });
   });
   $('layerTagsNew').addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing) return;
@@ -197,7 +216,7 @@
       ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
         `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
       ).join('')}</div>` : ''}
-      ${available.length ? `<select data-lookbook-tag-select aria-label="Přiřadit existující štítek"><option value="">Přiřadit existující štítek…</option>${available.map(([, tag]) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select>` : ''}
+      ${illustratedTagPicker(available)}
       <div class="lookbook-tag-add">
         <input type="text" aria-label="Nový štítek" placeholder="Nový štítek" maxlength="${M.LOOKBOOK_TAG_LIMIT}" data-lookbook-tag-input>
         <button type="button" data-lookbook-tag-add>Přidat</button>
@@ -205,7 +224,7 @@
     </details>`;
   }
 
-  function editTag(value, remove = false) {
+  function editTag(value, remove = false, fromPicker = false) {
     if (busy) return;
     const { item, inherited } = view === 'cards' ? customCards.tagItem()
       : { item: selectedTrait(), inherited: selectedTrait() ? M.inheritedLayerTags(state, category(), selectedTrait()) : [] };
@@ -233,7 +252,9 @@
     const editor = content.querySelector('.lookbook-tag-editor');
     if (editor && item === selected) {
       editor.outerHTML = tagEditor(item, inherited, true);
-      content.querySelector('[data-lookbook-tag-input]').focus({ preventScroll: true });
+      const input = content.querySelector('[data-lookbook-tag-input]');
+      const picker = content.querySelector('.lookbook-tag-picker > summary');
+      (fromPicker && picker ? picker : input).focus({ preventScroll: true });
     } else filterRoot.querySelector('summary').focus({ preventScroll: true });
   }
 
@@ -554,18 +575,16 @@
       openLayerTags(scope.dataset.lookbookScope, categoryId, scope.dataset.id, refreshTagResults);
       return;
     }
-    const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove]');
+    const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove], [data-tag-option]');
     if (!control) return;
-    if (control.hasAttribute('data-lookbook-tag-remove')) editTag(control.value, true);
+    if (control.hasAttribute('data-tag-option')) editTag(control.value, false, true);
+    else if (control.hasAttribute('data-lookbook-tag-remove')) editTag(control.value, true);
     else editTag(control.parentElement.querySelector('[data-lookbook-tag-input]').value);
   });
   content.addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing || !event.target.matches('[data-lookbook-tag-input]')) return;
     event.preventDefault();
     editTag(event.target.value);
-  });
-  content.addEventListener('change', event => {
-    if (event.target.matches('[data-lookbook-tag-select]')) editTag(event.target.value);
   });
 
   dialog.addEventListener('click', event => {

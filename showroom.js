@@ -91,7 +91,7 @@
   }
 
   function mount(dialog, dependencies) {
-    const { model, visibleLayers, paintLayers, download, onError } = dependencies;
+    const { model, visibleLayers, paintLayers, download, onError, confirmReset } = dependencies;
     const get = id => dialog.querySelector('#' + id);
     const canvas = get('showroomCanvas'), empty = get('showroomCanvasEmpty');
     const status = get('showroomStatus'), swatches = get('showroomSwatches');
@@ -100,7 +100,7 @@
     const save = get('showroomSave'), reset = get('showroomReset'), clearStep = get('showroomClearStep');
     const layout = dialog.querySelector('.showroom-layout');
     const choice = get('showroomChoice');
-    let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false;
+    let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false, confirmingReset = false;
 
     function update() {
       const { index, builder } = session;
@@ -236,9 +236,16 @@
       get('showroomStep').focus({ preventScroll: true });
       requestPreview();
     });
-    reset.addEventListener('click', () => {
-      session.builder.picks.length = 0;
-      navigate(-session.index);
+    reset.addEventListener('click', async () => {
+      if (reset.disabled || confirmingReset || !dialog.open || !session) return;
+      const current = session;
+      confirmingReset = true;
+      let confirmed;
+      try { confirmed = await confirmReset(); }
+      finally { confirmingReset = false; }
+      if (!confirmed || !dialog.open || session !== current) return;
+      current.builder.picks.length = 0;
+      navigate(-current.index);
       layout.scrollTop = 0;
       requestPreview();
     });

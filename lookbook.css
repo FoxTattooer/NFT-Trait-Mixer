@@ -240,7 +240,14 @@
 .lookbook-tag-editor > summary > small { color: #e0b9d0; font-size: 11px; margin-inline-start: 4px; }
 .lookbook-tag-editor[open] > summary > small { display: none; }
 .lookbook-tag-editor > :not(summary) { margin: 0 7px 7px; }
-.lookbook-tag-editor select { width: calc(100% - 14px); min-height: 42px; font-size: 16px; }
+.lookbook-tag-picker { min-width: 0; border: 1px solid var(--scheme-stroke, #5f5965); border-radius: 8px; background: #17161d; }
+.lookbook-tag-picker > summary { min-height: 44px; padding: 9px; line-height: 24px; font-size: 14px; cursor: pointer; }
+.tag-picker-options {
+  grid-template-columns: minmax(0, 1fr); max-height: min(232px, 42dvh); overflow: auto;
+  padding: 2px 5px 5px; gap: 3px;
+}
+.tag-picker-options button { min-height: 44px; font-size: 13px; }
+.tag-picker-options :is(.tag-swatch, .material-swatch) { flex: 0 0 26px; width: 26px; height: 26px; }
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }
 .lookbook-tag-add button { min-height: 44px; padding: 4px 8px; font-size: 12px; }
@@ -265,8 +272,19 @@
   display: inline-flex; align-items: center; gap: 2px; flex: none; vertical-align: middle;
   color: var(--scheme-muted, #b7aebb); font-size: 11px;
 }
-.layer-tag-marker > .icon { width: 12px; height: 12px; }
-.category-trait-copy .layer-tag-marker { margin-inline-start: 5px; }
+.layer-tag-fallback, .layer-tag-previews { align-items: center; gap: 2px; }
+.layer-tag-fallback { display: inline-flex; }
+.layer-tag-fallback > .icon { width: 12px; height: 12px; }
+.layer-tag-previews { display: none; font-size: 10px; }
+.layer-tag-previews :is(.tag-swatch, .material-swatch) { flex: 0 0 13px; width: 13px; height: 13px; border-radius: 3px; }
+.layer-tag-previews .tag-swatch .icon { width: 8px; height: 8px; }
+.layer-tree-trait .layer-tree-main, .category-trait-copy { container: layer-tag-space / inline-size; }
+.category-trait-copy strong { display: flex; align-items: center; gap: 5px; }
+.category-trait-copy strong > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@container layer-tag-space (min-width: 175px) {
+  .layer-tag-marker.has-previews .layer-tag-fallback { display: none; }
+  .layer-tag-previews { display: inline-flex; }
+}
 #layerTagsDialog {
   width: min(420px, calc(100% - 24px)); padding: 13px; max-width: calc(100% - 24px);
   max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: auto;
