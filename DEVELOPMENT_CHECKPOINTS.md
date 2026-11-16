@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.119 | checkpoint/v0.7.119-presun-vrstev | Přesun podržením, náhledy traitů a smazání celé kategorie v rozšířených kartách. |
 | 0.7.118 | checkpoint/v0.7.118-rarity | Rarity ve Finálu, automatické rozdělení šancí a simulace počtu traitů. |
 | 0.7.117 | checkpoint/v0.7.117-hromadny-vyber | Kulaté značky výběru s fajfkou. |
 | 0.7.116 | checkpoint/v0.7.116-dolozene-vrstvy | Doložené vrstvy a složky v Základu dripd. Nabídka složky bez uložení do Finálu. |

@@ -1,6 +1,8 @@
-/* One pointer interaction for mouse, pen and touch; only handles capture scrolling. */
+/* Rows wait for a touch hold so a normal swipe can still scroll. */
 (() => {
   let drag = null, frame = 0, suppressClickUntil = 0;
+  const handleSelector = '.drag-handle,.layer-drag-row';
+  const holdDelay = 300;
   const hint = text => { $('dragStatus').textContent = text; };
   function clearTarget() {
     document.querySelectorAll('.drop-before,.drop-after,.drop-inside').forEach(e => e.classList.remove('drop-before','drop-after','drop-inside'));
@@ -83,23 +85,29 @@
     drag.ghost.textContent = '⠿  ' + (drag.row.querySelector('.category-name,.folder-label,.layer-tree-label')?.textContent || 'Složka');
     document.body.append(drag.ghost);
     positionGhost();
-    frame = requestAnimationFrame(scrollFrame);
+    if (!drag.touchRow) frame = requestAnimationFrame(scrollFrame);
   }
   function positionGhost() {
     drag.ghost.style.left = Math.min(drag.x + 12, innerWidth - 180) + 'px';
     drag.ghost.style.top = drag.y + 12 + 'px';
     paintTarget();
   }
+  function begin(handle,id,x,y,touchRow = false) {
+    const { dragKind:kind,dragId,category } = handle.dataset;
+    drag = {handle,kind,id:dragId,categoryId:category,pointerId:id,startX:x,startY:y,x,y,
+      row:handle.closest('.drop-row'),started:false,target:null,touchRow};
+  }
   document.addEventListener('pointerdown', event => {
-    const handle = event.target.closest('.drag-handle,.layer-thumb[data-drag-kind=trait]');
+    const handle = event.target.closest(handleSelector);
     if (!handle || !ready || busy || event.button !== 0 || drag) return;
-    if (handle.dataset.dragKind !== 'trait') event.preventDefault();
-    drag = { handle, kind:handle.dataset.dragKind,id:handle.dataset.dragId,categoryId:handle.dataset.category,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,row:handle.closest('.drop-row'),started:false,target:null };
-    if (drag.kind === 'trait' && event.pointerType === 'touch') drag.pressTimer = setTimeout(lift, 260);
-    try { handle.setPointerCapture(event.pointerId); } catch {}
+    const row = handle.classList.contains('layer-drag-row');
+    if (row && event.pointerType === 'touch') return;
+    if (!row) event.preventDefault();
+    begin(handle,event.pointerId,event.clientX,event.clientY);
+    if (!row) try { handle.setPointerCapture(event.pointerId); } catch {}
   });
   document.addEventListener('pointermove', event => {
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!drag || drag.touchRow || drag.pointerId !== event.pointerId) return;
     if (busy || !drag.handle.isConnected) { cleanup(); return; }
     drag.x=event.clientX;drag.y=event.clientY;
     if (!drag.started && Math.hypot(drag.x-drag.startX,drag.y-drag.startY)<6) return;
@@ -107,9 +115,8 @@
     if (!drag.started) lift();
     if (drag.started) positionGhost();
   },{passive:false});
-  document.addEventListener('pointerup', event => {
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const current=drag;const target=current.started ? targetAt(event.clientX,event.clientY) : null;
+  function finish(x,y) {
+    const current=drag;const target=current.started ? targetAt(x,y) : null;
     cleanup(); if (!current.started) return;
     suppressClickUntil=Date.now()+400;
     if (!target || busy) { hint('Přesun zrušen'); return; }
@@ -130,12 +137,46 @@
       }
     },'Přesunuto · Zpět vrátí změnu');
     hint('Přesun dokončen. Tlačítko Zpět změnu vrátí.');
+  }
+  document.addEventListener('pointerup', event => {
+    if (drag && !drag.touchRow && drag.pointerId === event.pointerId) finish(event.clientX,event.clientY);
   });
-  document.addEventListener('pointercancel',event=>{if(drag?.pointerId===event.pointerId)cleanup();});
-  document.addEventListener('lostpointercapture',event=>{if(drag?.pointerId===event.pointerId)cleanup();});
+  document.addEventListener('touchstart', event => {
+    if (event.touches.length !== 1) { if (drag?.touchRow) cleanup(); return; }
+    const handle = event.target.closest('.layer-drag-row');
+    if (!handle || !ready || busy || drag) return;
+    const touch = event.changedTouches[0];
+    begin(handle,touch.identifier,touch.clientX,touch.clientY,true);
+    drag.pressTimer = setTimeout(lift,holdDelay);
+  },{passive:true});
+  document.addEventListener('touchmove', event => {
+    if (!drag?.touchRow) return;
+    const touch = Array.from(event.changedTouches).find(item => item.identifier === drag.pointerId);
+    if (!touch) return;
+    if (busy || !drag.handle.isConnected) { cleanup(); return; }
+    if (!drag.started) {
+      if (Math.hypot(touch.clientX-drag.startX,touch.clientY-drag.startY) >= 8) cleanup();
+      return;
+    }
+    if (!event.cancelable) { cleanup(); return; }
+    event.preventDefault();
+    drag.x=touch.clientX;drag.y=touch.clientY;
+    positionGhost();
+    if (!frame) frame = requestAnimationFrame(scrollFrame);
+  },{passive:false});
+  document.addEventListener('touchend', event => {
+    if (!drag?.touchRow) return;
+    const touch = Array.from(event.changedTouches).find(item => item.identifier === drag.pointerId);
+    if (!touch) return;
+    if (drag.started) event.preventDefault();
+    finish(touch.clientX,touch.clientY);
+  },{passive:false});
+  document.addEventListener('touchcancel', () => { if (drag?.touchRow) cleanup(); });
+  document.addEventListener('pointercancel',event=>{if(drag && !drag.touchRow && drag.pointerId===event.pointerId)cleanup();});
+  document.addEventListener('lostpointercapture',event=>{if(drag && !drag.touchRow && drag.pointerId===event.pointerId)cleanup();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape' && drag){cleanup();hint('Přesun zrušen');}});
   window.addEventListener('blur',cleanup);
-  document.addEventListener('contextmenu', event => { if (event.target.closest('.layer-thumb[data-drag-kind=trait]')) event.preventDefault(); });
+  document.addEventListener('contextmenu', event => { if (event.target.closest('.layer-drag-row')) event.preventDefault(); });
   document.addEventListener('click',event=>{if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},true);
 })();
 

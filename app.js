@@ -614,8 +614,8 @@ function renderLayerTree() {
     const image = folder || safeMode ? '' : layerThumbnail(c, item);
     return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${item.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
-      <button type="button" class="layer-tree-main" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
-        ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb" data-drag-kind="trait" data-drag-id="${id}" data-category="${esc(c.id)}" title="Podrž miniaturu a přetáhni">${image}</span>`}
+      <button type="button" class="layer-tree-main layer-drag-row" data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
+        ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
         <span class="layer-tree-label">${esc(item.name)}</span>${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
@@ -841,6 +841,16 @@ function renderCategoryStepper(c, traits) {
   const selected = traits[index];
   return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!traits.length || (traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
 }
+function renderCategoryPreviews(category, traits) {
+  if (!traits.length || safeMode) return '';
+  const selected = state.selected[category.id];
+  const index = Math.max(0,traits.findIndex(trait => trait.id === selected));
+  const start = Math.max(0,Math.min(index - 2,traits.length - 5));
+  return `<div class="category-trait-previews" role="group" aria-label="Náhledy traitů · ${esc(category.name)}">${traits.slice(start,start + 5).map(trait =>
+    button('choose-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>`, trait.id, '',
+      `type="button" data-category="${esc(category.id)}" aria-label="${esc(trait.name)}" title="${esc(trait.name)}" aria-pressed="${trait.id === selected}"`)
+  ).join('')}</div>`;
+}
 let compactView = localStorage.getItem('nft-compact-categories') !== 'false';
 let quickCategoryId = null;
 let quickSelectedId = null;
@@ -915,15 +925,17 @@ function renderCategories(hidden, categories) {
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
     return `<div class="category-card ${current ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${id}">
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
-        <button class="category-pick" data-action="select-category" data-id="${id}" aria-pressed="${current}">${icon('folder')}
+        <button class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}" data-category="${id}"` : ''} data-action="select-category" data-id="${id}" aria-pressed="${current}">${icon('folder')}
           <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${traits.length} traitů${hiddenLabel}</span></span>${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
+        ${compactView ? '' : tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}
       </div>
       ${current && folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, folders, assignments, marks)}</div>` : ''}
       ${renderCategoryStepper(c, traits)}
-      ${current ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}${tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}</div>` : ''}
+      ${compactView ? '' : renderCategoryPreviews(c, traits)}
+      ${current && !compactView ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}</div>` : ''}
     </div>`;
   }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
 }
@@ -2205,7 +2217,10 @@ async function handleAction(action, id, element) {
       if (!c) break;
       if (await ask({ title: `Smazat kategorii „${c.name}“?`, description: `Odstraní se i všech ${c.traits.length} traitů této kategorie a související pravidla. Změnu můžeš vrátit tlačítkem Zpět.`, confirm: true, submit: 'Smazat kategorii', danger: true })) {
         const index = state.cats.findIndex(item => item.id === c.id);
-        change(() => { M.removeCategory(state, c.id); active = state.cats[Math.min(index, state.cats.length - 1)]?.id || null; }, 'Kategorie smazána · můžeš použít Zpět');
+        change(() => {
+          M.removeCategory(state, c.id);
+          if (active === c.id) active = state.cats[Math.min(index, state.cats.length - 1)]?.id || null;
+        }, 'Kategorie smazána · můžeš použít Zpět');
         if (!state.cats.length) { selectWorkspaceTab(false); showPanel('layers'); }
       }
       break;
