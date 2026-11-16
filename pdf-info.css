@@ -2,7 +2,7 @@
   width: min(430px, calc(100% - 28px));
   padding: 0;
   border: 1px solid var(--scheme-stroke, #44414b);
-  background: var(--scheme-panel, #19191f);
+  background: var(--scheme-panel, #16161c);
   color: var(--scheme-text, #f4eff6);
 }
 #pdfInfoDialog .pdf-info-header, .pdf-reader-actions {
@@ -23,7 +23,7 @@
   padding: 6px 10px;
   border: 1px solid var(--scheme-stroke, #44414b);
   border-radius: 9px;
-  background: var(--scheme-control, #25242c);
+  background: var(--scheme-control, #212027);
   color: inherit;
   font: inherit;
   font-size: 12px;
@@ -37,7 +37,7 @@
   min-height: 62px;
   gap: 10px;
   border-color: var(--scheme-stroke, #44414b);
-  background: var(--scheme-control, #25242c);
+  background: var(--scheme-control, #212027);
   color: inherit;
   text-align: left;
 }
@@ -70,12 +70,12 @@
 .pdf-scroll {
   overflow: auto;
   overscroll-behavior: contain;
-  background: var(--scheme-bg, #101016);
+  background: var(--scheme-bg, #0e0e14);
   padding: 8px max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
 }
 #pdfStatus { width: min(100%, 680px); margin: 12px auto; line-height: 1.55; }
 .pdf-pages { display: grid; gap: 8px; width: min(100%, 680px); padding: 0; margin: 0 auto; list-style: none; }
-.pdf-paper { position: relative; background: var(--scheme-panel, #19191f); overflow: hidden; }
+.pdf-paper { position: relative; background: var(--scheme-panel, #16161c); overflow: hidden; }
 .pdf-paper canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pdf-page-links { position: absolute; inset: 0; pointer-events: none; }
 .pdf-page-links a { position: absolute; pointer-events: auto; }

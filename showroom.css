@@ -1,5 +1,5 @@
 #showroomDialog {
-  --showroom-bg: #090909;
+  --showroom-bg: #080808;
   --showroom-ink: #f2f2f2;
   --showroom-muted: #adadad;
   --showroom-line: #303030;
@@ -21,7 +21,7 @@
   overscroll-behavior: contain;
 }
 
-#showroomDialog::backdrop { background: #090909; backdrop-filter: none; }
+#showroomDialog::backdrop { background: #080808; backdrop-filter: none; }
 body:has(#showroomDialog[open]) { overflow: hidden; }
 #showroomDialog .showroom-shell { width: min(100%, 1250px); margin-inline: auto; }
 #showroomDialog .showroom-header {
@@ -33,7 +33,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   align-items: center;
   gap: 12px;
   padding-bottom: clamp(12px, 3vh, 28px);
-  background: linear-gradient(var(--showroom-bg) 65%, #090909ed 90%, #09090900);
+  background: linear-gradient(var(--showroom-bg) 65%, #080808ed 90%, #08080800);
 }
 #showroomDialog .showroom-title {
   display: flex;
@@ -71,7 +71,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   margin: 0 auto;
   border-radius: clamp(14px, 2.8vw, 26px);
   border: 1px solid var(--showroom-line);
-  background: radial-gradient(ellipse at 50% 42%, #191919, #0b0b0b 72%);
+  background: radial-gradient(ellipse at 50% 42%, #161616, #0a0a0a 72%);
   box-shadow: inset 0 1px #ffffff0a;
 }
 #showroomDialog .showroom-stage::before {
@@ -92,7 +92,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   padding: clamp(14px, 2.6vw, 32px);
   border: 1px solid var(--showroom-line);
   border-radius: clamp(14px, 2.8vw, 26px);
-  background: linear-gradient(150deg, #171717, #101010 70%);
+  background: linear-gradient(150deg, #141414, #0e0e0e 70%);
   box-shadow: 0 14px 32px #0005, inset 0 1px #ffffff09;
 }
 #showroomDialog .showroom-step-heading {
@@ -116,9 +116,9 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   border: 0;
   border-radius: 3px;
   overflow: hidden;
-  background: #323232;
+  background: #2c2c2c;
 }
-#showroomMeter::-webkit-progress-bar { background: #323232; }
+#showroomMeter::-webkit-progress-bar { background: #2c2c2c; }
 #showroomMeter::-webkit-progress-value { background: var(--showroom-accent); }
 #showroomMeter::-moz-progress-bar { background: var(--showroom-accent); }
 #showroomStep {
@@ -135,13 +135,13 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   padding: 8px 12px;
   border: 1px solid #454545;
   border-radius: 12px;
-  background: #1b1b1b;
+  background: #181818;
   color: var(--showroom-ink);
   font-size: 13px;
 }
 #showroomDialog button:focus-visible { outline: 2px solid var(--showroom-accent) !important; }
 #showroomDialog button:active:not(:disabled) { border-color: var(--showroom-accent); }
-#showroomDialog #showroomExit { flex: 0 0 auto; background: #161616; }
+#showroomDialog #showroomExit { flex: 0 0 auto; background: #141414; }
 #showroomDialog .showroom-choice {
   --showroom-arrow-size: clamp(56px, 10vw, 72px);
   position: relative;
@@ -234,7 +234,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 #showroomDialog .showroom-reset-actions .icon { width: 15px; height: 15px; }
 #showroomDialog :is(#showroomAdvance, #showroomSave) {
   flex: 1;
-  background: #222;
+  background: #1e1e1e;
   font-weight: 750;
 }
 #showroomStatus { color: var(--showroom-muted); margin: 9px 0 0; font-size: 13px; }
@@ -325,7 +325,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 
   @keyframes showroom-blackout {
     from { background-color: transparent; }
-    17%, to { background-color: #090909; }
+    17%, to { background-color: #080808; }
   }
   @keyframes showroom-intro {
     0%, 14% { opacity: 0; }

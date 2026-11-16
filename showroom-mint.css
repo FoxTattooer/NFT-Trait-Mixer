@@ -7,7 +7,7 @@
 #showroomDialog #showroomMintOpen {
   gap: 7px;
   border-color: #925366;
-  background: #29191f;
+  background: #24161c;
   color: #ffe0e6;
 }
 #showroomMintOpen .icon { width: 16px; height: 16px; }
@@ -21,11 +21,11 @@
   border: 1px solid var(--mint-stroke);
   border-radius: 19px;
   color: #f8edf0;
-  background: #100d12;
+  background: #0e0c10;
   color-scheme: dark;
   overscroll-behavior: contain;
 }
-#showroomMintDialog::backdrop { background: #080609e8; }
+#showroomMintDialog::backdrop { background: #070508e8; }
 .showroom-mint-shell { padding: 13px; }
 .showroom-mint-head, .showroom-mint-step, .showroom-mint-actions {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -40,7 +40,7 @@
   background:
     radial-gradient(ellipse at 50% 65%, #60364987, transparent 63%),
     radial-gradient(circle, #eaa2bb26 1px, transparent 1px) 50% 50% / 17px 17px,
-    #100c11;
+    #0e0b0f;
 }
 .showroom-mint-stage::after {
   position: absolute; content: ''; inset: 0; pointer-events: none;
@@ -54,7 +54,7 @@
 .showroom-mint-stage[data-phase='final'] { border-color: var(--mint-highlight); }
 .showroom-mint-panel {
   min-width: 0; padding: 12px; border: 1px solid var(--mint-stroke); border-radius: 13px;
-  background: #1a141b;
+  background: #171218;
 }
 #showroomMintCount { flex: none; color: #cfacb8; font-size: 12px; font-variant-numeric: tabular-nums; }
 #showroomMintProgress { width: 100%; height: 4px; margin: 7px 0 8px; accent-color: var(--mint-highlight); }
@@ -63,7 +63,7 @@
 .showroom-mint-actions { justify-content: flex-start; flex-wrap: wrap; }
 #showroomMintDialog button {
   min-height: 44px; gap: 6px; padding: 7px 11px; color: #f9e7ee;
-  border: 1px solid var(--mint-stroke); border-radius: 9px; background: #261922;
+  border: 1px solid var(--mint-stroke); border-radius: 9px; background: #22161e;
 }
 #showroomMintDialog button[hidden] { display: none; }
 #showroomMintDialog :is(#showroomMintAdvance, #showroomMintSave) {
