@@ -186,7 +186,7 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
   gap: 8px;
-  max-height: 118px;
+  max-height: 168px;
   overflow: auto;
   margin: 3px -3px 0;
   padding: 4px;
@@ -195,23 +195,22 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 #showroomDialog .showroom-swatch {
-  position: relative; display: grid; align-items: end; min-width: 0; padding: 0;
-  background: var(--material-image, var(--swatch)); border-color: #ffffff65;
-  box-shadow: inset 0 1px #ffffff55, inset 0 -1px #060a1650;
+  display: grid; align-content: start; justify-items: center; gap: 4px;
+  min-width: 0; padding: 0; border: 0; border-radius: 9px; background: transparent;
 }
-#showroomDialog .showroom-swatch span {
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 4px 2px 2px; border-radius: 0 0 11px 11px;
-  background: linear-gradient(transparent, #081022e8 80%);
-  color: #fff; font-size: 10px; font-weight: 700; line-height: 1.15; text-shadow: 0 1px 2px #0009;
+.showroom-swatch-art {
+  display: block; width: min(100%, 58px); aspect-ratio: 1; border-radius: 9px;
+  background: var(--material-base, var(--swatch));
+  background-image: var(--material-image, none);
+  background-size: cover;
+  box-shadow: inset 1px 1px #fbf5ff96, inset -1px -1px #090a10a6, inset 0 -3px 7px #160c2730;
 }
-#showroomDialog .showroom-swatch[aria-pressed="true"]::after {
-  content: ""; position: absolute; top: 6px; right: 7px; width: 7px; height: 4px;
-  border: solid #fff; border-width: 0 0 2px 2px; transform: rotate(-45deg);
-  filter: drop-shadow(0 1px 1px #000);
+.showroom-swatch-label {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--showroom-ink); font-size: 11px; line-height: 1.25;
 }
-#showroomDialog .showroom-swatch[aria-pressed="true"] {
-  outline: 2px solid var(--showroom-accent);
+#showroomDialog .showroom-swatch[aria-pressed="true"] .showroom-swatch-art {
+  outline: 2px solid var(--neon-control-accent, #ed7dba);
   outline-offset: 2px;
 }
 #showroomDialog .showroom-actions { display: flex; gap: 8px; margin-top: 12px; }
@@ -264,7 +263,8 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
 @media (orientation: landscape) and (max-height: 500px) {
   #showroomDialog .showroom-header { padding-bottom: 8px; }
   #showroomDialog .showroom-stage { width: min(100%, calc(100vh - 96px)); }
-  #showroomSwatches { max-height: 104px; }
+  #showroomSwatches { max-height: 130px; }
+  .showroom-swatch-art { width: min(100%, 42px); border-radius: 7px; }
   #showroomDialog .showroom-choice { --showroom-arrow-size: 56px; }
 }
 
@@ -390,88 +390,76 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   #showroomStep { grid-column: 2; font-size: 22px; text-align: center; }
   #showroomProgress { justify-self: end; }
   #showroomMeter { margin: 6px 0 8px; }
-  #showroomSwatches { gap: 5px; max-height: 104px; }
+  #showroomSwatches { gap: 7px 5px; }
   #showroomDialog .showroom-actions { margin-top: 8px; }
 }
 
-/* The same material samples are used in Showroom and on Lookbook tags. */
+/* The compact artwork is shaded for legibility at tag size. */
 .material-swatch {
   display: inline-block;
-  flex: 0 0 17px;
-  width: 17px;
-  height: 17px;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
   box-sizing: border-box;
   border: 1px solid #ffffff60;
-  border-radius: 4px;
-  background: var(--material-image);
-  box-shadow: inset 0 1px #ffffff35, inset 0 -1px #0a102240;
-}
-[data-material="silver"] {
-  --material-image:
-    linear-gradient(167deg, #eafcff83, transparent 38% 80%, #d3e4f461),
-    repeating-linear-gradient(163deg, #ffffff23 0 1%, #11182818 1% 2.7%, transparent 2.7% 5%),
-    linear-gradient(132deg, #5a687b 0%, #f6fafb 25%, #9faab8 47%, #303846 62%, #c4d5e0 79%, #778394);
-}
-[data-material="red"] {
-  --material-image:
-    radial-gradient(ellipse at 34% 14%, #fff1ed 0%, #ff9387c9 19%, transparent 46%),
-    radial-gradient(ellipse at 85% 62%, #fb482eac, transparent 55%),
-    linear-gradient(145deg, #ba162b, #e32e45 42%, #9e102d 71%, #390a20);
-}
-[data-material="gold"] {
-  --material-image:
-    linear-gradient(161deg, #fffadd6e, transparent 42% 74%, #fac55c62),
-    repeating-linear-gradient(164deg, #fff5b631 0 1.2%, transparent 1.2% 4%),
-    linear-gradient(133deg, #78430d, #e6a529 18%, #fff1ad 32%, #bb791d 56%, #f9cb61 74%, #684012);
-}
-[data-material="mosaic"] {
-  --material-image:
-    radial-gradient(ellipse at 48% 21%, #fff6caaa, transparent 49%),
-    radial-gradient(circle, #ecffffad 0 12%, transparent 17%) 3% 8% / 24% 31%,
-    conic-gradient(from 49deg at 67% 66%, #5fd0a1 0 15%, #9bd74e 15% 27%, #04458a 27% 45%, #824fdd 45% 54%, transparent 54%),
-    conic-gradient(from 159deg at 27% 34%, #f6739f 0 14%, #eea751 14% 33%, #bded84 33% 57%, #09a9b5 57% 76%, #695aff 76%);
+  border-radius: 5px;
+  background: var(--material-base);
+  background-image: var(--material-tag);
+  background-size: cover;
+  box-shadow: inset 1px 1px #fbf5ff55, inset -1px -1px #090a1066;
 }
 [data-material="cup"] {
-  --material-image:
-    radial-gradient(circle, #a586f6dd 0 12%, transparent 17%) 8% 9% / 32% 37%,
-    radial-gradient(circle, #ecffffaa 0 8%, transparent 14%) 3% 6% / 19% 23%,
-    linear-gradient(147deg, transparent 37%, #8f5fe398 38% 45%, transparent 46% 58%, #e4faffbf 60%, transparent 61%),
-    radial-gradient(ellipse at 57% 23%, #e8fcff, #60e3f6 35%, #1d95dc 63%, #29349c 88%);
-}
-[data-material="lime"] {
-  --material-image:
-    radial-gradient(ellipse at 39% 18%, #f5ffdb 0%, #ccffab 21%, transparent 53%),
-    radial-gradient(ellipse at 75% 64%, #75fa41b0, transparent 39%),
-    linear-gradient(146deg, #8fdf65, #45be41 47%, #20794c 69%, #0f362a);
-}
-[data-material="rainbow"] {
-  --material-image:
-    radial-gradient(ellipse at 54% 13%, #edffff 0%, #ccfff2b3 24%, transparent 54%),
-    radial-gradient(ellipse at 37% 57%, #f860ac 0%, transparent 53%),
-    radial-gradient(ellipse at 82% 71%, #a8f65e 0%, #5bcba0b3 31%, transparent 58%),
-    linear-gradient(155deg, #36dbec 8%, #6764ed 48%, #a2a7ff 70%, #3d72aa);
-}
-[data-material="orange"] {
-  --material-image:
-    radial-gradient(ellipse at 38% 17%, #fff8dd 0%, #ffe4a7 17%, transparent 47%),
-    radial-gradient(ellipse at 80% 56%, #ffaf3bbb, transparent 57%),
-    linear-gradient(141deg, #ffc050, #f68a24 47%, #ce4e15 73%, #672412);
-}
-[data-material="purple"] {
-  --material-image:
-    radial-gradient(ellipse at 38% 18%, #f4eaff 0%, #d6adfacf 24%, transparent 53%),
-    radial-gradient(ellipse at 81% 63%, #5e68ffa8, transparent 49%),
-    linear-gradient(145deg, #aa75dc, #9046d3 46%, #5528ac 70%, #221447);
+  --material-base: #8bd5f5;
+  --material-image: url('art/skin-relief/cup.webp');
+  --material-tag: url('art/skin-relief/cup-tag.webp');
 }
 [data-material="emerald"] {
-  --material-image:
-    radial-gradient(ellipse at 54% 20%, #e9ffff 0%, #acffefce 22%, transparent 53%),
-    radial-gradient(ellipse at 11% 63%, #4dff9bbf, transparent 46%),
-    linear-gradient(155deg, #5bd9bf, #339cb6 49%, #056b71 68%, #0a3e45);
+  --material-base: #46bda5;
+  --material-image: url('art/skin-relief/emerald.webp');
+  --material-tag: url('art/skin-relief/emerald-tag.webp');
+}
+[data-material="gold"] {
+  --material-base: #d6ab53;
+  --material-image: url('art/skin-relief/gold.webp');
+  --material-tag: url('art/skin-relief/gold-tag.webp');
+}
+[data-material="lime"] {
+  --material-base: #9acb63;
+  --material-image: url('art/skin-relief/lime.webp');
+  --material-tag: url('art/skin-relief/lime-tag.webp');
+}
+[data-material="mosaic"] {
+  --material-base: #97805d;
+  --material-image: url('art/skin-relief/mosaic.webp');
+  --material-tag: url('art/skin-relief/mosaic-tag.webp');
+}
+[data-material="orange"] {
+  --material-base: #e29c53;
+  --material-image: url('art/skin-relief/orange.webp');
+  --material-tag: url('art/skin-relief/orange-tag.webp');
+}
+[data-material="purple"] {
+  --material-base: #9a7bdb;
+  --material-image: url('art/skin-relief/purple.webp');
+  --material-tag: url('art/skin-relief/purple-tag.webp');
+}
+[data-material="rainbow"] {
+  --material-base: #87b4cf;
+  --material-image: url('art/skin-relief/rainbow.webp');
+  --material-tag: url('art/skin-relief/rainbow-tag.webp');
+}
+[data-material="red"] {
+  --material-base: #c46b72;
+  --material-image: url('art/skin-relief/red.webp');
+  --material-tag: url('art/skin-relief/red-tag.webp');
+}
+[data-material="silver"] {
+  --material-base: #9da9b9;
+  --material-image: url('art/skin-relief/silver.webp');
+  --material-tag: url('art/skin-relief/silver-tag.webp');
 }
 [data-material="water"] {
-  --material-image:
-    radial-gradient(ellipse at 44% 14%, #eaffff 0%, #b4f8ffde 22%, transparent 50%),
-    repeating-radial-gradient(ellipse at 60% -35%, transparent 0 32%, #dcffff82 33% 35%, #158bc052 38% 40%, transparent 43% 52%),
-    linear-gradient(160deg, #8aeeff, #33c3e9 49%, #0a87bd 70%, #063d6a);
+  --material-base: #59bde5;
+  --material-image: url('art/skin-relief/water.webp');
+  --material-tag: url('art/skin-relief/water-tag.webp');
 }

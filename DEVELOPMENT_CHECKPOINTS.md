@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.141 | checkpoint/v0.7.141-protlacene-materialy-skin | Jedenáct reliéfních kostiček v Showroomu a jejich varianty pro štítky v Lookbooku. |
 | 0.7.140 | checkpoint/v0.7.140-materialy-a-stitky | Jedenáct vzorků v Showroomu a srovnané štítky s miniaturami. |
 | 0.7.139 | checkpoint/v0.7.139-lookbook-stitky | Vlastní štítky a kombinované filtry v Lookbooku a Pravidlech. |
 | 0.7.138 | checkpoint/v0.7.138-papirovy-lookbook | Papírový vzhled Lookbooku bez přepínače motivů. |

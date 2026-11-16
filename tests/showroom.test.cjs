@@ -6,6 +6,7 @@ const { runInNewContext } = require('node:vm');
 const assert = require('node:assert/strict');
 const M = require('../project');
 const Showroom = require('../showroom');
+const materialNames = ['Silver', 'Red', 'Gold', 'Mosaic', 'Cup', 'Lime', 'Rainbow', 'Orange', 'Purple', 'Emerald', 'Water'];
 
 test('Showroom starts fresh, groups choices, and keeps editor state isolated', () => {
   const category = (id, name, ...traits) => ({
@@ -48,19 +49,22 @@ test('Showroom starts fresh, groups choices, and keeps editor state isolated', (
 });
 
 test('the eleven SKIN materials have distinct Showroom and tag samples', () => {
-  const names = ['Silver', 'Red', 'Gold', 'Mosaic', 'Cup', 'Lime', 'Rainbow', 'Orange', 'Purple', 'Emerald', 'Water'];
   const project = M.empty();
-  project.cats = [{ id: 'skin', name: 'SKIN', traits: names.map((name, id) => ({ id, name })) }];
+  project.cats = [{ id: 'skin', name: 'SKIN', traits: materialNames.map((name, id) => ({ id, name })) }];
   const samples = Showroom.create(project, M).steps[0].variants;
-  assert.deepEqual(samples.map(sample => sample.material), names.map(name => name.toLowerCase()));
+  assert.deepEqual(samples.map(sample => sample.material), materialNames.map(name => name.toLowerCase()));
   const css = readFileSync(join(__dirname, '../showroom.css'), 'utf8');
-  for (const { material } of samples) assert(css.includes(`[data-material="${material}"]`), material);
+  for (const { material } of samples) {
+    const style = css.split(`[data-material="${material}"] {`)[1]?.split('}')[0];
+    assert(style?.includes(`--material-image: url('art/skin-relief/${material}.webp');`), material);
+    assert(style.includes(`--material-tag: url('art/skin-relief/${material}-tag.webp');`), material);
+  }
   assert.equal(Showroom.materialId('Fialové vlasy'), 'purple');
   assert.equal(Showroom.materialId('Stříbrná'), 'silver');
   assert.equal(Showroom.materialId('Odstín bez názvu'), undefined);
 });
 
-test('installed Showroom serves the original intro art before consulting the network', async () => {
+test('installed Showroom serves intro and material artwork before consulting the network', async () => {
   const scope = 'https://example.test/NFT-Trait-Mixer/';
   const listeners = new Map();
   const entries = new Map();
@@ -68,9 +72,15 @@ test('installed Showroom serves the original intro art before consulting the net
   const index = readFileSync(join(__dirname, '../index.html'), 'utf8');
   const artwork = index.match(/<img src="(art\/showroom-dripd\.png[^"]+)"/)[1];
   const artworkURL = new URL(artwork, scope).href;
+  const materialFiles = new Map(materialNames.flatMap(name => ['', '-tag'].map(suffix => {
+    const path = `art/skin-relief/${name.toLowerCase()}${suffix}.webp`;
+    return [new URL(path, scope).href, readFileSync(join(__dirname, '..', path))];
+  })));
   const cache = {
     async addAll(requests) {
-      for (const request of requests) entries.set(request.url, request.url === artworkURL ? original : index);
+      for (const request of requests) {
+        entries.set(request.url, request.url === artworkURL ? original : materialFiles.get(request.url) ?? index);
+      }
     },
     async match(key) { return entries.get(key.url ?? key); },
   };
@@ -100,5 +110,6 @@ test('installed Showroom serves the original intro art before consulting the net
   assert.equal(await request(scope, 'navigate'), index);
   const afterNavigation = networkRequests;
   assert.equal(await request(artworkURL, 'no-cors'), original);
-  assert.equal(networkRequests, afterNavigation, 'a stalled connection cannot delay the intro image');
+  for (const [url, data] of materialFiles) assert.equal(await request(url, 'no-cors'), data);
+  assert.equal(networkRequests, afterNavigation, 'a stalled connection cannot delay precached images');
 });

@@ -128,9 +128,13 @@
         button.className = 'showroom-swatch';
         if (variant.material) button.dataset.material = variant.material;
         else button.style.setProperty('--swatch', variant.color);
+        const art = document.createElement('span');
+        art.className = 'showroom-swatch-art';
+        art.setAttribute('aria-hidden', 'true');
         const name = document.createElement('span');
+        name.className = 'showroom-swatch-label';
         name.textContent = variant.label;
-        button.append(name);
+        button.append(art, name);
         button.title = variant.label;
         button.setAttribute('aria-label', variant.label);
         button.setAttribute('aria-pressed', String(variant === current));
