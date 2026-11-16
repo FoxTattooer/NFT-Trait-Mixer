@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.151 | checkpoint/v0.7.151-stitky-ve-vrstvach | Ikony štítků jsou vidět u vrstev, složek a kategorií vedle vlajek a označení. |
 | 0.7.150 | checkpoint/v0.7.150-stitky-vsech-traitu | Štítky lze uložit přímo všem traitům ve vybrané kategorii. Detail v Lookbooku dává cestu, procenta a raritu na jeden řádek. |
 | 0.7.149 | checkpoint/v0.7.149-hromadne-stitky-vrstev | Vybraným traitům, složkám a kategoriím lze přidat jeden nebo více štítků jedním uložením. |
 | 0.7.148 | checkpoint/v0.7.148-prehlednejsi-lookbook | Detail je nad výběrem, přepínač a filtry pod ním. Světlý list má kratší záhlaví a štítky bez textových popisků. |

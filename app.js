@@ -496,20 +496,20 @@ function layerMarkBadges(item) {
     (item.trash ? '<span class="layer-trash-mark">TRASH</span>' : '') +
     (item.draw ? '<span class="layer-draw-mark">DRAW</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
-function layerTagMarker(item, previews = false) {
-  const tags = item.lookbookTags || [];
+function layerTagMarker(tags = []) {
   const count = tags.length;
   if (!count) return '';
-  const compact = `<span class="layer-tag-fallback" aria-hidden="true">${icon('tag')}${count > 1 ? `<span>${count}</span>` : ''}</span>`;
-  const labels = previews ? `<span class="layer-tag-previews" aria-hidden="true">${tags.slice(0, 2).map(tagSample).join('')}${count > 2 ? `<span>+${count - 2}</span>` : ''}</span>` : '';
-  return `<span class="layer-tag-marker${previews ? ' has-previews' : ''}" role="img" aria-label="Štítky: ${esc(tags.join(', '))}">${compact}${labels}</span>`;
+  const name = esc('Štítky: ' + tags.join(', '));
+  const compact = count > 1 ? `<span class="layer-tag-fallback" aria-hidden="true">${icon('tag')}<span>${count}</span></span>` : '';
+  const previews = `<span class="layer-tag-previews" aria-hidden="true">${tags.slice(0, 2).map(tagSample).join('')}${count > 2 ? `<span>+${count - 2}</span>` : ''}</span>`;
+  return `<span class="layer-tag-marker" role="img" aria-label="${name}" title="${name}">${compact}${previews}</span>`;
 }
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
   const org = organizerFolders(cat.id);
   const path = [cat.name, organizerPath(org.folders, org.assignments[trait.id]), ...(label !== trait.name ? [trait.name] : [])].filter(Boolean).join(' › ');
   return button('reveal-trait', `<span class="layer-thumb">${safeMode ? '' : layerThumbnail(cat, trait)}</span>
-    <span class="layer-review-copy"><strong>${esc(label)}${showFlag ? flagIcon(trait.flag, true) : ''}</strong><small>${esc(path)}</small></span>${icon('chevron')}`,
+    <span class="layer-review-copy"><strong>${esc(label)}${layerTagMarker(M.effectiveLayerTags(state, cat, trait))}${showFlag ? flagIcon(trait.flag, true) : ''}</strong><small>${esc(path)}</small></span>${icon('chevron')}`,
     trait.id, '', 'type="button" class="layer-review-link"');
 }
 function renderMatchScope(categories) {
@@ -537,7 +537,7 @@ function reviewFlagLink({ cat, item, kind }) {
   const { folders } = organizerFolders(cat.id);
   const path = kind === 'folder' ? [cat.name, organizerPath(folders, item.parentId)].filter(Boolean).join(' › ') : '';
   return button('reveal-flagged-group', `<span class="layer-thumb">${icon('folder')}</span>
-    <span class="layer-review-copy"><strong>${esc(item.name)}${flagIcon(item.flag, true)}</strong><small>${esc(path || (kind === 'category' ? 'Kategorie' : cat.name))}</small></span>${icon('chevron')}`,
+    <span class="layer-review-copy"><strong>${esc(item.name)}${layerTagMarker(M.effectiveLayerTags(state, cat, item, kind))}${flagIcon(item.flag, true)}</strong><small>${esc(path || (kind === 'category' ? 'Kategorie' : cat.name))}</small></span>${icon('chevron')}`,
     item.id, '', `type="button" class="layer-review-link" data-kind="${kind}" data-category="${esc(cat.id)}"`);
 }
 function reviewMatchGroup(group, inScope) {
@@ -677,13 +677,14 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     const expanded = folder && !!organizerExpanded[c.id]?.has(item.id);
     const indent = Math.min(7, depth);
     const image = folder || safeMode ? '' : layerThumbnail(c, item, manage ? '' : 'layer-cropped-thumbnail');
+    const tags = M.effectiveLayerTags(state, c, item, folder ? 'folder' : 'trait');
     return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${item.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${layerBulkPick(item)}
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label">${esc(item.name)}</span>${layerTagMarker(item, !folder)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -858,11 +859,15 @@ function renderLayerBulkDialog() {
   } else if (mode === 'delete') {
     controls = '<p>Kategorie se smažou i s obsahem. U samostatně vybraných složek zůstanou traity v kategorii, pokud je také nevybereš. Smazání můžeš vrátit tlačítkem Zpět.</p>';
   }
+  const reviewItems = mode === 'review' ? layerItemIndex() : null;
+  const categories = reviewItems && new Map(state.cats.map(cat => [cat.id, cat]));
   body.innerHTML = controls + (selected.length ? `<ul class="layer-bulk-dialog-list">${selected.map(node => {
     const name = esc(node.name), path = esc(node.path);
+    const item = reviewItems?.get(node.id);
+    const tags = item ? M.effectiveLayerTags(state, categories.get(node.categoryId), item, node.kind === 'layer' ? 'trait' : node.kind) : [];
     const copy = mode === 'rename'
       ? `<label><span>${layerBulkKind[node.kind]} · ${path}</span><input type="text" data-rename-id="${esc(node.id)}" value="${name}" required maxlength="120"></label>`
-      : `<div><strong>${name}</strong><small>${layerBulkKind[node.kind]} · ${path}</small></div>`;
+      : `<div class="layer-bulk-item-copy"><strong>${name}${layerTagMarker(tags)}</strong><small>${layerBulkKind[node.kind]} · ${path}</small></div>`;
     return `<li>${mode === 'review' ? layerBulkPick(node) : icon(node.kind === 'layer' ? 'layers' : 'folder')}${copy}</li>`;
   }).join('')}</ul>` : '<p>Výběr je prázdný.</p>');
   syncLayerBulkPicks(body);
@@ -1131,7 +1136,7 @@ function categoryTraitDetails(category, trait, categoryHidden, picked) {
   }
   const visibility = enabled ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
   const name = esc(trait.name);
-  return `<div class="category-trait-copy"><strong title="${name}"><span>${name}</span>${layerTagMarker(trait, true)}</strong><small>${status}</small></div>
+  return `<div class="category-trait-copy"><strong title="${name}"><span>${name}</span>${layerTagMarker(M.effectiveLayerTags(state, category, trait))}</strong><small>${status}</small></div>
     ${button('toggle-trait-visibility', '', trait.id, shown ? 'eye' : 'eye-off', `type="button" class="icon-button subtle category-trait-eye" aria-pressed="${shown}" aria-label="${visibility} · ${name}" title="${visibility}"`)}
     ${tool('rename-trait', `Přejmenovat ${trait.name}`, trait.id, 'edit')}
     ${button('open-layer-menu', '', trait.id, 'more', `type="button" class="icon-button subtle" data-kind="trait" data-category="${esc(category.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${name}" title="Další akce"`)}`;
@@ -1266,7 +1271,7 @@ function renderCategories(hidden, categories) {
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
         <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
-          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c)}${layerMarkBadges(c)}
+          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
@@ -1329,7 +1334,7 @@ function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
   const selected = c && traits.find(t => t.id === state.selected[c.id]);
   $('manageCategoryBulkPick').innerHTML = c ? layerBulkPick(c) : '';
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
-  $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerMarkBadges(c)}` : '';
+  $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c)}` : '';
   const rename = $('manageRenameCategory');
   rename.disabled = !c || busy;
   rename.dataset.id = c?.id || '';

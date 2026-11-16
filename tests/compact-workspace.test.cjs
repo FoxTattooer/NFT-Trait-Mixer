@@ -1112,11 +1112,14 @@ get('layerTagsForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancel
 await waitFor(() => !get('layerTagsDialog').open);
 assert.deepEqual([...M.category(w.inspectState(), 'other').lookbookTags], ['Kolekce alfa', 'Cowboy', 'Crown']);
 assert.deepEqual([...M.locate(w.inspectState(), 'other-1').trait.lookbookTags], ['Afro', 'Účesy', 'Kolekce alfa']);
-assert.equal(find('#cats [data-action="select-category"][data-id="other"] .layer-tag-marker').textContent, '3');
+const categoryTagMarker = find('#cats [data-action="select-category"][data-id="other"] .layer-tag-marker');
+assert.equal(categoryTagMarker.querySelector('.layer-tag-fallback').textContent, '3');
+assert(categoryTagMarker.querySelector('.layer-tag-previews .tag-swatch-art'));
 if (get('layer-branch-other').hidden) click('#cats [data-action="select-category"][data-id="other"]');
 const labeledLayer = '#layer-branch-other [data-action="choose-trait"][data-id="other-1"]';
 assert(find(labeledLayer + ' .layer-tag-previews .tag-swatch-art'));
 assert(find(labeledLayer + ' .layer-tag-fallback .icon'));
+assert.equal(find(labeledLayer + ' .layer-tag-marker').getAttribute('aria-label'), 'Štítky: Afro, Účesy, Kolekce alfa, Cowboy, Crown');
 // A category export contains original PNGs, including hidden traits and nested folders.
 const pngA = savedBook.cats[0].traits[0].data, pngB = savedBook.cats[1].traits[0].data;
 const exportProject = M.empty();
@@ -1543,7 +1546,7 @@ const bulkProject = M.empty();
 bulkProject.cats = [
   { id:'bulk-a', name:'Source A', traits:[{ id:'bulk-a1', name:'Hat', data:rarityAsset }] },
   { id:'bulk-b', name:'Source B', traits:[
-    { id:'bulk-b1', name:'Glasses', data:rarityAsset, lookbookTags:['Afro', 'Původní'] }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
+    { id:'bulk-b1', name:'Glasses', data:rarityAsset, flag:'blue', lookbookTags:['Afro', 'Původní'] }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
   ] },
   { id:'bulk-c', name:'Destination', traits:[] },
 ];
@@ -1557,6 +1560,12 @@ bulkProject.organizer = {
 bulkProject.selected['bulk-b'] = 'bulk-b2';
 w.useTestProject(M.clone(bulkProject));
 click('#layersTab');
+click('#layerReviewToggle');
+click('#layerReviewPanel [data-id="flags"]');
+const flaggedTag = find('#layerReviewDetail [data-id="bulk-b1"] .layer-tag-marker');
+assert.equal(flaggedTag.getAttribute('aria-label'), 'Štítky: Afro, Původní');
+assert.equal(flaggedTag.nextElementSibling.dataset.flag, 'blue');
+click('#layerReviewToggle');
 const bulkAction = id => click(`#editorLayerBulk [data-id="${id}"]`);
 const bulkRow = id => click(`#cats [data-layer-bulk-row][data-id="${id}"]`);
 const bulkExpand = id => click(`#cats [data-layer-bulk-expand][data-id="${id}"]`);
@@ -1597,6 +1606,8 @@ assert.deepEqual([...M.locate(w.inspectState(), 'bulk-a1').trait.lookbookTags], 
 assert.deepEqual([...w.inspectState().organizer['bulk-b'].folders.find(folder => folder.id === 'bulk-subfolder').lookbookTags], ['Afro', 'Cowboy', 'Výběr A']);
 assert.deepEqual([...M.locate(w.inspectState(), 'bulk-b1').trait.lookbookTags], ['Afro', 'Původní', 'Cowboy', 'Výběr A']);
 assert.equal(M.locate(w.inspectState(), 'bulk-b2').trait.lookbookTags, undefined);
+assert(find('#cats [data-layer-bulk-row][data-id="bulk-subfolder"] .layer-tag-previews .tag-swatch-art'));
+assert.equal(find('#cats [data-layer-bulk-row][data-id="bulk-b2"] .layer-tag-marker').getAttribute('aria-label'), 'Štítky: Afro, Cowboy, Výběr A');
 countBulk(3);
 click('#undo');
 assert.equal(JSON.stringify(w.inspectState()), beforeBulk, 'one undo restores all affected tag assignments');
@@ -1605,6 +1616,7 @@ bulkExpand('bulk-folder');
 bulkAction('review');
 assert(get('layerBulkDialog').open);
 assert.match(get('layerBulkDialogBody').textContent, /Source B \/ Accessories \/ Eyes \/ Glasses/);
+assert.equal(find('#layerBulkDialogBody .layer-tag-marker').getAttribute('aria-label'), 'Štítky: Afro, Původní');
 click('#layerBulkDialogClose');
 bulkAction('rename');
 find('#layerBulkDialog [data-rename-id="bulk-a"]').value='Hats';

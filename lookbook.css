@@ -297,14 +297,17 @@
 .layer-tag-fallback, .layer-tag-previews { align-items: center; gap: 2px; }
 .layer-tag-fallback { display: inline-flex; }
 .layer-tag-fallback > .icon { width: 12px; height: 12px; }
-.layer-tag-previews { --tag-icon-size: 13px; --tag-icon-radius: 3px; display: none; font-size: 10px; }
+.layer-tag-previews { --tag-icon-size: 13px; --tag-icon-radius: 3px; display: inline-flex; font-size: 10px; }
+.layer-tag-fallback + .layer-tag-previews { display: none; }
 .layer-tag-previews .tag-swatch .icon { width: 8px; height: 8px; }
-.layer-tree-trait .layer-tree-main, .category-trait-copy { container: layer-tag-space / inline-size; }
+.layer-tree-main, .category-top > .category-pick, .category-trait-copy,
+.layer-review-copy, .layer-bulk-item-copy { container: layer-tag-space / inline-size; }
+:is(.layer-review-copy, .layer-bulk-item-copy) strong > .layer-tag-marker { margin-inline-start: 5px; }
 .category-trait-copy strong { display: flex; align-items: center; gap: 5px; }
 .category-trait-copy strong > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 @container layer-tag-space (min-width: 175px) {
-  .layer-tag-marker.has-previews .layer-tag-fallback { display: none; }
-  .layer-tag-previews { display: inline-flex; }
+  .layer-tag-fallback { display: none; }
+  .layer-tag-fallback + .layer-tag-previews { display: inline-flex; }
 }
 #layerTagsDialog {
   width: min(420px, calc(100% - 24px)); padding: 13px; max-width: calc(100% - 24px);

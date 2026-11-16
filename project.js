@@ -141,9 +141,9 @@
     }
     return normalizeLookbookTags(tags);
   }
-  function effectiveLayerTags(project, cat, trait) {
-    const inherited = inheritedLayerTags(project, cat, trait);
-    const own = trait.lookbookTags || [];
+  function effectiveLayerTags(project, cat, item, kind = 'trait') {
+    const inherited = inheritedLayerTags(project, cat, item, kind);
+    const own = item.lookbookTags || [];
     return !inherited.length ? own : !own.length ? inherited : normalizeLookbookTags([...own, ...inherited]);
   }
   function layerTagOptions(project, cats = project.cats) {
