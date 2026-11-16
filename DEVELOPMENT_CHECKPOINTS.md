@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.146 | checkpoint/v0.7.146-hromadny-vyber-stitku | V okně Štítky se označí více položek kolečky a uloží jedním krokem. |
 | 0.7.145 | checkpoint/v0.7.145-miniatury-stitku-a-reset | Náhledy štítků ve výběru i u vrstev. Úplný reset Showroomu má potvrzení, aktuální krok se čistí rovnou. |
 | 0.7.144 | checkpoint/v0.7.144-sprava-stitku | Přiřazení štítků kategoriím, složkám a traitům, výběr existujících štítků, tvorba nových a přejmenování skupiny Materiály. |
 | 0.7.143 | checkpoint/v0.7.143-oznaceni-v-lookbooku | Kategorie ukazují stav a počet štítků. Traity zobrazují stručný výpis štítků přímo na kartě a vybraná kategorie se vejde do posuvné lišty. |

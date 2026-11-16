@@ -202,12 +202,12 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 126px), 1fr));
   gap: 5px;
 }
-.tag-grid button, .lookbook-assigned-tags button {
+.tag-grid button, .tag-grid .tag-picker-choice, .lookbook-assigned-tags button {
   display: flex; align-items: center; justify-content: flex-start; gap: 7px;
   min-height: 40px; min-width: 0; padding: 4px 7px; border-radius: 8px;
   background: #1c1920; color: #f5edf3; text-align: start; font-size: 12px;
 }
-.tag-grid button span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
+.tag-grid button span, .tag-picker-choice span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #4c2d43; color: #fff3f9; }
 #lookbookTags .tag-grid button, .lookbook-assigned-tags button { min-height: 44px; }
 #lookbookTags .tag-grid button[aria-pressed=true] { border-color: #ee6dae; background: #382938; }
@@ -246,7 +246,20 @@
   grid-template-columns: minmax(0, 1fr); max-height: min(232px, 42dvh); overflow: auto;
   padding: 2px 5px 5px; gap: 3px;
 }
-.tag-picker-options button { min-height: 44px; font-size: 13px; }
+.tag-picker-options :is(button, .tag-picker-choice) { min-height: 44px; font-size: 13px; }
+.tag-picker-choice { position: relative; border: 1px solid var(--scheme-stroke, #4d4550); cursor: pointer; }
+#layerTagsForm .tag-picker-checkbox { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0; }
+.tag-picker-circle {
+  display: grid; place-items: center; flex: none; width: 20px; height: 20px;
+  margin-inline-start: auto; border: 1px solid #918593; border-radius: 50%;
+}
+.tag-picker-choice:has(.tag-picker-checkbox:checked) { border-color: var(--ui-feedback, #ee6dae); background: #382938; }
+.tag-picker-checkbox:checked + .tag-picker-circle { border-color: #e49ac6; background: #a64d85; color: #fff4fa; }
+.tag-picker-checkbox:checked + .tag-picker-circle::after {
+  content: ""; width: 8px; height: 4px; margin-block-start: -2px;
+  border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(-45deg);
+}
+.tag-picker-choice:has(.tag-picker-checkbox:focus-visible) { outline: 2px solid var(--ui-feedback, #ee6dae); outline-offset: -2px; }
 .tag-picker-options :is(.tag-swatch, .material-swatch) { flex: 0 0 26px; width: 26px; height: 26px; }
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }

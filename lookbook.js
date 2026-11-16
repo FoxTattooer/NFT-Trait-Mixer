@@ -24,13 +24,17 @@
     }
     return [...options].sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
   }
-  function illustratedTagPicker(options) {
+  function illustratedTagPicker(options, multiple = false) {
     if (!options.length) return '';
     return `<details class="lookbook-tag-picker">
-      <summary>Přiřadit existující štítek…</summary>
-      <div class="tag-grid tag-picker-options" role="group" aria-label="Existující štítky">${options.map(([, tag]) =>
-        `<button type="button" data-tag-option value="${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span></button>`
-      ).join('')}</div>
+      <summary>${multiple ? 'Přiřadit existující štítky…' : 'Přiřadit existující štítek…'}</summary>
+      <div class="tag-grid tag-picker-options" role="group" aria-label="Existující štítky">${options.map(([, tag]) => {
+        const sample = `${tagSample(tag)}<span>${esc(tag)}</span>`;
+        return multiple ? `<label class="tag-picker-choice">${sample}
+          <input type="checkbox" class="tag-picker-checkbox" data-layer-tag-option value="${esc(tag)}">
+          <span class="tag-picker-circle" aria-hidden="true"></span></label>`
+          : `<button type="button" data-tag-option value="${esc(tag)}">${sample}</button>`;
+      }).join('')}</div>
     </details>`;
   }
   function revealTagOptions(event) {
@@ -75,14 +79,22 @@
     const inheritedField = $('layerTagsInherited');
     inheritedField.hidden = !inherited.length;
     inheritedField.textContent = inherited.length ? 'Z kategorie nebo složky · ' + inherited.join(' · ') : '';
+    const options = $('layerTagsOptions');
+    const inheritedKeys = new Set(inherited.map(M.lookbookTagKey));
+    const available = availableTagOptions().filter(([key]) => !inheritedKeys.has(key));
+    options.innerHTML = illustratedTagPicker(available, true);
+    options.hidden = !available.length;
+    renderLayerTagSelection();
+  }
+
+  function renderLayerTagSelection() {
     $('layerTagsAssigned').innerHTML = draftLayerTags.map(tag =>
       `<button type="button" data-layer-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
     ).join('');
-    const options = $('layerTagsOptions');
-    const keys = new Set([...draftLayerTags, ...inherited].map(M.lookbookTagKey));
-    const available = availableTagOptions().filter(([key]) => !keys.has(key));
-    options.innerHTML = illustratedTagPicker(available);
-    options.hidden = !available.length;
+    const selected = new Set(draftLayerTags.map(M.lookbookTagKey));
+    for (const input of $('layerTagsOptions').querySelectorAll('[data-layer-tag-option]')) {
+      input.checked = selected.has(M.lookbookTagKey(input.value));
+    }
   }
 
   function openLayerTags(kind, catId, id, onSave) {
@@ -115,17 +127,21 @@
     const field = $('layerTagsNew');
     addLayerDraftTag(field.value);
     field.value = '';
-    renderLayerTagDraft();
+    renderLayerTagSelection();
     field.focus({ preventScroll: true });
   }
 
-  $('layerTagsOptions').addEventListener('click', event => {
-    const control = event.target.closest('[data-tag-option]');
-    if (!control) return;
-    addLayerDraftTag(control.value);
-    renderLayerTagDraft();
-    ($('layerTagsOptions').querySelector('summary') || $('layerTagsNew')).focus({ preventScroll: true });
+  $('layerTagsOptions').addEventListener('change', event => {
+    const input = event.target;
+    if (!input.matches('[data-layer-tag-option]')) return;
+    if (input.checked) addLayerDraftTag(input.value);
+    else removeLayerDraftTag(input.value);
+    renderLayerTagSelection();
   });
+  function removeLayerDraftTag(value) {
+    const key = M.lookbookTagKey(value);
+    draftLayerTags = draftLayerTags.filter(tag => M.lookbookTagKey(tag) !== key);
+  }
   $('layerTagsNew').addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing) return;
     event.preventDefault();
@@ -136,8 +152,8 @@
   $('layerTagsAssigned').addEventListener('click', event => {
     const control = event.target.closest('[data-layer-tag-remove]');
     if (!control) return;
-    draftLayerTags = draftLayerTags.filter(tag => tag !== control.value);
-    renderLayerTagDraft();
+    removeLayerDraftTag(control.value);
+    renderLayerTagSelection();
     $('layerTagsNew').focus({ preventScroll: true });
   });
   $('layerTagsForm').addEventListener('submit', event => {
@@ -155,6 +171,7 @@
     layerTagsDialog.close();
   });
   layerTagsDialog.addEventListener('close', () => {
+    if (layerTagsDialog.open) return;
     const target = layerTagTarget;
     layerTagTarget = undefined;
     draftLayerTags = [];
