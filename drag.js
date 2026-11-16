@@ -69,7 +69,8 @@
     }
     if(!moved) {
       const speed=edgeSpeed(drag.y,top,bottom) || carry;
-      if(speed){window.scrollBy(0,speed*dt);moved=true;}
+      const scroller=dock && !dock.hidden ? $('workspaceScroll') : window;
+      if(speed && scroller){scroller.scrollBy(0,speed*dt);moved=true;}
     }
     if(moved)paintTarget();
     frame=requestAnimationFrame(scrollFrame);

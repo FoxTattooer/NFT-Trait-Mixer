@@ -342,6 +342,17 @@ const LAYER_BATCH = 48;
 let layerLimit = LAYER_BATCH;
 const layerBrowseHistory = [];
 const layerScrollPanes = [$('catsPanel'), $('traitsPanel').closest('.inspector'), $('traitSearchResults')];
+const workspaceScroll = $('workspaceScroll');
+
+function workspaceScrollPosition() {
+  return portraitWorkspace.matches
+    ? { x: workspaceScroll.scrollLeft, y: Math.max(0, workspaceScroll.scrollTop) }
+    : { x: window.scrollX || 0, y: Math.max(0, window.scrollY || 0) };
+}
+function scrollWorkspaceTo({ x, y }) {
+  const scroller = portraitWorkspace.matches ? workspaceScroll : window;
+  scroller.scrollTo(x, y);
+}
 
 function captureLayerView(source) {
   const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults');
@@ -349,7 +360,7 @@ function captureLayerView(source) {
     panel: mobilePanel, overview: layerOverview, active, layerLimit, wipFilter,
     expanded: new Set(organizerExpanded[active]),
     tabSelected: workspaceTabSelected, portrait: portraitWorkspace.matches,
-    windowTop: Math.max(0, window.scrollY || 0),
+    workspacePosition: workspaceScrollPosition(),
     paneTops: layerScrollPanes.map(pane => pane.scrollTop),
     origin: list && { list, ...source.dataset },
   };
@@ -389,7 +400,7 @@ function returnToLayerView(categoriesOnly = false) {
   );
   trigger?.focus({ preventScroll: true });
   layerScrollPanes.forEach((pane, i) => { pane.scrollTop = view.paneTops[i]; });
-  window.scrollTo(0, view.windowTop);
+  scrollWorkspaceTo(view.workspacePosition);
   if (view.portrait !== portraitWorkspace.matches) trigger?.scrollIntoView({ block: 'nearest' });
   resetWorkspaceScroll();
 }
@@ -1901,7 +1912,7 @@ let workspaceTabSelected = false, workspaceTabsCollapsed = false;
 let workspaceComparisonSelected = false;
 let workspaceScrollTop = 0, workspaceScrollDistance = 0;
 function resetWorkspaceScroll() {
-  workspaceScrollTop = Math.max(0, window.scrollY || 0);
+  workspaceScrollTop = Math.max(0, workspaceScroll.scrollTop);
   workspaceScrollDistance = 0;
 }
 function syncWorkspaceTabs() {
@@ -1913,7 +1924,7 @@ function syncWorkspaceTabs() {
   const dock = $('workspaceDock'), handle = $('workspaceTabsHandle');
   const target = portrait ? dock : $('appLayout');
   const movedTab = tabs.parentElement !== target && tabs.contains(document.activeElement) ? document.activeElement : null;
-  // Keep both portrait controls in one viewport-fixed layer outside the scrolling layout.
+  // The portrait navigation is a sibling of the scroll container.
   if (tabs.parentElement !== target) {
     if (portrait) dock.append(tabs, handle);
     else target.querySelector('.inspector').before(tabs, handle);
@@ -1959,9 +1970,9 @@ function selectWorkspaceTab(selected) {
 function toggleWorkspaceTabs() {
   if (portraitWorkspace.matches) setWorkspaceTabsCollapsed(!workspaceTabsCollapsed, true);
 }
-window.addEventListener('scroll', event => {
-  if (!portraitWorkspace.matches || !workspaceTabSelected || workspaceTabsCollapsed || ![document, window].includes(event.target)) return;
-  const top = Math.max(0, window.scrollY || 0);
+workspaceScroll.addEventListener('scroll', () => {
+  if (!portraitWorkspace.matches || !workspaceTabSelected || workspaceTabsCollapsed) return;
+  const top = Math.max(0, workspaceScroll.scrollTop);
   const delta = top - workspaceScrollTop;
   workspaceScrollTop = top;
   if (delta < 0 || !ready || busy || !$('layerContext').hidden || document.body.classList.contains('is-dragging-layer')) {
@@ -1973,7 +1984,7 @@ window.addEventListener('scroll', event => {
     const focused = document.activeElement;
     setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(focused) && focused.matches(':focus-visible'));
   }
-}, { capture: true, passive: true });
+}, { passive: true });
 portraitWorkspace.addEventListener('change', () => setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle')));
 landscapeWorkspace.addEventListener('change', syncWorkspaceTabs);
 $('showroomDialog').addEventListener('close', () => selectWorkspaceTab(false));
@@ -2676,6 +2687,9 @@ function positionLandscapeMenu() {
   });
 }
 const toolbarMenus = [...document.querySelectorAll('.app-header .header-menu')];
+workspaceScroll.addEventListener('scroll', () => {
+  for (const menu of toolbarMenus) if (menu.open) menu.open = false;
+}, { passive: true });
 for (const menu of toolbarMenus) {
   menu.addEventListener('toggle', () => {
     if (menu.open) {

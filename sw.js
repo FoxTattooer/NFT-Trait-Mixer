@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.124';
+const CACHE = PREFIX + 'v0.7.125';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const PDF_DOCUMENTS = new Set([
@@ -13,11 +13,11 @@ const SHELL = [
   './inventory-base.js?build=07116', './inventory-base-ui.js?build=07116', './inventory-preview.js?build=07112', './inventory-review.js?build=07113', './inventory-dripd.json?build=07111',
   './pdf-info.css?build=07101', './pdf-info.js?build=07101',
   './trait-comparison.css?build=07104', './trait-comparison.js?build=07112',
-  './lookbook.css?build=07109', './lookbook-cards.js?build=07109', './lookbook.js?build=07118',
-  './', './index.html', ROADMAP, './styles.css?build=07120', './design.css?build=07120', './compact.css?build=07124',
-  './schemes.css?build=07122', './drag.js?build=07124', './project.js?build=07118', './diagnostics.js?build=07124',
+  './lookbook.css?build=07109', './lookbook-cards.js?build=07109', './lookbook.js?build=07125',
+  './', './index.html', ROADMAP, './styles.css?build=07120', './design.css?build=07120', './compact.css?build=07125',
+  './schemes.css?build=07122', './drag.js?build=07125', './project.js?build=07118', './diagnostics.js?build=07125',
   './showroom.css?build=0799', './showroom.js?build=07102', SHOWROOM_ART, './art/fox-credit-drop.png',
-  './app.js?build=07124', './recent.js?build=0789', './storage.js?build=07109', './final.js?build=07112', './final-ui.js?build=07118', './final-builder.js?build=07112',
+  './app.js?build=07125', './recent.js?build=0789', './storage.js?build=07109', './final.js?build=07112', './final-ui.js?build=07118', './final-builder.js?build=07112',
   './psd-core.js?build=0786', './psd-core.js',
   './psd-file.js', './psd-ui.js?build=0789', './psd-worker.js', './vendor/ag-psd.js',
   './procreate-worker.js?build=0789', './procreate-file.js?build=0789', './procreate-plist.js', './procreate-tiles.js',

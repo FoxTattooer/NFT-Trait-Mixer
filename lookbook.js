@@ -193,7 +193,7 @@
 
   open.addEventListener('click', () => {
     if (!ready || busy || dialog.open) return;
-    origin = { x: window.scrollX || 0, y: window.scrollY || 0, panes: layerScrollPanes.map(pane => pane.scrollTop) };
+    origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
     view = 'traits';
     const cat = M.category(state, active);
@@ -219,7 +219,7 @@
     menu.querySelector('summary').focus({ preventScroll: true });
     if (origin) {
       layerScrollPanes.forEach((pane, index) => { pane.scrollTop = origin.panes[index]; });
-      window.scrollTo(origin.x, origin.y);
+      scrollWorkspaceTo(origin.workspace);
       origin = undefined;
     }
   });
