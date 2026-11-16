@@ -157,14 +157,42 @@
 .tag-filter > summary, .lookbook-tag-editor > summary {
   min-height: 40px; padding: 10px 9px; font-size: 12px; line-height: 20px; cursor: pointer; overflow-wrap: anywhere;
 }
-.tag-filter-options, .lookbook-assigned-tags {
-  display: flex; flex-wrap: wrap; gap: 4px;
+.lookbook-filter-bar > .tag-filter { flex: 1 0 100%; }
+.tag-filter-options {
+  display: grid; gap: 9px; padding: 0 7px 7px;
+  max-height: min(278px, 35dvh); overflow: auto; overscroll-behavior: contain;
 }
-.tag-filter-options { padding: 0 7px 7px; max-height: 164px; overflow: auto; overscroll-behavior: contain; }
-.tag-filter-options button, .lookbook-assigned-tags button {
-  min-height: 40px; max-width: 100%; padding: 4px 8px; border-radius: 18px; font-size: 12px; overflow-wrap: anywhere;
+.tag-filter-group p {
+  margin: 0 0 5px;
+  color: #d5cad4;
+  font-size: 11px;
+  font-weight: 650;
 }
-.tag-filter-options button[aria-pressed=true] { border-color: #cb83aa; background: #4c2d43; color: #fff3f9; }
+.tag-grid, .lookbook-assigned-tags {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 126px), 1fr));
+  gap: 5px;
+}
+.tag-grid button, .lookbook-assigned-tags button {
+  display: flex; align-items: center; justify-content: flex-start; gap: 7px;
+  min-height: 40px; min-width: 0; padding: 4px 7px; border-radius: 8px;
+  background: #1c1920; color: #f5edf3; text-align: start; font-size: 12px;
+}
+.tag-grid button span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
+.tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #4c2d43; color: #fff3f9; }
+.tag-grid button[aria-pressed=true]::after {
+  content: ""; width: 7px; height: 4px; flex: 0 0 7px; margin-inline-start: auto;
+  border: solid #ffd4ec; border-width: 0 0 2px 2px; transform: rotate(-45deg);
+}
+.tag-swatch {
+  display: grid; place-items: center; flex: 0 0 17px; width: 17px; height: 17px;
+  border-radius: 4px; color: #c9bccb; background: #ffffff12;
+}
+.tag-swatch .icon { width: 11px; height: 11px; }
+.tag-clear {
+  justify-self: start; min-height: 40px; padding: 4px 8px; font-size: 12px;
+}
+.tag-remove { margin-inline-start: auto; color: #efc9df; }
 .lookbook-tag-editor { margin-top: 8px; }
 .lookbook-tag-editor > summary > small { color: #e0b9d0; font-size: 11px; margin-inline-start: 4px; }
 .lookbook-tag-editor[open] > summary > small { display: none; }

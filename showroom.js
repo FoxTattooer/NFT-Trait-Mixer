@@ -7,16 +7,29 @@
     { label: 'Barva postavy', matches: /^(skin|skintones?|skincolors?|skins|plet|kuze)$/, swatches: true },
     { label: 'Oči', matches: /^(eyes?|oci|oko)$/ },
   ];
+  const materials = [
+    ['cup', /\b(?:cup|ice blue|ledov[a-z]* modr[a-z]*)\b/],
+    ['emerald', /\b(?:emerald|smaragd[a-z]*)\b/],
+    ['gold', /\b(?:gold|golden|zlat[a-z]*)\b/],
+    ['lime', /\b(?:lime|limetk[a-z]*)\b/],
+    ['mosaic', /\b(?:mosaic|mozaik[a-z]*)\b/],
+    ['orange', /\b(?:orange|oranzov[a-z]*)\b/],
+    ['purple', /\b(?:purple|violet|lilac|lavender|fialov[a-z]*)\b/],
+    ['rainbow', /\b(?:rainbow|duhov[a-z]*|duha)\b/],
+    ['red', /\b(?:red|crimson|cerven[a-z]*)\b/],
+    ['silver', /\b(?:silver|chrome|stribr[a-z]*)\b/],
+    ['water', /\b(?:water|voda|vodni|vodov[a-z]*)\b/],
+  ];
+  function materialId(label) {
+    const name = normalize(label).replace(/[^a-z0-9]+/g, ' ');
+    return materials.find(([, pattern]) => pattern.test(name))?.[0];
+  }
   const palette = [
-    [/mozaik|mosaic/, 'conic-gradient(#6edbcb 0 25%, #ac83e9 25% 50%, #ffb081 50% 75%, #e98bbc 75%)'],
-    [/purple|violet|lilac|lavender|fialov/, '#a287db'],
     [/pink|rose|ruzov/, '#ec8eb4'],
     [/turquoise|teal|cyan|tyrkys/, '#4dcac9'],
     [/blue|modr/, '#5d9de8'],
-    [/green|lime|zelen/, '#81be79'],
-    [/orange|oranz/, '#ee9b5c'],
-    [/yellow|gold|zlut|zlat/, '#f2c96a'],
-    [/red|crimson|cerven/, '#da696b'],
+    [/green|zelen/, '#81be79'],
+    [/yellow|zlut/, '#f2c96a'],
     [/black|cern/, '#242835'],
     [/white|bil/, '#f1eff0'],
     [/grey|gray|sed/, '#8a93a0'],
@@ -36,6 +49,7 @@
       for (const cat of categories) remaining.delete(cat);
       const variants = categories.flatMap(cat => cat.traits.map(trait => ({
         catId: cat.id, traitId: trait.id, label: trait.name,
+        material: swatches ? materialId(trait.name) : undefined,
         color: swatches ? palette.find(([pattern]) => pattern.test(normalize(trait.name)))?.[1] || '#68717e' : null,
       })));
       steps.push({ label, swatches, variants: required ? variants : [null, ...variants] });
@@ -112,7 +126,11 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'showroom-swatch';
-        button.style.setProperty('--swatch', variant.color);
+        if (variant.material) button.dataset.material = variant.material;
+        else button.style.setProperty('--swatch', variant.color);
+        const name = document.createElement('span');
+        name.textContent = variant.label;
+        button.append(name);
         button.title = variant.label;
         button.setAttribute('aria-label', variant.label);
         button.setAttribute('aria-pressed', String(variant === current));
@@ -279,7 +297,7 @@
     };
   }
 
-  const api = { create, mount };
+  const api = { create, mount, materialId };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.TraitShowroom = api;
 })();

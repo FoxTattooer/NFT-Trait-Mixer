@@ -920,6 +920,9 @@ const addBookTag = label => {
 };
 const chooseBookTag = tag => changeControl('[data-lookbook-tag-select]', tag);
 const filterBook = tag => click(`#lookbookTags [data-tag-filter][value="${tag}"]`);
+assert(find('#lookbookTags [data-tag-filter][value="fialové vlasy"] [data-material="purple"]'));
+assert(find('#lookbookTags [data-tag-filter][value="afro"] .tag-swatch'));
+assert.deepEqual([...get('lookbookTags').querySelectorAll('.tag-filter-group')].map(group => group.getAttribute('aria-label')), ['Materiály', 'Ostatní štítky']);
 const bookTraitIds = () => [...get('lookbookContent').querySelectorAll('[data-lookbook-trait]')].map(button => button.dataset.lookbookTrait);
 addBookTag('Účesy');
 assert.deepEqual([...M.locate(w.inspectState(), 'other-1').trait.lookbookTags], ['Afro', 'Účesy']);

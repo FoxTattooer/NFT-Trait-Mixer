@@ -47,6 +47,19 @@ test('Showroom starts fresh, groups choices, and keeps editor state isolated', (
   assert.equal(JSON.stringify(project), original);
 });
 
+test('the eleven SKIN materials have distinct Showroom and tag samples', () => {
+  const names = ['Silver', 'Red', 'Gold', 'Mosaic', 'Cup', 'Lime', 'Rainbow', 'Orange', 'Purple', 'Emerald', 'Water'];
+  const project = M.empty();
+  project.cats = [{ id: 'skin', name: 'SKIN', traits: names.map((name, id) => ({ id, name })) }];
+  const samples = Showroom.create(project, M).steps[0].variants;
+  assert.deepEqual(samples.map(sample => sample.material), names.map(name => name.toLowerCase()));
+  const css = readFileSync(join(__dirname, '../showroom.css'), 'utf8');
+  for (const { material } of samples) assert(css.includes(`[data-material="${material}"]`), material);
+  assert.equal(Showroom.materialId('Fialové vlasy'), 'purple');
+  assert.equal(Showroom.materialId('Stříbrná'), 'silver');
+  assert.equal(Showroom.materialId('Odstín bez názvu'), undefined);
+});
+
 test('installed Showroom serves the original intro art before consulting the network', async () => {
   const scope = 'https://example.test/NFT-Trait-Mixer/';
   const listeners = new Map();

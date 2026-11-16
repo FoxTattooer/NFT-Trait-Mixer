@@ -36,7 +36,7 @@
   }
 
   function tagEditor(item, inherited = [], expanded = false) {
-    const assigned = item.lookbookTags || [];
+    const assigned = [...(item.lookbookTags || [])].sort((a, b) => a.localeCompare(b, 'cs'));
     const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
     const keys = new Set(effective.map(M.lookbookTagKey));
     const available = [...M.lookbookTagOptions([...projectTraits(), ...projectCards()])].filter(([key]) => !keys.has(key));
@@ -44,7 +44,7 @@
       <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
       ${inherited.length ? `<p class="lookbook-help">Z karty · ${inherited.map(esc).join(' · ')}</p>` : ''}
       ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
-        `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${esc(tag)} <span aria-hidden="true">×</span></button>`
+        `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
       ).join('')}</div>` : ''}
       ${available.length ? `<select data-lookbook-tag-select aria-label="Přiřadit existující štítek"><option value="">Přiřadit existující štítek…</option>${available.map(([, tag]) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select>` : ''}
       <div class="lookbook-tag-add">

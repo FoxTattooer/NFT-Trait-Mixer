@@ -1342,6 +1342,12 @@ function fillSelect(element, values, placeholder) {
   element.disabled = !values.length;
 }
 const ruleTagFilters = { source: new Set(), target: new Set() };
+function tagSample(label) {
+  const material = window.TraitShowroom?.materialId(label);
+  return material
+    ? `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`
+    : `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
+}
 function renderTagFilter(root, options, selected, label) {
   for (const key of selected) if (!options.has(key)) selected.delete(key);
   const list = root.querySelector('.tag-filter-options');
@@ -1349,9 +1355,15 @@ function renderTagFilter(root, options, selected, label) {
   const scrollTop = list.scrollTop;
   root.hidden = !options.size;
   root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
-  list.innerHTML = [...options].map(([key, name]) =>
-    `<button type="button" data-tag-filter value="${esc(key)}" aria-pressed="${selected.has(key)}">${esc(name)}</button>`
-  ).join('') + (selected.size ? '<button type="button" data-tag-filter value="">Vymazat filtr</button>' : '');
+  const materials = [], otherTags = [];
+  for (const [key, name] of options) {
+    const group = window.TraitShowroom?.materialId(name) ? materials : otherTags;
+    group.push(`<button type="button" data-tag-filter value="${esc(key)}" aria-pressed="${selected.has(key)}">${tagSample(name)}<span>${esc(name)}</span></button>`);
+  }
+  const groups = [[materials, 'Materiály'], [otherTags, 'Ostatní štítky']];
+  list.innerHTML = groups.filter(([items]) => items.length).map(([items, title]) =>
+    `<div class="tag-filter-group" role="group" aria-label="${title}">${materials.length && otherTags.length ? `<p>${title}</p>` : ''}<div class="tag-grid">${items.join('')}</div></div>`
+  ).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
   list.scrollTop = scrollTop;
   if (focused !== undefined) {
     const next = [...list.querySelectorAll('button')].find(button => button.value === focused);
