@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.139 | checkpoint/v0.7.139-lookbook-stitky | Vlastní štítky a kombinované filtry v Lookbooku a Pravidlech. |
 | 0.7.138 | checkpoint/v0.7.138-papirovy-lookbook | Papírový vzhled Lookbooku bez přepínače motivů. |
 | 0.7.137 | checkpoint/v0.7.137-lista-oznaceni | Odebrání ikony výběru z lišty označení. |
 | 0.7.136 | checkpoint/v0.7.136-presun-a-nahled-traitu | Přesun mezi kategoriemi a zvětšený náhled traitu z nabídky. |

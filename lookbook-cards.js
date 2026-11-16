@@ -2,12 +2,14 @@
 (() => {
   'use strict';
 
-  function mount({ content, scroll, mast }) {
+  function mount({ content, scroll, mast, tagEditor, filters, clearFilters, updateFilters }) {
     const pageSize = 6;
     let cardId, variantId, page = 0, layerLimit = 48;
     const card = () => state.lookbookCards.find(item => item.id === cardId);
     const variant = () => card()?.variants.find(item => item.id === variantId);
     const selected = () => variant() || card();
+    const tagItem = () => ({ item: selected(), inherited: variant() ? card().lookbookTags || [] : [] });
+    const matchingVariants = card => card.variants.filter(variant => M.matchesLookbookTags(variant, filters, card.lookbookTags));
     const editor = () => content.querySelector('.lookbook-custom-editor');
     const layerPicker = () => content.querySelector('.lookbook-source-picker');
     const layerSearch = () => content.querySelector('.lookbook-source-search');
@@ -23,7 +25,8 @@
 
     function render({ editing = editor()?.open, picking = layerPicker()?.open,
       query = layerSearch()?.value || '' } = {}) {
-      const cards = state.lookbookCards;
+      const cards = filters.size ? state.lookbookCards.filter(card =>
+        M.matchesLookbookTags(card, filters) || matchingVariants(card).length) : state.lookbookCards;
       const pages = Math.max(1, Math.ceil(cards.length / pageSize));
       page = Math.min(page, pages - 1);
       const visibleCards = cards.slice(page * pageSize, (page + 1) * pageSize);
@@ -31,7 +34,9 @@
         cardId = visibleCards[0]?.id;
         variantId = undefined;
       }
-      const current = card(), choice = variant(), jobs = [], thumbnails = [];
+      const current = card(), variants = current ? matchingVariants(current) : [];
+      if (!variants.some(variant => variant.id === variantId)) variantId = undefined;
+      const choice = variant(), jobs = [], thumbnails = [];
       const previousRail = content.querySelector('.lookbook-variants');
       const railLeft = previousRail?.dataset.cardId === cardId ? previousRail?.scrollLeft || 0 : 0;
       const art = (item, cover) => {
@@ -58,7 +63,7 @@
         ${mast(counted(cards.length, 'karta', 'karty', 'karet'))}
         <div class="lookbook-custom-head"><h3>Vlastní karty</h3><button type="button" data-book-action="new-card">+ Nová karta</button></div>
         ${cards.length ? `<div class="lookbook-grid lookbook-custom-grid">${visibleCards.map(item => tile(item, 'card', cardId)).join('')}</div>` :
-          '<p class="lookbook-custom-empty">Přidej kartu pro vlastní trait, variantu nebo outfit.</p>'}
+          `<p class="lookbook-custom-empty">${filters.size ? 'Žádná karta ani její varianta nemá všechny vybrané štítky.' : 'Přidej kartu pro vlastní trait, variantu nebo outfit.'}</p>`}
         ${pages > 1 ? `<div class="lookbook-pages">
           <button type="button" data-book-action="page" data-id="-1" ${page === 0 ? 'disabled' : ''}>‹ Předchozí</button>
           <span>${page + 1} / ${pages}</span><button type="button" data-book-action="page" data-id="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
@@ -69,8 +74,8 @@
           <button type="button" data-book-action="new-variant">+ Varianta</button>
         </div>
         <p class="lookbook-story" data-book-note ${current.note ? '' : 'hidden'}>${esc(current.note)}</p>
-        ${current.variants.length ? `<div class="lookbook-variants" data-card-id="${esc(current.id)}" role="group" aria-label="Varianty karty">
-          ${current.variants.map(item => tile(item, 'variant', variantId)).join('')}
+        ${variants.length ? `<div class="lookbook-variants" data-card-id="${esc(current.id)}" role="group" aria-label="Varianty karty">
+          ${variants.map(item => tile(item, 'variant', variantId)).join('')}
         </div>` : ''}
         ${choice ? `<div class="lookbook-variant-preview">
           <button type="button" class="lookbook-cover-choice" data-book-action="cover">‹ Titulní karta</button>
@@ -78,6 +83,7 @@
           <h4 data-book-name="${esc(choice.id)}">${title(choice)}</h4>
           <p class="lookbook-story" data-book-variant-note ${choice.note ? '' : 'hidden'}>${esc(choice.note)}</p>
         </div>` : ''}
+        ${tagEditor(choice || current, tagItem().inherited)}
         ${editMarkup(choice || current, !!choice, editing, picking, query)}
       </section>` : ''}`;
       for (const image of content.querySelectorAll('img[data-book-image]')) image.dataset.asset = thumbnails[Number(image.dataset.bookImage)];
@@ -170,6 +176,7 @@
           cardId = next.id;
           variantId = undefined;
           page = Math.floor((state.lookbookCards.length - 1) / pageSize);
+          clearFilters();
           render({ editing: true });
           focusName();
           return;
@@ -178,6 +185,7 @@
           const next = { ...newItem('Nová varianta'), withCover: false };
           change(() => current.variants.push(next), 'Varianta přidána do Lookbooku', true);
           variantId = next.id;
+          clearFilters();
           render({ editing: true });
           focusName();
           return;
@@ -233,6 +241,7 @@
             if (item === current) state.lookbookCards = state.lookbookCards.filter(card => card !== current);
             else current.variants = current.variants.filter(variant => variant !== item);
           }, 'Položka Lookbooku smazána', true);
+          updateFilters();
           variantId = undefined;
           break;
       }
@@ -302,7 +311,7 @@
         editor().querySelector(`[name="${field.name}"]`)?.focus({ preventScroll: true });
       }
     });
-    return { render };
+    return { render, tagItem };
   }
   window.TraitLookbookCards = { mount };
 })();

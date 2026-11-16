@@ -860,6 +860,11 @@ compare.open = false;
 const bookProject = M.clone(w.inspectState());
 bookProject.snapshots = [{ id: 'look-one', name: 'První sestava', selected: { compare: 'compare-0', other: 'other-1' },
   selectedExtras: {}, visibility: { compare: true, other: true }, rulesEnabled: true }];
+for (const [id, tags] of [
+  ['compare-0', ['Afro', 'Fialové vlasy']],
+  ['other-1', ['Afro']],
+  ['other-2', ['Klobouky', 'Fialové vlasy']],
+]) M.locate(bookProject, id).trait.lookbookTags = tags;
 w.useTestProject(bookProject);
 assert.equal(get('openLookbook').textContent.trim(), 'Lookbook');
 assert(get('landscapePreviewActions').contains(get('openLookbook')));
@@ -909,11 +914,29 @@ assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava')
 assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Redline/);
 click('[data-lookbook-jump="other-1"]');
 assert.equal(find('[data-lookbook-title]').textContent, 'Doplňky 1');
+const addBookTag = label => {
+  find('[data-lookbook-tag-input]').value = label;
+  click('[data-lookbook-tag-add]');
+};
+const chooseBookTag = tag => changeControl('[data-lookbook-tag-select]', tag);
+const filterBook = tag => click(`#lookbookTags [data-tag-filter][value="${tag}"]`);
+const bookTraitIds = () => [...get('lookbookContent').querySelectorAll('[data-lookbook-trait]')].map(button => button.dataset.lookbookTrait);
+addBookTag('Účesy');
+assert.deepEqual([...M.locate(w.inspectState(), 'other-1').trait.lookbookTags], ['Afro', 'Účesy']);
+filterBook('afro');
+assert.deepEqual(bookTraitIds(), ['other-1']);
+filterBook('fialové vlasy');
+assert.deepEqual(bookTraitIds(), ['compare-0']);
+assert.match(find('.lookbook-chance').textContent, /^6,25\s*%$/, 'filtering does not change rarity odds');
+filterBook('klobouky');
+assert.match(get('lookbookContent').textContent, /Žádný trait nemá všechny/);
+filterBook('');
 assert(!find('#lookbookDialog [data-lookbook-theme]'), 'the paper look has no theme switcher');
 click('[data-lookbook-view="cards"]');
 click('[data-book-action="new-card"]');
 changeControl('[name="bookName"]', 'Cowboy Hat');
 changeControl('[name="bookNote"]', 'Doplnit variantu Afro');
+chooseBookTag('Klobouky');
 assert.equal(find('.lookbook-custom-detail h3').textContent, 'Cowboy Hat');
 const fileInput = find('.lookbook-card-file');
 Object.defineProperty(fileInput, 'files', { value: [detailBlob] });
@@ -922,6 +945,7 @@ await waitFor(() => w.inspectState().lookbookCards[0].data);
 assert(find('.lookbook-custom-grid .lookbook-thumbnail'));
 click('[data-book-action="new-variant"]');
 changeControl('[name="bookName"]', 'Violet Dreads');
+chooseBookTag('Fialové vlasy');
 const sourcePicker = find('.lookbook-source-picker');
 sourcePicker.open = true;
 sourcePicker.dispatchEvent(new w.Event('toggle', { bubbles: true }));
@@ -939,6 +963,11 @@ click('[data-book-action="cover"]');
 assert(!find('.lookbook-variant-preview'));
 click('[data-book-action="variant"]');
 assert.equal(find('.lookbook-variant-preview h4').textContent, 'Violet Dreads');
+filterBook('klobouky');
+filterBook('fialové vlasy');
+assert(find('[data-book-action="card"]'));
+assert(find('[data-book-action="variant"]'), 'a variant can match its own and its cover tags');
+filterBook('');
 workspaceScroller.scrollTop = 0;
 editorPane.scrollTop = 0;
 click('#lookbookExit');
@@ -956,6 +985,22 @@ assert.equal(savedBook.lookbookCards[0].note, 'Doplnit variantu Afro');
 assert.match(savedBook.lookbookCards[0].data, /^data:image\/png;base64,/);
 assert.deepEqual(savedBook.lookbookCards[0].variants[0].layers, ['other-2']);
 assert.equal(savedBook.lookbookCards[0].variants[0].withCover, true);
+assert.deepEqual(savedBook.lookbookCards[0].lookbookTags, ['Klobouky']);
+assert.deepEqual(savedBook.lookbookCards[0].variants[0].lookbookTags, ['Fialové vlasy']);
+assert.deepEqual(M.locate(savedBook, 'other-1').trait.lookbookTags, ['Afro', 'Účesy']);
+click('#openLookbook');
+filterBook('afro');
+filterBook('fialové vlasy');
+click('#lookbookUseRules');
+await waitFor(() => !get('lookbookDialog').open && !get('rulesPanel').hidden);
+assert.deepEqual([...get('ruleSource').options].map(option => option.value), ['compare-0']);
+changeControl('#ruleAction', 'block');
+changeControl('#ruleTargetCat', 'other');
+click('#ruleTargetTags [data-tag-filter][value="klobouky"]');
+assert.deepEqual([...get('ruleTargetTrait').options].map(option => option.value), ['other-2']);
+click('#addRule');
+assert(w.inspectState().rules.some(rule => rule.source === 'compare-0' && rule.targetTrait === 'other-2'));
+click('#layersTab');
 // A category export contains original PNGs, including hidden traits and nested folders.
 const pngA = savedBook.cats[0].traits[0].data, pngB = savedBook.cats[1].traits[0].data;
 const exportProject = M.empty();

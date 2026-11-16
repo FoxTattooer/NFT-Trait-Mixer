@@ -1341,6 +1341,37 @@ function fillSelect(element, values, placeholder) {
   if (values.some(([value]) => value === previous)) element.value = previous;
   element.disabled = !values.length;
 }
+const ruleTagFilters = { source: new Set(), target: new Set() };
+function renderTagFilter(root, options, selected, label) {
+  for (const key of selected) if (!options.has(key)) selected.delete(key);
+  const list = root.querySelector('.tag-filter-options');
+  const focused = list.contains(document.activeElement) ? document.activeElement.value : undefined;
+  const scrollTop = list.scrollTop;
+  root.hidden = !options.size;
+  root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
+  list.innerHTML = [...options].map(([key, name]) =>
+    `<button type="button" data-tag-filter value="${esc(key)}" aria-pressed="${selected.has(key)}">${esc(name)}</button>`
+  ).join('') + (selected.size ? '<button type="button" data-tag-filter value="">Vymazat filtr</button>' : '');
+  list.scrollTop = scrollTop;
+  if (focused !== undefined) {
+    const next = [...list.querySelectorAll('button')].find(button => button.value === focused);
+    (next || root.querySelector('summary')).focus({ preventScroll: true });
+  }
+}
+function toggleTagFilter(selected, key) {
+  if (!key) selected.clear();
+  else if (selected.has(key)) selected.delete(key);
+  else selected.add(key);
+}
+function openRulesWithLookbookTags(tags) {
+  ruleTagFilters.source = new Set(tags);
+  renderRules();
+  $('ruleSourceTags').open = true;
+  selectWorkspaceTab(false);
+  showPanel('rules');
+  $('rulesPanel').scrollIntoView({ block: 'nearest' });
+  $('ruleSource').focus({ preventScroll: true });
+}
 function updateRuleTargets() {
   const source = M.locate(state, $('ruleSource').value);
   fillSelect($('ruleTargetCat'), state.cats.filter(c => c.id !== source?.cat.id).map(c => [c.id, c.name]), 'Přidej další kategorii');
@@ -1348,14 +1379,23 @@ function updateRuleTargets() {
 }
 function updateTargetTraits() {
   const target = M.category(state, $('ruleTargetCat').value), block = $('ruleAction').value === 'block';
-  fillSelect($('ruleTargetTrait'), target?.traits.map(t => [t.id, t.name]) || [], 'Nejdřív nahraj PNG do cílové kategorie');
+  const traits = target?.traits || [];
+  const tags = ruleTagFilters.target;
+  renderTagFilter($('ruleTargetTags'), M.lookbookTagOptions(traits), tags, 'Štítky cíle');
+  fillSelect($('ruleTargetTrait'), traits.filter(trait => M.matchesLookbookTags(trait, tags)).map(t => [t.id, t.name]),
+    tags.size ? 'Žádný trait neodpovídá štítkům' : 'Nejdřív nahraj PNG do cílové kategorie');
   $('targetTraitField').hidden = !block;
   $('ruleTargetTrait').required = block;
   $('addRule').disabled = !$('ruleSource').value || !target || (block && !$('ruleTargetTrait').value) || busy;
 }
 function renderRules() {
   $('rulesEnabled').checked = state.rulesEnabled;
-  fillSelect($('ruleSource'), state.cats.flatMap(c => c.traits.map(t => [t.id, `${c.name} / ${t.name}`])), 'Nejdřív nahraj PNG');
+  const tags = ruleTagFilters.source;
+  renderTagFilter($('ruleSourceTags'), M.lookbookTagOptions(state.cats.flatMap(cat => cat.traits)), tags, 'Štítky zdroje');
+  fillSelect($('ruleSource'), state.cats.flatMap(c => c.traits
+    .filter(trait => M.matchesLookbookTags(trait, tags))
+    .map(t => [t.id, `${c.name} / ${t.name}`])),
+  tags.size ? 'Žádný trait neodpovídá štítkům' : 'Nejdřív nahraj PNG');
   updateRuleTargets();
   $('rules').innerHTML = state.rules.length ? state.rules.map(r => `<article class="saved-card"><strong>${esc(M.locate(state, r.source)?.trait.name || '?')}</strong><p>${r.action === 'hide' ? 'Skryje kategorii' : 'Nesmí se kombinovat s'} ${esc(M.category(state, r.targetCat)?.name || '?')}${r.targetTrait ? ' / ' + esc(M.locate(state, r.targetTrait)?.trait.name || '?') : ''}</p><div class="saved-actions">${button('delete-rule', 'Odstranit pravidlo', r.id, 'trash')}</div></article>`).join('') : '<p class="empty-list">Pravidla jsou volitelná.<br>Přidej je, až budeš mít více vrstev.</p>';
 }
@@ -3164,6 +3204,14 @@ $('traitFiles').addEventListener('change', event => {
   uploadFiles(input.files, categoryId);
 });
 $('projectFile').addEventListener('change', event => loadProject(event.target.files[0]));
+for (const [id, key, refresh] of [['ruleSourceTags', 'source', renderRules], ['ruleTargetTags', 'target', updateTargetTraits]]) {
+  $(id).addEventListener('click', event => {
+    const control = event.target.closest('[data-tag-filter]');
+    if (!control) return;
+    toggleTagFilter(ruleTagFilters[key], control.value);
+    refresh();
+  });
+}
 $('ruleSource').addEventListener('change', updateRuleTargets);
 $('ruleTargetCat').addEventListener('change', updateTargetTraits);
 $('ruleAction').addEventListener('change', updateTargetTraits);

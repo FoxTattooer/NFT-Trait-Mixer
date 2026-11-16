@@ -5,11 +5,12 @@
   const uid = () => globalThis.crypto?.randomUUID?.() || `trait-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, selectedExtras: {}, rules: [], snapshots: [], lookbookCards: [], organizer: {}, rulesEnabled: true });
   const hasContent = p => !!(p?.cats?.length || p?.lookbookCards?.length);
-  const cloneCardItem = item => ({ ...item, layers: [...item.layers] });
+  const cloneTags = item => item.lookbookTags ? { lookbookTags: [...item.lookbookTags] } : {};
+  const cloneCardItem = item => ({ ...item, ...cloneTags(item), layers: [...item.layers] });
   const cloneLookbookCards = (cards = []) => cards.map(card => ({ ...cloneCardItem(card), variants: card.variants.map(cloneCardItem) }));
   function clone(p) {
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
-    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
+    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -87,6 +88,32 @@
   const DEFAULT_RARITY_WEIGHT = 100;
   const MAX_RARITY_WEIGHT = 1000;
   const normalizeLookbookText = (value, limit) => typeof value === 'string' ? value.trim().slice(0, limit).trimEnd() : '';
+  const LOOKBOOK_TAG_LIMIT = 48;
+  const lookbookTagKey = tag => tag.toLocaleLowerCase('cs').normalize('NFC');
+  function normalizeLookbookTags(values) {
+    if (!Array.isArray(values)) return [];
+    const tags = new Map();
+    for (const value of values) {
+      if (typeof value !== 'string') continue;
+      const tag = normalizeLookbookText(value.normalize('NFC').replace(/\s+/g, ' '), LOOKBOOK_TAG_LIMIT);
+      const key = lookbookTagKey(tag);
+      if (tag && !tags.has(key)) tags.set(key, tag);
+    }
+    return [...tags.values()];
+  }
+  function lookbookTagOptions(items) {
+    const tags = normalizeLookbookTags(items.flatMap(item => item.lookbookTags || []));
+    return new Map(tags.sort((a, b) => a.localeCompare(b, 'cs')).map(tag => [lookbookTagKey(tag), tag]));
+  }
+  function matchesLookbookTags(item, selected, inherited = []) {
+    if (!selected.size) return true;
+    const keys = new Set([...(item.lookbookTags || []), ...inherited].map(lookbookTagKey));
+    return [...selected].every(key => keys.has(key));
+  }
+  function lookbookTagFields(item) {
+    const lookbookTags = normalizeLookbookTags(item.lookbookTags);
+    return lookbookTags.length ? { lookbookTags } : {};
+  }
   const validRarityWeight = value => Number.isFinite(value) && value >= 0 && value <= MAX_RARITY_WEIGHT;
   const rarityWeight = trait => validRarityWeight(trait.rarityWeight) ? trait.rarityWeight : DEFAULT_RARITY_WEIGHT;
   const rarityTotal = traits => traits.reduce((sum, trait) => sum + (trait.hidden ? 0 : rarityWeight(trait)), 0);
@@ -195,7 +222,7 @@
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
-          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t),
+          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t), ...lookbookTagFields(t),
           ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
     });
@@ -246,7 +273,7 @@
       const title = normalizeLookbookText(item.name, LOOKBOOK_NAME_LIMIT);
       const note = normalizeLookbookText(item.note, LOOKBOOK_STORY_LIMIT);
       return {
-        id: unique(item.id), name: title || fallback, note,
+        id: unique(item.id), name: title || fallback, note, ...lookbookTagFields(item),
         layers: Array.isArray(item.layers) ? [...new Set(item.layers.filter(validId))] : [],
         ...(item.data ? { data: item.data } : {}),
       };
@@ -451,7 +478,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText,
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, matchesLookbookTags,
     DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };

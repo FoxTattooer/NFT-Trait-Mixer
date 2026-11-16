@@ -8,6 +8,12 @@
   const rarities = new Map([[M.DEFAULT_RARITY_WEIGHT, 'Běžný'], [50, 'Neobvyklý'], [20, 'Vzácný'], [5, 'Výjimečný']]);
   const percent = new Intl.NumberFormat('cs-CZ', { style: 'percent', maximumFractionDigits: 2 });
   const pageSize = 4;
+  const tagFilters = { traits: new Set(), cards: new Set() };
+  const filterRoot = $('lookbookTags');
+  const projectTraits = () => state.cats.flatMap(cat => cat.traits);
+  const projectCards = () => state.lookbookCards.flatMap(card => [card, ...card.variants]);
+  const visibleTraits = cat => cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits));
+  let ruleTags;
   let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
 
   const label = item => item.lookbookName || item.name;
@@ -15,8 +21,74 @@
   const selectedTrait = () => category()?.traits.find(trait => trait.id === traitId);
   const selectedSnapshot = () => state.snapshots.find(snapshot => snapshot.id === snapshotId);
   const selectedItem = () => view === 'traits' ? selectedTrait() : selectedSnapshot();
-  const customCards = window.TraitLookbookCards?.mount({ content, scroll, mast });
+  const customCards = window.TraitLookbookCards?.mount({
+    content, scroll, mast, tagEditor, filters: tagFilters.cards,
+    clearFilters: () => { tagFilters.cards.clear(); renderFilters(); },
+    updateFilters: renderFilters,
+  });
 
+  function renderFilters() {
+    const items = view === 'traits' ? projectTraits() : view === 'cards' ? projectCards() : [];
+    const selected = tagFilters[view] || new Set();
+    renderTagFilter(filterRoot, M.lookbookTagOptions(items), selected, 'Filtrovat štítky');
+    $('lookbookFilterBar').hidden = filterRoot.hidden;
+    $('lookbookUseRules').hidden = view !== 'traits' || !selected.size;
+  }
+
+  function tagEditor(item, inherited = [], expanded = false) {
+    const assigned = item.lookbookTags || [];
+    const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
+    const keys = new Set(effective.map(M.lookbookTagKey));
+    const available = [...M.lookbookTagOptions([...projectTraits(), ...projectCards()])].filter(([key]) => !keys.has(key));
+    return `<details class="lookbook-tag-editor" ${expanded ? 'open' : ''}>
+      <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
+      ${inherited.length ? `<p class="lookbook-help">Z karty · ${inherited.map(esc).join(' · ')}</p>` : ''}
+      ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
+        `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${esc(tag)} <span aria-hidden="true">×</span></button>`
+      ).join('')}</div>` : ''}
+      ${available.length ? `<select data-lookbook-tag-select aria-label="Přiřadit existující štítek"><option value="">Přiřadit existující štítek…</option>${available.map(([, tag]) => `<option value="${esc(tag)}">${esc(tag)}</option>`).join('')}</select>` : ''}
+      <div class="lookbook-tag-add">
+        <input type="text" aria-label="Nový štítek" placeholder="Nový štítek" maxlength="${M.LOOKBOOK_TAG_LIMIT}" data-lookbook-tag-input>
+        <button type="button" data-lookbook-tag-add>Přidat</button>
+      </div>
+    </details>`;
+  }
+
+  function editTag(value, remove = false) {
+    if (busy) return;
+    const { item, inherited } = view === 'cards' ? customCards.tagItem() : { item: selectedTrait(), inherited: [] };
+    const [tag] = M.normalizeLookbookTags([value]);
+    if (!item || !tag) return;
+    const key = M.lookbookTagKey(tag);
+    if (!remove && inherited.some(label => M.lookbookTagKey(label) === key)) return;
+    const current = item.lookbookTags || [];
+    const next = remove ? current.filter(label => M.lookbookTagKey(label) !== key)
+      : M.normalizeLookbookTags([...current, tag]);
+    if (next.length !== current.length) {
+      if (view === 'traits') saveCard();
+      change(() => {
+        if (next.length) item.lookbookTags = next;
+        else delete item.lookbookTags;
+      }, 'Štítky uloženy', true);
+    }
+    const filtered = tagFilters[view].size > 0;
+    if (filtered) refreshTagResults();
+    else renderFilters();
+    const selected = view === 'cards' ? customCards.tagItem().item : selectedTrait();
+    const editor = content.querySelector('.lookbook-tag-editor');
+    if (editor && item === selected) {
+      editor.outerHTML = tagEditor(item, inherited, true);
+      content.querySelector('[data-lookbook-tag-input]').focus({ preventScroll: true });
+    } else filterRoot.querySelector('summary').focus({ preventScroll: true });
+  }
+
+  function refreshTagResults() {
+    if (view === 'traits') {
+      const cat = category();
+      if (cat) selectTrait(cat, traitId);
+    }
+    render();
+  }
   function chance(trait, total, weight = M.rarityWeight(trait)) {
     if (trait.hidden || !total || !weight) return percent.format(0);
     const fraction = weight / total;
@@ -59,14 +131,15 @@
       <div class="lookbook-detail-head"><div><h3 data-lookbook-title>${esc(label(item))}</h3><p>${esc(path)}</p></div>
       ${trait ? `<div class="lookbook-chance-box"><output class="lookbook-chance" aria-label="Základní šance traitu"></output><span class="lookbook-rarity-label">${item.hidden ? 'Skrytý' : rarities.get(M.rarityWeight(item)) || 'Vlastní'}</span></div>` : ''}</div>
       <p class="lookbook-story" ${item.story ? '' : 'hidden'}>${esc(item.story || '')}</p>
-      ${tags}${editor(item, trait)}
+      ${tags}${trait ? tagEditor(item) : ''}${editor(item, trait)}
     </section>`;
   }
 
   function renderTraits(cat) {
-    const pages = Math.ceil(cat.traits.length / pageSize);
+    const matches = visibleTraits(cat);
+    const pages = Math.ceil(matches.length / pageSize);
     page = Math.max(0, Math.min(page, pages - 1));
-    const traits = cat.traits.slice(page * pageSize, (page + 1) * pageSize);
+    const traits = matches.slice(page * pageSize, (page + 1) * pageSize);
     if (!traits.some(trait => trait.id === traitId)) traitId = traits[0].id;
     const trait = selectedTrait();
     const { folders, assignments } = organizerFolders(cat.id);
@@ -81,7 +154,7 @@
       <span>${page + 1} / ${pages}</span><button type="button" data-lookbook-page="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
     </div>` : '';
     content.innerHTML = `<section class="lookbook-sheet">
-      ${mast(counted(cat.traits.length, 'trait', 'traity', 'traitů'))}<h3>${esc(cat.name)}</h3>
+      ${mast(counted(matches.length, 'trait', 'traity', 'traitů'))}<h3>${esc(cat.name)}</h3>
       <div class="lookbook-grid">${cards}</div>${pager}</section>${detail(trait, path, true)}`;
     updateChances();
     mountThumbnails();
@@ -122,13 +195,14 @@
     for (const control of dialog.querySelectorAll('button[data-lookbook-view]')) {
       control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view));
     }
+    renderFilters();
     if (view === 'cards') {
       chapters.hidden = true;
       chapters.replaceChildren();
       customCards?.render();
       return;
     }
-    const items = view === 'traits' ? state.cats.filter(cat => cat.traits.length) : state.snapshots;
+    const items = view === 'traits' ? state.cats.filter(cat => visibleTraits(cat).length) : state.snapshots;
     const id = view === 'traits' ? categoryId : snapshotId;
     const selected = items.find(item => item.id === id) || items[0];
     const left = chapters.scrollLeft;
@@ -138,8 +212,9 @@
     ).join('');
     chapters.scrollLeft = left;
     if (!selected) {
+      const emptyTraits = tagFilters.traits.size ? 'Žádný trait nemá všechny vybrané štítky.' : 'Přidej do projektu traity a zobrazí se tady.';
       content.innerHTML = view === 'traits'
-        ? '<p class="lookbook-empty">Přidej do projektu traity a zobrazí se tady.</p>'
+        ? `<p class="lookbook-empty">${emptyTraits}</p>`
         : '<p class="lookbook-empty">Ulož sestavu v editoru a zobrazí se tady.</p>';
     } else if (view === 'traits') {
       categoryId = selected.id;
@@ -186,8 +261,9 @@
 
   function selectTrait(cat, id) {
     categoryId = cat.id;
-    const index = cat.traits.findIndex(trait => trait.id === id);
-    traitId = index >= 0 ? id : cat.traits[0]?.id;
+    const matches = visibleTraits(cat);
+    const index = matches.findIndex(trait => trait.id === id);
+    traitId = index >= 0 ? id : matches[0]?.id;
     page = Math.max(0, Math.floor(index / pageSize));
   }
 
@@ -196,6 +272,7 @@
     origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
     view = 'traits';
+    renderFilters();
     const cat = M.category(state, active);
     if (cat?.traits.length) selectTrait(cat, state.selected[cat.id]);
     else { categoryId = traitId = undefined; page = 0; }
@@ -222,6 +299,36 @@
       scrollWorkspaceTo(origin.workspace);
       origin = undefined;
     }
+    if (ruleTags) {
+      openRulesWithLookbookTags(ruleTags);
+      ruleTags = undefined;
+    }
+  });
+
+  filterRoot.addEventListener('click', event => {
+    const control = event.target.closest('[data-tag-filter]');
+    if (!control) return;
+    saveCard();
+    toggleTagFilter(tagFilters[view], control.value);
+    refreshTagResults();
+  });
+  $('lookbookUseRules').addEventListener('click', () => {
+    ruleTags = new Set(tagFilters.traits);
+    close();
+  });
+  content.addEventListener('click', event => {
+    const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove]');
+    if (!control) return;
+    if (control.hasAttribute('data-lookbook-tag-remove')) editTag(control.value, true);
+    else editTag(control.parentElement.querySelector('[data-lookbook-tag-input]').value);
+  });
+  content.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.isComposing || !event.target.matches('[data-lookbook-tag-input]')) return;
+    event.preventDefault();
+    editTag(event.target.value);
+  });
+  content.addEventListener('change', event => {
+    if (event.target.matches('[data-lookbook-tag-select]')) editTag(event.target.value);
   });
 
   dialog.addEventListener('click', event => {
@@ -238,6 +345,7 @@
       const target = M.locate(state, lookbookJump);
       if (!target) return;
       view = 'traits';
+      if (!M.matchesLookbookTags(target.trait, tagFilters.traits)) tagFilters.traits.clear();
       selectTrait(target.cat, target.trait.id);
     }
     render();

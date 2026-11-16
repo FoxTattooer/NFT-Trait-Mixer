@@ -92,6 +92,24 @@ test('Lookbook titles, stories and rarity round-trip without renaming source tra
   M.randomize(restored, () => 0.2);
   assert.equal(restored.selected.a, 'variant');
 });
+test('Lookbook tags round-trip, deduplicate and match within a single item or variant', () => {
+  const p = project();
+  p.cats[0].traits[0].lookbookTags = [' Afro ', 'AFRO', 'Fialové   vlasy'];
+  p.lookbookCards = [{ id: 'cover', name: 'Klobouk', layers: [], lookbookTags: ['Klobouky'], variants: [
+    { id: 'purple', name: 'Fialová', layers: [], lookbookTags: ['Fialové vlasy'] },
+    { id: 'afro', name: 'Afro', layers: [], lookbookTags: ['Afro'] },
+  ] }];
+  const cloned = M.clone(p);
+  cloned.cats[0].traits[0].lookbookTags.push('Přidáno');
+  assert(!p.cats[0].traits[0].lookbookTags.includes('Přidáno'));
+  const restored = M.normalize(p);
+  const [trait] = restored.cats[0].traits;
+  assert.deepEqual(trait.lookbookTags, ['Afro', 'Fialové vlasy']);
+  assert(M.matchesLookbookTags(trait, new Set(['afro', 'fialové vlasy'])));
+  const [cover] = restored.lookbookCards;
+  assert(M.matchesLookbookTags(cover.variants[0], new Set(['klobouky', 'fialové vlasy']), cover.lookbookTags));
+  assert(!cover.variants.some(variant => M.matchesLookbookTags(variant, new Set(['afro', 'fialové vlasy']), cover.lookbookTags)));
+});
 test('review marks round-trip with the project and folder WIP reaches nested traits', () => {
   const p = project();
   const category = p.cats[0];
