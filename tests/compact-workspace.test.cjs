@@ -1876,6 +1876,66 @@ assert(find('#lookbookTagIcons [value="emerald"] [data-material="emerald"]'));
 assert(find('#lookbookDetailArea .lookbook-tag-picker [value="Silver"]').closest('label').querySelector('[data-material="silver"]'));
 click('#lookbookExit');
 await waitFor(() => !get('lookbookDialog').open);
+// Names open rename directly. A tag removed from one folder stays on its siblings.
+const hairs = M.empty();
+hairs.cats = [{ id: 'hairs', name: 'HAIRS', traits: [
+  { id: 'spa', name: 'Spaghetti', data: rarityAsset, lookbookTags: ['Hair', 'Spaghetti'] },
+  { id: 'afro', name: 'Afro', data: rarityAsset, lookbookTags: ['Hair'] },
+], lookbookTags: ['Hair'] }];
+hairs.organizer.hairs = {
+  folders: [{ id: 'spa-wip', name: 'Spa wip', parentId: null }, { id: 'nested', name: 'Basic', parentId: 'spa-wip' }],
+  assignments: { spa: 'nested' },
+};
+hairs.selected.hairs = 'afro';
+w.useTestProject(M.clone(hairs));
+const renameByName = async (id, before, after) => {
+  click(`#cats [data-id="${id}"] [data-layer-rename]`);
+  assert(get('editDialog').open);
+  assert.equal(get('dialogInput').value, before);
+  get('dialogInput').value = after;
+  get('dialogForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => find(`#cats [data-id="${id}"] [data-layer-rename]`)?.textContent === after);
+};
+await renameByName('hairs', 'HAIRS', 'Hairs');
+if (get('layer-branch-hairs').hidden) click('#cats [data-action="select-category"][data-id="hairs"]');
+await renameByName('spa-wip', 'Spa wip', 'Spaghetti WIP');
+assert.equal(find('#cats [data-action="toggle-tree-folder"][data-id="spa-wip"]').getAttribute('aria-expanded'), 'false');
+click('#cats [data-action="toggle-tree-folder"][data-id="spa-wip"]');
+click('#cats [data-action="toggle-tree-folder"][data-id="nested"]');
+await renameByName('spa', 'Spaghetti', 'Spaghetti Lime');
+assert.equal(w.inspectState().selected.hairs, 'afro');
+const openLayerTagEditor = id => {
+  click(`#cats [data-action="open-layer-menu"][data-id="${id}"]`);
+  click('#layerContext [data-action="open-layer-tags"]');
+  assert(get('layerTagsDialog').open);
+};
+const saveLayerTagEditor = async () => {
+  get('layerTagsForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => !get('layerTagsDialog').open);
+};
+const hairsModel = () => M.category(w.inspectState(), 'hairs');
+const hairTags = id => Array.from(M.effectiveLayerTags(w.inspectState(), hairsModel(), M.locate(w.inspectState(), id).trait));
+openLayerTagEditor('spa-wip');
+assert.match(find('#layerTagsAssigned [value="Hair"]').textContent, /Zděděný/);
+assert(find('#layerTagsOptions input[value="Hair"]').checked);
+click('#layerTagsAssigned [value="Hair"]');
+assert(!find('#layerTagsOptions input[value="Hair"]').checked);
+await saveLayerTagEditor();
+assert.deepEqual(hairTags('spa'), ['Spaghetti']);
+assert.deepEqual(hairTags('afro'), ['Hair']);
+assert.deepEqual([...hairsModel().lookbookTags], ['Hair']);
+openLayerTagEditor('hairs');
+await saveLayerTagEditor();
+assert.deepEqual(hairTags('spa'), ['Spaghetti'], 'propagation honors a local exclusion');
+openLayerTagEditor('spa-wip');
+find('#layerTagsOptions .lookbook-tag-picker').open = true;
+click('#layerTagsOptions input[value="Hair"]');
+await saveLayerTagEditor();
+assert.deepEqual(hairTags('spa'), ['Spaghetti', 'Hair']);
+click('#undo');
+assert.deepEqual(hairTags('spa'), ['Spaghetti']);
+click('#redo');
+assert.deepEqual(hairTags('spa'), ['Spaghetti', 'Hair']);
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

@@ -256,12 +256,12 @@
 .lookbook-tag-editor[open] > summary > small { display: none; }
 .lookbook-tag-editor > :not(summary) { margin: 0 7px 7px; }
 .lookbook-tag-picker { min-width: 0; border: 1px solid var(--scheme-stroke, #5f5965); border-radius: 8px; background: #14141a; }
-.lookbook-tag-picker > summary { min-height: 44px; padding: 9px; line-height: 24px; font-size: 14px; cursor: pointer; }
+.lookbook-tag-picker > summary { min-height: 44px; padding: 10px 7px; line-height: 20px; font-size: 13px; cursor: pointer; }
 .tag-picker-options {
   grid-template-columns: minmax(0, 1fr); max-height: min(232px, 42dvh); overflow: auto;
-  padding: 2px 5px 5px; gap: 3px;
+  padding: 0 3px 3px; gap: 1px;
 }
-.tag-picker-options :is(button, .tag-picker-choice) { min-height: 44px; font-size: 13px; }
+.tag-picker-options :is(button, .tag-picker-choice) { --tag-icon-size: 21px; min-height: 44px; padding: 2px 6px; gap: 5px; font-size: 13px; }
 .tag-picker-choice { position: relative; border: 1px solid var(--scheme-stroke, #4d4550); cursor: pointer; }
 :is(#layerTagsForm, .lookbook-trait-tag-editor) .tag-picker-checkbox {
   position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0;
@@ -277,8 +277,7 @@
   border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(-45deg);
 }
 .tag-picker-choice:has(.tag-picker-checkbox:focus-visible) { outline: 2px solid var(--ui-feedback, #ee6dae); outline-offset: -2px; }
-.lookbook-trait-tag-editor > :not(summary) { margin: 0 5px 5px; }
-.lookbook-trait-tag-editor .tag-picker-options { gap: 2px; }
+.lookbook-trait-tag-editor > :not(summary) { margin: 0 4px 3px; }
 .tag-picker-apply { min-height: 44px; margin: 2px 5px 5px; padding: 4px 9px; font-size: 12px; }
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }
@@ -329,16 +328,19 @@
   .layer-tag-fallback + .layer-tag-previews { display: inline-flex; }
 }
 #layerTagsDialog {
-  width: min(420px, calc(100% - 24px)); padding: 13px; max-width: calc(100% - 24px);
+  width: min(420px, calc(100% - 24px)); padding: 10px; max-width: calc(100% - 24px);
   max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: auto;
 }
-#layerTagsForm { display: grid; gap: 8px; }
+#layerTagsForm { display: grid; gap: 4px; }
 #layerTagsForm h2, #layerTagsForm p { margin: 0; overflow-wrap: anywhere; }
 #layerTagsForm h2 { font-size: 19px; }
 #layerTagsPath, #layerTagsInherited { color: var(--scheme-muted, #beb2bf); font-size: 12px; }
 #layerTagsAssigned:empty { display: none; }
-#layerTagsForm :is(input, select) { min-width: 0; min-height: 44px; width: 100%; font-size: 16px; }
+#layerTagsNew { min-width: 0; min-height: 44px; width: 100%; font-size: 16px; }
+#layerTagsForm .lookbook-assigned-tags, .lookbook-trait-tag-editor .lookbook-assigned-tags { gap: 2px; }
+.lookbook-assigned-tags button { --tag-icon-size: 21px; gap: 5px; }
+.lookbook-assigned-tags small { display: block; font-size: 10px; color: var(--scheme-muted, #beb2bf); }
 #layerTagsPropagateLabel { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--scheme-text, #f0edf2); font-size: 13px; }
 #layerTagsPropagateLabel[hidden] { display: none; }
 #layerTagsForm #layerTagsPropagate { flex: none; width: 18px; min-height: 0; height: 18px; margin: 0; accent-color: var(--ui-feedback, #ee6dae); }
-#layerTagsForm .dialog-actions { margin-top: 3px; }
+#layerTagsForm .dialog-actions { margin-top: 1px; }

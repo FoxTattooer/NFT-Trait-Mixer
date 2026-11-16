@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.159 | checkpoint/v0.7.159-prejmenovani-a-stitky-slozek | Přejmenování klepnutím na název, kompaktnější výběr štítků a místní odebrání zděděných štítků. |
 | 0.7.158 | checkpoint/v0.7.158-pritmeni-rozhrani | Jemně tmavší pozadí, lišty a panely. Papír v Lookbooku má mírně tlumený tón. |
 | 0.7.157 | checkpoint/v0.7.157-nahled-duplicit | Tlačítko Náhled vrstvy na každé kartě při porovnávání duplicit. |
 | 0.7.156 | checkpoint/v0.7.156-showroom-rezim-mint | Animované odhalování náhodně vylosované postavy podle rarit a pravidel. Závěr umožňuje stažení PNG. |

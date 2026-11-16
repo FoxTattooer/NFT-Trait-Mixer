@@ -35,6 +35,31 @@ test('category and nested folder tags are inherited and survive saving, undo cop
   assert.deepEqual(original.organizer.a.folders[1].lookbookTags, ['Povrch', 'SKIN']);
   assert.deepEqual(original.cats[0].lookbookTags, ['Skin']);
 });
+test('tag exclusions survive JSON and undo copies and do not affect sibling branches', () => {
+  const p = project();
+  const cat = p.cats[0];
+  cat.lookbookTags = ['Hair', 'Headwear'];
+  const trait = cat.traits[0];
+  const outside = { id: 'outside', name: 'Mimo složku', data: png };
+  cat.traits.push(outside);
+  const folder = { id: 'parent', name: 'Spaghetti', parentId: null };
+  const nested = { id: 'child', name: 'Basic', parentId: 'parent' };
+  p.organizer.a = { folders: [folder, nested], assignments: { red: 'child' } };
+  const change = M.editLayerTags(folder, ['hair'], M.layerTagInheritance(p, cat, folder, 'folder').tags, true);
+  M.setLayerTags(folder, change.assigned, change.excluded);
+  assert.deepEqual(M.layerTagDescendants(p, cat, folder, 'folder'), [nested, trait]);
+  assert.deepEqual(M.effectiveLayerTags(p, cat, trait), ['Headwear']);
+  assert.deepEqual(M.effectiveLayerTags(p, cat, outside), ['Hair', 'Headwear']);
+  const saved = M.normalize(JSON.parse(JSON.stringify(p)));
+  assert.deepEqual(saved.organizer.a.folders[0].excludedLookbookTags, ['hair']);
+  assert.deepEqual(M.effectiveLayerTags(saved, saved.cats[0], saved.cats[0].traits[0]), ['Headwear']);
+  const clone = M.clone(saved);
+  clone.organizer.a.folders[0].excludedLookbookTags.push('Headwear');
+  assert.deepEqual(saved.organizer.a.folders[0].excludedLookbookTags, ['hair']);
+  const restore = M.editLayerTags(folder, ['Hair'], M.layerTagInheritance(p, cat, folder, 'folder').tags, false);
+  M.setLayerTags(folder, restore.assigned, restore.excluded);
+  assert.deepEqual(M.effectiveLayerTags(p, cat, trait), ['Hair', 'Headwear']);
+});
 test('moving a whole category preserves the subtree and updates selections and rules', () => {
   const p = project();
   Object.assign(p.cats[0], { draw:true, flag:'blue', name:'A'.repeat(140) });

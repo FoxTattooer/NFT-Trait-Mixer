@@ -5,7 +5,10 @@
   const uid = () => globalThis.crypto?.randomUUID?.() || `trait-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, selectedExtras: {}, rules: [], snapshots: [], lookbookCards: [], organizer: {}, rulesEnabled: true });
   const hasContent = p => !!(p?.cats?.length || p?.lookbookCards?.length);
-  const cloneTags = item => item.lookbookTags ? { lookbookTags: [...item.lookbookTags] } : {};
+  const cloneTags = item => ({
+    ...(item.lookbookTags ? { lookbookTags: [...item.lookbookTags] } : {}),
+    ...(item.excludedLookbookTags ? { excludedLookbookTags: [...item.excludedLookbookTags] } : {}),
+  });
   const cloneCardItem = item => ({ ...item, ...cloneTags(item), layers: [...item.layers] });
   const cloneLookbookCards = (cards = []) => cards.map(card => ({ ...cloneCardItem(card), variants: card.variants.map(cloneCardItem) }));
   function clone(p) {
@@ -126,20 +129,27 @@
     const keys = new Set([...(item.lookbookTags || []), ...inherited].map(lookbookTagKey));
     return [...selected].every(key => keys.has(key));
   }
-  function inheritedLayerTags(project, cat, item, kind = 'trait') {
-    if (kind === 'category') return [];
+  function layerTagInheritance(project, cat, item, kind = 'trait') {
+    const blocked = new Set();
+    if (kind === 'category') return { tags: [], blocked };
     const organizer = project.organizer?.[cat.id];
     let parent = kind === 'folder' ? item.parentId : organizer?.assignments[item.id];
-    const categoryTags = cat.lookbookTags || [];
-    if (!parent) return categoryTags;
-    const tags = [...categoryTags];
+    const tags = [];
+    const allowed = layer => (layer.lookbookTags || []).filter(tag => !blocked.has(lookbookTagKey(tag)));
     while (parent) {
       const folder = organizer?.folders.find(candidate => candidate.id === parent);
       if (!folder) break;
-      tags.push(...(folder.lookbookTags || []));
+      tags.push(...allowed(folder));
+      for (const tag of folder.excludedLookbookTags || []) blocked.add(lookbookTagKey(tag));
       parent = folder.parentId;
     }
-    return normalizeLookbookTags(tags);
+    return { tags: normalizeLookbookTags([...allowed(cat), ...tags]), blocked };
+  }
+  function inheritedLayerTags(project, cat, item, kind = 'trait') {
+    const { tags } = layerTagInheritance(project, cat, item, kind);
+    if (!item.excludedLookbookTags?.length) return tags;
+    const excluded = new Set(item.excludedLookbookTags.map(lookbookTagKey));
+    return tags.filter(tag => !excluded.has(lookbookTagKey(tag)));
   }
   function effectiveLayerTags(project, cat, item, kind = 'trait') {
     const inherited = inheritedLayerTags(project, cat, item, kind);
@@ -152,6 +162,45 @@
   function lookbookTagFields(item) {
     const lookbookTags = normalizeLookbookTags(item.lookbookTags);
     return lookbookTags.length ? { lookbookTags } : {};
+  }
+  function layerTagFields(item) {
+    const fields = lookbookTagFields(item);
+    const own = new Set((fields.lookbookTags || []).map(lookbookTagKey));
+    const excludedLookbookTags = normalizeLookbookTags(item.excludedLookbookTags)
+      .filter(tag => !own.has(lookbookTagKey(tag)));
+    return excludedLookbookTags.length ? { ...fields, excludedLookbookTags } : fields;
+  }
+  function setLayerTags(item, assigned, excluded) {
+    if (assigned.length) item.lookbookTags = assigned;
+    else delete item.lookbookTags;
+    if (excluded.length) item.excludedLookbookTags = excluded;
+    else delete item.excludedLookbookTags;
+  }
+  function editLayerTags(item, values, inherited, remove) {
+    const keys = new Set(values.map(lookbookTagKey));
+    const inheritedKeys = new Set(inherited.map(lookbookTagKey));
+    const current = item.lookbookTags || [];
+    const exclusions = item.excludedLookbookTags || [];
+    const assigned = remove ? current.filter(tag => !keys.has(lookbookTagKey(tag)))
+      : normalizeLookbookTags([...current, ...values.filter(tag => !inheritedKeys.has(lookbookTagKey(tag)))]);
+    const excluded = remove ? normalizeLookbookTags([...exclusions, ...values.filter(tag => inheritedKeys.has(lookbookTagKey(tag)))])
+      : exclusions.filter(tag => !keys.has(lookbookTagKey(tag)));
+    return { assigned, excluded };
+  }
+  function layerTagDescendants(project, cat, item, kind) {
+    if (kind === 'trait') return [];
+    const { folders = [], assignments = {} } = project.organizer?.[cat.id] || {};
+    if (kind === 'category') return [...folders, ...cat.traits];
+    const branches = new Set([item.id]);
+    for (const id of branches) {
+      for (const folder of folders) {
+        if (folder.parentId === id) branches.add(folder.id);
+      }
+    }
+    return [
+      ...folders.filter(folder => folder !== item && branches.has(folder.id)),
+      ...cat.traits.filter(trait => branches.has(assignments[trait.id])),
+    ];
   }
   const validRarityWeight = value => Number.isFinite(value) && value >= 0 && value <= MAX_RARITY_WEIGHT;
   const rarityWeight = trait => validRarityWeight(trait.rarityWeight) ? trait.rarityWeight : DEFAULT_RARITY_WEIGHT;
@@ -268,7 +317,7 @@
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
         return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
-          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t), ...lookbookTagFields(t),
+          ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t), ...layerTagFields(t),
           ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
     });
@@ -286,7 +335,7 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 200), ...psdOrigin(f), ...layerMarks(f), ...lookbookTagFields(f),
+        return { id: unique(f.id), name: f.name.trim().slice(0, 200), ...psdOrigin(f), ...layerMarks(f), ...layerTagFields(f),
           parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
@@ -525,7 +574,7 @@
     return merge;
   }
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
-    DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
+    layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

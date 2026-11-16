@@ -274,6 +274,10 @@ body.compact-workspace #categoryOverview {padding:0 2px 2px}
 }
 .layer-tree-more .icon {width:19px;height:19px}
 .layer-tree-label {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+#appLayout:not([data-layer-bulk]) [data-layer-rename] {cursor:pointer}
+@media (hover:hover) and (pointer:fine) {
+  #appLayout:not([data-layer-bulk]) [data-layer-rename]:hover {text-decoration:underline;text-underline-offset:3px}
+}
 .layer-tree-folder {background:linear-gradient(150deg,#241a27,#19141d)}
 .layer-tree-folder .layer-tree-main {color:#efc7e0}
 .layer-tree-folder .layer-tree-main[aria-expanded=true] .icon:first-child {transform:rotate(90deg)}

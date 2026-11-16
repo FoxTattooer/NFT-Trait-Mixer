@@ -121,6 +121,7 @@
         }
       }
       tagChanges(changes, 'Štítky', from.lookbookTags, to.lookbookTags);
+      tagChanges(changes, 'Výjimky z dědění štítků', from.excludedLookbookTags, to.excludedLookbookTags);
       if (marks.some(mark => Boolean(from[mark]) !== Boolean(to[mark]))) {
         field(changes, 'Označení', joined(marks.filter(mark => from[mark]).map(mark => mark.toUpperCase())),
           joined(marks.filter(mark => to[mark]).map(mark => mark.toUpperCase())));

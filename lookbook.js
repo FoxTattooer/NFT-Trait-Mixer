@@ -61,7 +61,7 @@
       : traits;
   }
   let ruleTags;
-  let layerTagTarget, draftLayerTags = [];
+  let layerTagTarget, draftLayerTagItem = {};
   let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
 
   const label = item => item.lookbookName || item.name;
@@ -85,12 +85,25 @@
     return { cat, item };
   }
 
-  function showLayerTagDialog(title, path, tags = [], inherited = []) {
+  function draftEffectiveTags() {
+    const excluded = new Set((draftLayerTagItem.excludedLookbookTags || []).map(M.lookbookTagKey));
+    return M.normalizeLookbookTags([
+      ...(draftLayerTagItem.lookbookTags || []),
+      ...layerTagTarget.inherited.filter(tag => !excluded.has(M.lookbookTagKey(tag))),
+    ]);
+  }
+
+  function showLayerTagDialog(title, path, item = {}, inherited = []) {
     $('layerTagsTitle').textContent = title;
     $('layerTagsPath').textContent = path;
     $('layerTagsNew').value = '';
-    draftLayerTags = [...tags];
+    draftLayerTagItem = {
+      lookbookTags: [...(item.lookbookTags || [])],
+      excludedLookbookTags: [...(item.excludedLookbookTags || [])],
+    };
     layerTagTarget.inherited = inherited;
+    layerTagTarget.initialOwnTags = draftLayerTagItem.lookbookTags;
+    layerTagTarget.initialTags = draftEffectiveTags();
     const selectedIds = new Set(layerTagTarget.ids);
     const copyable = layerTagTarget.kind === 'category' || state.cats.some(cat => selectedIds.has(cat.id));
     $('layerTagsPropagateLabel').hidden = !copyable;
@@ -98,24 +111,30 @@
     $('layerTagsPropagateText').textContent = layerTagTarget.ids
       ? 'Přidat i všem traitům ve vybraných kategoriích' : 'Přidat i všem traitům v kategorii';
     const options = $('layerTagsOptions');
-    const inheritedKeys = new Set(inherited.map(M.lookbookTagKey));
-    const available = availableTagOptions().filter(([key]) => !inheritedKeys.has(key));
-    options.innerHTML = illustratedTagPicker(available, true);
-    options.hidden = !available.length;
+    const available = new Map(availableTagOptions());
+    for (const tag of [...inherited, ...draftLayerTagItem.excludedLookbookTags]) {
+      const key = M.lookbookTagKey(tag);
+      if (!available.has(key)) available.set(key, tag);
+    }
+    options.innerHTML = illustratedTagPicker([...available].sort(([, a], [, b]) => a.localeCompare(b, 'cs')), true);
+    options.hidden = !available.size;
     renderLayerTagSelection();
     layerTagsDialog.showModal();
     $('layerTagsTitle').focus({ preventScroll: true });
   }
 
   function renderLayerTagSelection() {
-    $('layerTagsAssigned').innerHTML = draftLayerTags.map(tag =>
-      `<button type="button" data-layer-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
+    const tags = draftEffectiveTags();
+    const own = new Set((draftLayerTagItem.lookbookTags || []).map(M.lookbookTagKey));
+    $('layerTagsAssigned').innerHTML = tags.map(tag =>
+      `<button type="button" data-layer-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}${own.has(M.lookbookTagKey(tag)) ? '' : ' <small>Zděděný</small>'}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
     ).join('');
-    const selected = new Set(draftLayerTags.map(M.lookbookTagKey));
-    const inherited = layerTagTarget.inherited.filter(tag => !selected.has(M.lookbookTagKey(tag)));
+    const selected = new Set(tags.map(M.lookbookTagKey));
     const inheritedField = $('layerTagsInherited');
-    inheritedField.hidden = !inherited.length;
-    inheritedField.textContent = inherited.length ? 'Z kategorie nebo složky · ' + inherited.join(' · ') : '';
+    const branch = ['category', 'folder'].includes(layerTagTarget.kind);
+    const removed = branch && layerTagTarget.initialTags.some(tag => !selected.has(M.lookbookTagKey(tag)));
+    inheritedField.hidden = !removed;
+    inheritedField.textContent = removed ? 'Odebrané štítky se odeberou i z obsahu této složky.' : '';
     for (const input of $('layerTagsOptions').querySelectorAll('[data-layer-tag-option]')) {
       input.checked = selected.has(M.lookbookTagKey(input.value));
     }
@@ -128,7 +147,7 @@
     if (!item) { layerTagTarget = undefined; return; }
     const { folders, assignments } = organizerFolders(cat.id);
     const path = kind === 'category' ? cat.name : [cat.name, organizerPath(folders, kind === 'folder' ? id : assignments[id]), kind === 'trait' ? item.name : ''].filter(Boolean).join(' / ');
-    showLayerTagDialog('Štítky', path, item.lookbookTags, M.inheritedLayerTags(state, cat, item, kind));
+    showLayerTagDialog('Štítky', path, item, M.layerTagInheritance(state, cat, item, kind).tags);
   }
 
   function openBulkLayerTags(ids, returnTo) {
@@ -137,13 +156,16 @@
     showLayerTagDialog('Přidat štítky', 'Vybráno ' + counted(ids.length, 'položka', 'položky', 'položek'));
   }
 
+  function layerTagsChanged(item, assigned, excluded) {
+    return JSON.stringify([assigned, excluded]) !== JSON.stringify([item.lookbookTags || [], item.excludedLookbookTags || []]);
+  }
+
   function layerTagAdditions(items, tags) {
     const updates = [];
     if (!tags.length) return updates;
     for (const item of items) {
-      const current = item.lookbookTags || [];
-      const next = M.normalizeLookbookTags([...current, ...tags]);
-      if (next.length > current.length) updates.push([item, next]);
+      const { assigned, excluded } = M.editLayerTags(item, tags, [], false);
+      if (layerTagsChanged(item, assigned, excluded)) updates.push([item, assigned, excluded]);
     }
     return updates;
   }
@@ -151,29 +173,35 @@
   function saveBulkLayerTags(ids) {
     const index = layerItemIndex();
     const items = new Set(ids.map(id => index.get(id)).filter(Boolean));
-    if ($('layerTagsPropagate').checked) {
+    const tags = draftLayerTagItem.lookbookTags || [];
+    const updates = layerTagAdditions(items, tags);
+    if ($('layerTagsPropagate').checked && tags.length) {
       for (const cat of state.cats) {
-        if (items.has(cat)) for (const trait of cat.traits) items.add(trait);
+        if (items.has(cat)) updates.push(...categoryTagCopies(cat, tags, items));
       }
     }
-    const updates = layerTagAdditions(items, draftLayerTags);
     if (!updates.length) return;
     change(() => {
-      for (const [item, tags] of updates) item.lookbookTags = tags;
+      for (const update of updates) M.setLayerTags(...update);
     }, `Štítky přidány · ${counted(updates.length, 'položka', 'položky', 'položek')}`, true);
+  }
+
+  function categoryTagCopies(cat, tags, skip = new Set()) {
+    return cat.traits.flatMap(trait => {
+      if (skip.has(trait)) return [];
+      const { blocked } = M.layerTagInheritance(state, cat, trait);
+      for (const tag of trait.excludedLookbookTags || []) blocked.add(M.lookbookTagKey(tag));
+      return layerTagAdditions([trait], tags.filter(tag => !blocked.has(M.lookbookTagKey(tag))));
+    });
   }
 
   function addLayerDraftTag(value) {
     const [tag] = M.normalizeLookbookTags([value]);
     if (!layerTagTarget || !tag) return;
-    if (!layerTagTarget.ids) {
-      const { cat, item } = resolveLayerTagTarget();
-      if (!item) return;
-      const key = M.lookbookTagKey(tag);
-      const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
-      if (inherited.some(label => M.lookbookTagKey(label) === key)) return;
-    }
-    draftLayerTags = M.normalizeLookbookTags([...draftLayerTags, tag]);
+    const key = M.lookbookTagKey(tag);
+    const original = layerTagTarget.initialOwnTags.find(label => M.lookbookTagKey(label) === key);
+    const { assigned, excluded } = M.editLayerTags(draftLayerTagItem, [original || tag], original ? [] : layerTagTarget.inherited, false);
+    M.setLayerTags(draftLayerTagItem, assigned, excluded);
   }
 
   function addNewLayerTag() {
@@ -192,8 +220,8 @@
     renderLayerTagSelection();
   });
   function removeLayerDraftTag(value) {
-    const key = M.lookbookTagKey(value);
-    draftLayerTags = draftLayerTags.filter(tag => M.lookbookTagKey(tag) !== key);
+    const { assigned, excluded } = M.editLayerTags(draftLayerTagItem, [value], layerTagTarget.inherited, true);
+    M.setLayerTags(draftLayerTagItem, assigned, excluded);
   }
   $('layerTagsNew').addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing) return;
@@ -219,16 +247,23 @@
       return;
     }
     const { cat, item } = resolveLayerTagTarget();
-    const edited = item && JSON.stringify(draftLayerTags) !== JSON.stringify(item.lookbookTags || []);
+    if (!item) { layerTagsDialog.close(); return; }
+    const assigned = draftLayerTagItem.lookbookTags || [], excluded = draftLayerTagItem.excludedLookbookTags || [];
+    const edited = layerTagsChanged(item, assigned, excluded);
+    const selected = new Set(draftEffectiveTags().map(M.lookbookTagKey));
+    const removed = new Set(layerTagTarget.initialTags.map(M.lookbookTagKey).filter(key => !selected.has(key)));
     const copy = layerTagTarget.kind === 'category' && cat && $('layerTagsPropagate').checked;
-    const updates = copy ? layerTagAdditions(cat.traits, draftLayerTags) : [];
-    if (edited || updates.length) {
+    const updates = copy ? categoryTagCopies(cat, assigned) : [];
+    const descendants = removed.size ? M.layerTagDescendants(state, cat, item, layerTagTarget.kind) : [];
+    if (edited || updates.length || descendants.length) {
       change(() => {
-        if (edited) {
-          if (draftLayerTags.length) item.lookbookTags = [...draftLayerTags];
-          else delete item.lookbookTags;
+        if (edited) M.setLayerTags(item, assigned, excluded);
+        for (const update of updates) M.setLayerTags(...update);
+        // Category-wide assignment previously copied tags directly to each trait.
+        for (const child of descendants) {
+          const own = (child.lookbookTags || []).filter(tag => !removed.has(M.lookbookTagKey(tag)));
+          M.setLayerTags(child, own, child.excludedLookbookTags || []);
         }
-        for (const [trait, tags] of updates) trait.lookbookTags = tags;
       }, 'Štítky uloženy', true);
       layerTagTarget.onSave?.();
     }
@@ -238,7 +273,7 @@
     if (layerTagsDialog.open) return;
     const target = layerTagTarget;
     layerTagTarget = undefined;
-    draftLayerTags = [];
+    draftLayerTagItem = {};
     if (!target) return;
     const visible = target.returnTo?.isConnected ? target.returnTo : dialog.open
       ? dialog.querySelector(`[data-lookbook-scope="${target.kind}"]:not([hidden])`) || $('lookbookTitle')
@@ -281,21 +316,27 @@
   }
 
   function tagEditor(item, inherited = [], expanded = false) {
+    const multiple = view === 'traits';
     const assigned = [...(item.lookbookTags || [])].sort((a, b) => a.localeCompare(b, 'cs'));
     const assignedKeys = new Set(assigned.map(M.lookbookTagKey));
     const inheritedOnly = inherited.filter(tag => !assignedKeys.has(M.lookbookTagKey(tag)));
     const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
     const keys = new Set(effective.map(M.lookbookTagKey));
-    const available = availableTagOptions().filter(([key]) => !keys.has(key));
-    const multiple = view === 'traits';
+    const available = new Map(availableTagOptions());
+    if (multiple) for (const tag of item.excludedLookbookTags || []) {
+      const key = M.lookbookTagKey(tag);
+      if (!available.has(key)) available.set(key, tag);
+    }
+    const options = [...available].filter(([key]) => !keys.has(key)).sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
+    const removable = multiple ? [...assigned, ...inheritedOnly] : assigned;
     const action = multiple ? '<button type="button" class="tag-picker-apply" data-lookbook-tag-apply disabled>Přiřadit vybrané</button>' : '';
     return `<details class="lookbook-tag-editor${multiple ? ' lookbook-trait-tag-editor' : ''}" ${expanded ? 'open' : ''}>
       <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
-      ${inheritedOnly.length ? `<p class="lookbook-help">${view === 'cards' ? 'Z karty' : 'Z kategorie nebo složky'} · ${inheritedOnly.map(esc).join(' · ')}</p>` : ''}
-      ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
-        `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
+      ${!multiple && inheritedOnly.length ? `<p class="lookbook-help">Z karty · ${inheritedOnly.map(esc).join(' · ')}</p>` : ''}
+      ${removable.length ? `<div class="lookbook-assigned-tags">${removable.map(tag =>
+        `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}${assignedKeys.has(M.lookbookTagKey(tag)) ? '' : ' <small>Zděděný</small>'}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
       ).join('')}</div>` : ''}
-      ${illustratedTagPicker(available, multiple, action)}
+      ${illustratedTagPicker(options, multiple, action)}
       <div class="lookbook-tag-add">
         <input type="text" aria-label="Nový štítek" placeholder="Nový štítek" maxlength="${M.LOOKBOOK_TAG_LIMIT}" data-lookbook-tag-input>
         <button type="button" data-lookbook-tag-add>Přidat</button>
@@ -310,22 +351,15 @@
   function editTags(values, remove = false, fromPicker = false) {
     if (busy) return;
     const { item, inherited } = view === 'cards' ? customCards.tagItem()
-      : { item: selectedTrait(), inherited: selectedTrait() ? M.inheritedLayerTags(state, category(), selectedTrait()) : [] };
+      : { item: selectedTrait(), inherited: selectedTrait() ? M.layerTagInheritance(state, category(), selectedTrait()).tags : [] };
     const tags = M.normalizeLookbookTags(values);
     if (!item || !tags.length) return;
-    const keys = new Set(tags.map(M.lookbookTagKey));
-    const inheritedKeys = new Set(inherited.map(M.lookbookTagKey));
     const picker = content.querySelector('.lookbook-trait-tag-editor .lookbook-tag-picker[open]');
     const pending = picker && !fromPicker ? new Set(checkedPickerTags(picker)) : null;
-    const current = item.lookbookTags || [];
-    const next = remove ? current.filter(label => !keys.has(M.lookbookTagKey(label)))
-      : M.normalizeLookbookTags([...current, ...tags.filter(tag => !inheritedKeys.has(M.lookbookTagKey(tag)))]);
-    if (next.length !== current.length) {
+    const { assigned, excluded } = M.editLayerTags(item, tags, view === 'cards' && remove ? [] : inherited, remove);
+    if (layerTagsChanged(item, assigned, excluded)) {
       if (view === 'traits') saveCard();
-      change(() => {
-        if (next.length) item.lookbookTags = next;
-        else delete item.lookbookTags;
-      }, 'Štítky uloženy', true);
+      change(() => M.setLayerTags(item, assigned, excluded), 'Štítky uloženy', true);
     }
     const filtered = tagFilters[view].size > 0;
     if (filtered) refreshResults();
@@ -336,7 +370,7 @@
     const selected = view === 'cards' ? customCards.tagItem().item : selectedTrait();
     const editor = content.querySelector('.lookbook-tag-editor');
     if (editor && item === selected) {
-      editor.outerHTML = tagEditor(item, inherited, true);
+      editor.outerHTML = tagEditor(item, view === 'traits' ? M.inheritedLayerTags(state, category(), item) : inherited, true);
       const input = content.querySelector('[data-lookbook-tag-input]');
       const updatedPicker = content.querySelector('.lookbook-tag-picker');
       if (pending && updatedPicker) {
