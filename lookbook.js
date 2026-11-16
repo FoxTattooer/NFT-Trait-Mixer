@@ -11,6 +11,9 @@
   const pageSize = 4;
   const tagFilters = { traits: new Set(), cards: new Set() };
   const filterRoot = $('lookbookTags');
+  const layerFilterBar = $('lookbookLayerFilters'), categoryEye = $('lookbookCategoryView');
+  const markFilters = new Map();
+  let categoryView = 'all';
   const assignGroup = $('lookbookAssignTagGroup'), renameGroup = $('lookbookRenameTagGroup');
   const layerTagsDialog = $('layerTagsDialog');
   const projectCards = () => state.lookbookCards.flatMap(card => [card, ...card.variants]);
@@ -45,9 +48,17 @@
   }
   content.addEventListener('toggle', revealTagOptions, true);
   layerTagsDialog.addEventListener('toggle', revealTagOptions, true);
-  const visibleTraits = cat => tagFilters.traits.size
-    ? cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait)))
-    : cat.traits;
+  function traitsMatchingLayerFilters(cat) {
+    if (!categoryMatchesVisibility(cat, categoryView)) return [];
+    const ids = matchingStatusLayerIds(cat, categoryView, markFilters);
+    return ids ? cat.traits.filter(trait => ids.has(trait.id)) : cat.traits;
+  }
+  function visibleTraits(cat) {
+    const traits = traitsMatchingLayerFilters(cat);
+    return tagFilters.traits.size
+      ? traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait)))
+      : traits;
+  }
   let ruleTags;
   let layerTagTarget, draftLayerTags = [];
   let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
@@ -236,6 +247,10 @@
   });
 
   function renderFilters() {
+    layerFilterBar.hidden = view !== 'traits' || !state.cats.length;
+    if (!layerFilterBar.hidden) {
+      renderLayerFilterControls(categoryEye, $('lookbookStatusFilters'), $('lookbookLayerFilterStatus'), categoryView, markFilters);
+    }
     const tags = view === 'traits' ? M.layerTagOptions(state) : M.lookbookTagOptions(view === 'cards' ? projectCards() : []);
     const selected = tagFilters[view] || new Set();
     renderTagFilter(filterRoot, tags, selected, 'Filtrovat štítky');
@@ -314,7 +329,7 @@
       }, 'Štítky uloženy', true);
     }
     const filtered = tagFilters[view].size > 0;
-    if (filtered) refreshTagResults();
+    if (filtered) refreshResults();
     else {
       renderFilters();
       if (view === 'traits') updateTraitTagPreviews(item);
@@ -329,12 +344,15 @@
     } else filterRoot.querySelector('summary').focus({ preventScroll: true });
   }
 
-  function refreshTagResults() {
+  function refreshResults(anchor) {
+    const top = anchor?.getBoundingClientRect().top;
     if (view === 'traits') {
       const cat = category();
       if (cat) selectTrait(cat, traitId);
     }
     render();
+    showChapterInStrip();
+    if (anchor && !anchor.hidden) scroll.scrollTop += anchor.getBoundingClientRect().top - top;
   }
   function chance(trait, total, weight = M.rarityWeight(trait)) {
     if (trait.hidden || !total || !weight) return percent.format(0);
@@ -409,8 +427,7 @@
     else card.querySelector('.lookbook-card-caption').insertAdjacentHTML('beforeend', traitTagPreview(cat, trait));
   }
 
-  function renderTraits(cat) {
-    const matches = visibleTraits(cat);
+  function renderTraits(cat, matches) {
     const pages = Math.ceil(matches.length / pageSize);
     page = Math.max(0, Math.min(page, pages - 1));
     const traits = matches.slice(page * pageSize, (page + 1) * pageSize);
@@ -501,7 +518,14 @@
       customCards?.render();
       return;
     }
-    const items = view === 'traits' ? state.cats.filter(cat => visibleTraits(cat).length) : state.snapshots;
+    const matches = new Map();
+    if (view === 'traits') {
+      for (const cat of state.cats) {
+        const traits = visibleTraits(cat);
+        if (traits.length) matches.set(cat, traits);
+      }
+    }
+    const items = view === 'traits' ? [...matches.keys()] : state.snapshots;
     const id = view === 'traits' ? categoryId : snapshotId;
     const selected = items.find(item => item.id === id) || items[0];
     const left = chapters.scrollLeft;
@@ -509,14 +533,17 @@
     chapters.innerHTML = items.map(item => chapterButton(item, selected)).join('');
     chapters.scrollLeft = left;
     if (!selected) {
-      const emptyTraits = tagFilters.traits.size ? 'Žádný trait nemá všechny vybrané štítky.' : 'Přidej do projektu traity a zobrazí se tady.';
+      const filtered = categoryView !== 'all' || markFilters.size;
+      const emptyTraits = filtered ? 'Vybraným filtrům neodpovídají žádné traity.'
+        : tagFilters.traits.size ? 'Žádný trait nemá všechny vybrané štítky.' : 'Přidej do projektu traity a zobrazí se tady.';
       detailArea.replaceChildren();
       sheetArea.innerHTML = view === 'traits'
         ? `<p class="lookbook-empty">${emptyTraits}</p>`
         : '<p class="lookbook-empty">Ulož sestavu v editoru a zobrazí se tady.</p>';
     } else if (view === 'traits') {
+      if (categoryId !== selected.id) page = 0;
       categoryId = selected.id;
-      renderTraits(selected);
+      renderTraits(selected, matches.get(selected));
     } else {
       snapshotId = selected.id;
       renderLooks(selected);
@@ -611,6 +638,19 @@
     }
   });
 
+  layerFilterBar.addEventListener('click', event => {
+    const control = event.target.closest('button');
+    if (!control || view !== 'traits') return;
+    saveCard();
+    if (control === categoryEye) {
+      categoryView = nextCategoryView(categoryView, markFilters).id;
+      markFilters.clear();
+    } else {
+      categoryView = 'all';
+      cycleLayerMarkFilter(markFilters, control.dataset.id);
+    }
+    refreshResults(layerFilterBar);
+  });
   filterRoot.addEventListener('click', event => {
     const toggle = event.target.closest('[data-tag-group-toggle]');
     if (toggle) {
@@ -621,10 +661,8 @@
     const control = event.target.closest('[data-tag-filter]');
     if (!control) return;
     saveCard();
-    const top = filterRoot.getBoundingClientRect().top;
     toggleTagFilter(tagFilters[view], control.value);
-    refreshTagResults();
-    if (!filterRoot.hidden) scroll.scrollTop += filterRoot.getBoundingClientRect().top - top;
+    refreshResults(filterRoot);
   });
   assignGroup.elements.namedItem('tag').addEventListener('change', showAssignedGroup);
   $('lookbookTagGroups').addEventListener('toggle', event => {
@@ -660,7 +698,7 @@
     const scope = event.target.closest('[data-lookbook-scope]');
     if (scope) {
       saveCard();
-      openLayerTags(scope.dataset.lookbookScope, categoryId, scope.dataset.id, refreshTagResults);
+      openLayerTags(scope.dataset.lookbookScope, categoryId, scope.dataset.id, refreshResults);
       return;
     }
     const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove], [data-tag-option]');
@@ -689,6 +727,10 @@
       const target = M.locate(state, lookbookJump);
       if (!target) return;
       view = 'traits';
+      if (!traitsMatchingLayerFilters(target.cat).includes(target.trait)) {
+        categoryView = 'all';
+        markFilters.clear();
+      }
       if (!M.matchesLookbookTags(target.trait, tagFilters.traits, M.inheritedLayerTags(state, target.cat, target.trait))) tagFilters.traits.clear();
       selectTrait(target.cat, target.trait.id);
     }

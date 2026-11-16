@@ -36,7 +36,13 @@
 .lookbook-chapters button[aria-pressed="true"] { border-color: var(--ui-feedback, #d071a4); background: #392934; color: #fff0f7; }
 .lookbook-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
 .lookbook-layout > :empty { display: none; }
-.lookbook-layout + .lookbook-segments { margin-top: 8px; }
+.lookbook-layer-filters:not([hidden]) { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 6px; }
+.lookbook-layer-filters > .icon-button { width: 44px; min-height: 44px; }
+.lookbook-layer-filters > .icon-button[data-filtered] {
+  border-color: var(--ui-feedback, #d071a4); background: var(--ui-feedback-wash, #392934); color: var(--ui-feedback, #d071a4);
+}
+.lookbook-layer-filters[hidden] + .lookbook-filter-bar:not([hidden]),
+.lookbook-filter-bar[hidden] + .lookbook-segments { margin-top: 8px; }
 .lookbook-empty { margin: 6px 0; padding: 10px; color: #d1c6cd; font-size: 13px; }
 .lookbook-sheet {
   --paper: #ded8c9; --ink: #252321; --muted-ink: #514940; --rule: #a69a87;
@@ -165,7 +171,7 @@
   .lookbook-poster { width: min(100%, 38dvh); }
 }
 
-.lookbook-filter-bar {
+.lookbook-filter-bar:not([hidden]) {
   display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; margin-bottom: 8px;
 }
 .lookbook-filter-bar > button { min-height: 42px; padding: 5px 9px; font-size: 12px; }

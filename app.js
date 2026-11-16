@@ -422,13 +422,11 @@ function resetCategoryFilters() {
   categoryStatusFilters.clear();
   filteredLayerIds.clear();
 }
-function matchingLayerIds(category) {
-  if (!categoryStatusFilters.size && categoryFilter !== 'unmarked') return null;
-  if (filteredLayerIds.has(category.id)) return filteredLayerIds.get(category.id);
-
+function matchingStatusLayerIds(category, view, statusFilters) {
+  if (!statusFilters.size && view !== 'unmarked') return null;
   const included = [], excluded = [];
-  for (const [mark, mode] of categoryStatusFilters) (mode === 'include' ? included : excluded).push(mark);
-  if (categoryFilter === 'unmarked') excluded.push(...Object.keys(layerStatusLabels));
+  for (const [mark, mode] of statusFilters) (mode === 'include' ? included : excluded).push(mark);
+  if (view === 'unmarked') excluded.push(...Object.keys(layerStatusLabels));
   const ids = new Set();
   const children = M.layerChildren(state, category);
   function visit(item, inherited, parentId) {
@@ -444,36 +442,46 @@ function matchingLayerIds(category) {
     return hasMatch;
   }
   visit(category, false, null);
-  filteredLayerIds.set(category.id, ids);
   return ids;
 }
+function matchingLayerIds(category) {
+  if (!categoryStatusFilters.size && categoryFilter !== 'unmarked') return null;
+  if (!filteredLayerIds.has(category.id)) {
+    filteredLayerIds.set(category.id, matchingStatusLayerIds(category, categoryFilter, categoryStatusFilters));
+  }
+  return filteredLayerIds.get(category.id);
+}
+function categoryMatchesVisibility(category, view) {
+  if (view === 'visible') return category.visible !== false;
+  if (view === 'hidden') return category.visible === false;
+  return true;
+}
 function categoryPassesFilter(category) {
-  if (categoryFilter === 'visible') return category.visible !== false;
-  if (categoryFilter === 'hidden') return category.visible === false;
-  return matchingLayerIds(category)?.has(category.id) ?? true;
+  return categoryMatchesVisibility(category, categoryFilter) && (matchingLayerIds(category)?.has(category.id) ?? true);
 }
 function listedTraits(category) {
   const ids = matchingLayerIds(category);
   return ids ? category.traits.filter(trait => ids.has(trait.id)) : category.traits;
 }
-function nextCategoryView() {
-  if (categoryStatusFilters.size) return categoryViewModes[0];
-  const index = categoryViewModes.findIndex(mode => mode.id === categoryFilter);
+function nextCategoryView(view, statusFilters) {
+  if (statusFilters.size) return categoryViewModes[0];
+  const index = categoryViewModes.findIndex(mode => mode.id === view);
   return categoryViewModes[(index + 1) % categoryViewModes.length];
 }
-function renderCategoryFilters() {
-  const eye = $('layerReviewFilter');
-  const mode = categoryViewModes.find(mode => mode.id === categoryFilter);
+function cycleLayerMarkFilter(statusFilters, mark) {
+  if (statusFilters.get(mark) === 'exclude') statusFilters.delete(mark);
+  else statusFilters.set(mark, statusFilters.has(mark) ? 'exclude' : 'include');
+}
+function renderLayerFilterControls(eye, badges, announcement, view, statusFilters) {
+  const mode = categoryViewModes.find(mode => mode.id === view);
   eye.querySelector('use').setAttribute('href', '#i-' + mode.icon);
-  eye.title = `Zobrazení kategorií · ${categoryStatusFilters.size ? 'Podle označení' : mode.label}`;
-  eye.setAttribute('aria-label', `${eye.title}. Přepnout na ${nextCategoryView().label}`);
+  eye.title = `Zobrazení kategorií · ${statusFilters.size ? 'Podle označení' : mode.label}`;
+  eye.setAttribute('aria-label', `${eye.title}. Přepnout na ${nextCategoryView(view, statusFilters).label}`);
   eye.toggleAttribute('data-filtered', mode.id !== 'all');
-  const badges = $('categoryStatusFilters');
-  badges.hidden = !state.cats.length;
   const summaries = [];
   for (const control of badges.querySelectorAll('button')) {
     const mark = control.dataset.id;
-    const status = categoryStatusFilters.get(mark) || 'off';
+    const status = statusFilters.get(mark) || 'off';
     const label = layerStatusLabels[mark];
     const current = { off:'Vypnuto', include:'Jen označené', exclude:'Označené skryté' }[status];
     const next = { off:'Zobrazit označené', include:'Skrýt označené', exclude:'Zrušit filtr' }[status];
@@ -483,7 +491,12 @@ function renderCategoryFilters() {
     control.setAttribute('aria-label', control.title);
     if (status !== 'off') summaries.push(`${label}: ${current}`);
   }
-  $('categoryFilterStatus').textContent = summaries.join(' · ') || eye.title;
+  announcement.textContent = summaries.join(' · ') || eye.title;
+}
+function renderCategoryFilters() {
+  const badges = $('categoryStatusFilters');
+  badges.hidden = !state.cats.length;
+  renderLayerFilterControls($('layerReviewFilter'), badges, $('categoryFilterStatus'), categoryFilter, categoryStatusFilters);
 }
 function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
@@ -2591,13 +2604,12 @@ async function handleAction(action, id, element) {
     case 'filter-category-mark':
       if (!Object.hasOwn(layerStatusLabels, id)) break;
       categoryFilter = 'all';
-      if (categoryStatusFilters.get(id) === 'exclude') categoryStatusFilters.delete(id);
-      else categoryStatusFilters.set(id, categoryStatusFilters.has(id) ? 'exclude' : 'include');
+      cycleLayerMarkFilter(categoryStatusFilters, id);
       layerLimit = LAYER_BATCH;
       render(true);
       break;
     case 'cycle-category-view':
-      categoryFilter = nextCategoryView().id;
+      categoryFilter = nextCategoryView(categoryFilter, categoryStatusFilters).id;
       categoryStatusFilters.clear();
       layerLimit = LAYER_BATCH;
       render(true);

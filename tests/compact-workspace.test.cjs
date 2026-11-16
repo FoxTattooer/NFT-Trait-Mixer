@@ -890,8 +890,9 @@ click('#openLookbook');
 assert(get('lookbookDialog').open);
 assert(!get('openLookbook').closest('details').open);
 assert.deepEqual([...get('lookbookContent').children].map(element => element.id), ['lookbookDetailArea', 'lookbookChapters', 'lookbookSheetArea']);
-assert(get('lookbookContent').nextElementSibling.classList.contains('lookbook-segments'));
-assert.equal(get('lookbookContent').nextElementSibling.nextElementSibling, get('lookbookFilterBar'));
+assert.equal(get('lookbookContent').nextElementSibling, get('lookbookLayerFilters'));
+assert.equal(get('lookbookLayerFilters').nextElementSibling, get('lookbookFilterBar'));
+assert(get('lookbookFilterBar').nextElementSibling.classList.contains('lookbook-segments'));
 assert(find('#lookbookDetailArea [data-lookbook-title]'));
 const compactDetail = find('.lookbook-detail-compact');
 assert(compactDetail.querySelector('.lookbook-detail-copy h3'));
@@ -939,6 +940,7 @@ assert.match(find('.lookbook-chance').textContent, /^6,25\s*%$/);
 assert.equal(M.locate(w.inspectState(), 'compare-0').trait.name, 'Kopie 1');
 assert.equal(find('[data-lookbook-title]').textContent, 'Redline');
 click('[data-lookbook-view="looks"]');
+assert(get('lookbookLayerFilters').hidden && get('lookbookFilterBar').hidden);
 assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava');
 assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Redline/);
 click('[data-lookbook-jump="other-1"]');
@@ -1140,6 +1142,7 @@ const filterProject = M.clone(exportProject);
 filterProject.cats[0].draw = true;
 filterProject.cats[1].fin = true;
 filterProject.cats[2].traits[0].draw = true;
+filterProject.cats[2].traits[0].lookbookTags = ['Cowboy'];
 filterProject.cats[2].traits.push({ id:'filter-clean',name:'Bez označení',data:pngA });
 filterProject.organizer['export-c'] = {
   folders:[{ id:'filter-folder',name:'Podsložka filtru',parentId:null }],
@@ -1180,6 +1183,47 @@ for (const [label,ids] of [
   assert.deepEqual(categoryIds(),ids);
 }
 assert.equal(JSON.stringify(w.inspectState()),beforeFilters,'filtering leaves the project and composition unchanged');
+click(categoryBadge('fin'));
+click('#openLookbook');
+const bookStatus = mark => `#lookbookStatusFilters [data-id="${mark}"]`;
+const bookCategories = () => [...get('lookbookChapters').children].map(button => button.dataset.lookbookChapter);
+assert.deepEqual(bookCategories(), ['export-a', 'export-b', 'export-c'], 'Lookbook starts independently of the editor filter');
+click('#lookbookChapters [data-lookbook-chapter="export-c"]');
+click(bookStatus('draw'));
+assert.equal(find(bookStatus('draw')).dataset.filterMode, 'include');
+assert.deepEqual(bookCategories(), ['export-a', 'export-c']);
+assert.deepEqual(bookTraitIds(), ['export-bg']);
+filterBook('cowboy');
+assert.deepEqual(bookCategories(), ['export-c']);
+click(bookStatus('draw'));
+assert.equal(find(bookStatus('draw')).dataset.filterMode, 'exclude');
+assert.deepEqual(bookCategories(), []);
+assert.match(get('lookbookSheetArea').textContent, /filtrům/);
+assert(!get('lookbookLayerFilters').hidden);
+click(bookStatus('draw'));
+assert.equal(find(bookStatus('draw')).dataset.filterMode, 'off');
+assert.deepEqual(bookTraitIds(), ['export-bg']);
+filterBook('cowboy');
+click(bookStatus('fin'));
+assert.deepEqual(bookCategories(), ['export-b']);
+click('#lookbookCategoryView');
+assert.deepEqual(bookCategories(), ['export-a', 'export-b', 'export-c']);
+for (const [label, ids] of [
+  ['Zapnuté', ['export-b', 'export-c']],
+  ['Skryté', ['export-a']],
+  ['Bez označení', ['export-c']],
+  ['Vše', ['export-a', 'export-b', 'export-c']],
+]) {
+  click('#lookbookCategoryView');
+  assert.equal(get('lookbookCategoryView').title, `Zobrazení kategorií · ${label}`);
+  assert.deepEqual(bookCategories(), ids);
+  if (label === 'Bez označení') assert.deepEqual(bookTraitIds(), ['filter-clean']);
+}
+click('#lookbookExit');
+await waitFor(() => !get('lookbookDialog').open);
+assert.deepEqual(categoryIds(), ['export-b']);
+assert.equal(JSON.stringify(w.inspectState()), beforeFilters, 'Lookbook filtering leaves the project, marks and visibility unchanged');
+click('#layerReviewFilter');
 if (!get('layer-branch-export-c').hidden) click(filterCategory);
 w.useTestProject(exportProject);
 click('#cats [data-action="open-layer-menu"][data-id="export-b"]');
