@@ -14,7 +14,8 @@
   const layerFilterBar = $('lookbookLayerFilters'), categoryEye = $('lookbookCategoryView'), folderTagButton = $('lookbookFolderTags');
   const markFilters = new Map();
   let categoryView = 'all';
-  const assignGroup = $('lookbookAssignTagGroup'), renameGroup = $('lookbookRenameTagGroup');
+  const tagIcons = $('lookbookTagIcons');
+  let tagIconMarkup = '';
   const layerTagsDialog = $('layerTagsDialog');
   const projectCards = () => state.lookbookCards.flatMap(card => [card, ...card.variants]);
   const projectTagOptions = () => M.lookbookTagOptions([
@@ -28,7 +29,7 @@
     }
     return [...options].sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
   }
-  function illustratedTagPicker(options, multiple = false) {
+  function illustratedTagPicker(options, multiple = false, action = '') {
     if (!options.length) return '';
     return `<details class="lookbook-tag-picker">
       <summary>${multiple ? 'Přiřadit existující štítky…' : 'Přiřadit existující štítek…'}</summary>
@@ -38,7 +39,7 @@
           <input type="checkbox" class="tag-picker-checkbox" data-layer-tag-option value="${esc(tag)}">
           <span class="tag-picker-circle" aria-hidden="true"></span></label>`
           : `<button type="button" data-tag-option value="${esc(tag)}">${sample}</button>`;
-      }).join('')}</div>
+      }).join('')}</div>${action}
     </details>`;
   }
   function revealTagOptions(event) {
@@ -254,39 +255,29 @@
     const tags = view === 'traits' ? M.layerTagOptions(state) : M.lookbookTagOptions(view === 'cards' ? projectCards() : []);
     const selected = tagFilters[view] || new Set();
     renderTagFilter(filterRoot, tags, selected, 'Filtrovat štítky');
-    $('lookbookTagGroups').hidden = view === 'looks';
+    renderTagIcons(tags, selected);
     $('lookbookFilterBar').hidden = view === 'looks';
     $('lookbookUseRules').hidden = view !== 'traits' || !selected.size;
-    if (view === 'looks') return;
-    const groups = new Map(Object.values(tagDefaultGroupTitles()).map(title => [M.lookbookTagKey(title), title]));
-    for (const [key, title] of M.lookbookTagGroupOptions(state.lookbookTagGroups)) {
-      if (!groups.has(key)) groups.set(key, title);
+  }
+
+  function renderTagIcons(tags, selected) {
+    const markup = [...tags].flatMap(([key, name]) => {
+      const artwork = illustratedTagSample(name);
+      return artwork ? [
+        `<button type="button" data-tag-filter value="${esc(key)}" aria-label="${esc(name)}" title="${esc(name)}" aria-pressed="${selected.has(key)}">${artwork}</button>`
+      ] : [];
+    }).join('');
+    tagIcons.hidden = !markup;
+    if (markup === tagIconMarkup) return;
+    const focused = tagIcons.contains(document.activeElement) ? document.activeElement.value : undefined;
+    const left = tagIcons.scrollLeft;
+    tagIconMarkup = markup;
+    tagIcons.innerHTML = markup;
+    tagIcons.scrollLeft = left;
+    if (focused !== undefined) {
+      const control = [...tagIcons.children].find(button => button.value === focused);
+      (control || filterRoot.querySelector('summary')).focus({ preventScroll: true });
     }
-    const tagField = assignGroup.elements.namedItem('tag');
-    const previous = tagField.value;
-    fillSelect(tagField, availableTagOptions(), 'Vyber štítek');
-    if (tagField.value !== previous) showAssignedGroup();
-    const names = [...groups.values()].map(title => new Option(title, title));
-    $('lookbookTagGroupNames').replaceChildren(...names);
-    renameGroup.hidden = false;
-    fillSelect(renameGroup.elements.namedItem('group'), [...groups], 'Vyber skupinu');
-  }
-
-  function showAssignedGroup() {
-    const key = assignGroup.elements.namedItem('tag').value;
-    const groups = state.lookbookTagGroups || {};
-    assignGroup.elements.namedItem('group').value = Object.hasOwn(groups, key) ? groups[key] : '';
-  }
-
-  function saveTagGroups(groups, titles = state.lookbookTagGroupTitles) {
-    if (busy) return;
-    saveCard();
-    change(() => {
-      state.lookbookTagGroups = M.normalizeLookbookTagGroups(groups);
-      if (titles) state.lookbookTagGroupTitles = titles;
-    }, 'Skupiny štítků uloženy', true);
-    renderFilters();
-    showAssignedGroup();
   }
 
   function tagEditor(item, inherited = [], expanded = false) {
@@ -296,13 +287,15 @@
     const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
     const keys = new Set(effective.map(M.lookbookTagKey));
     const available = availableTagOptions().filter(([key]) => !keys.has(key));
-    return `<details class="lookbook-tag-editor" ${expanded ? 'open' : ''}>
+    const multiple = view === 'traits';
+    const action = multiple ? '<button type="button" class="tag-picker-apply" data-lookbook-tag-apply disabled>Přiřadit vybrané</button>' : '';
+    return `<details class="lookbook-tag-editor${multiple ? ' lookbook-trait-tag-editor' : ''}" ${expanded ? 'open' : ''}>
       <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
       ${inheritedOnly.length ? `<p class="lookbook-help">${view === 'cards' ? 'Z karty' : 'Z kategorie nebo složky'} · ${inheritedOnly.map(esc).join(' · ')}</p>` : ''}
       ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
         `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
       ).join('')}</div>` : ''}
-      ${illustratedTagPicker(available)}
+      ${illustratedTagPicker(available, multiple, action)}
       <div class="lookbook-tag-add">
         <input type="text" aria-label="Nový štítek" placeholder="Nový štítek" maxlength="${M.LOOKBOOK_TAG_LIMIT}" data-lookbook-tag-input>
         <button type="button" data-lookbook-tag-add>Přidat</button>
@@ -310,17 +303,23 @@
     </details>`;
   }
 
-  function editTag(value, remove = false, fromPicker = false) {
+  function checkedPickerTags(picker) {
+    return [...picker.querySelectorAll('[data-layer-tag-option]:checked')].map(input => input.value);
+  }
+
+  function editTags(values, remove = false, fromPicker = false) {
     if (busy) return;
     const { item, inherited } = view === 'cards' ? customCards.tagItem()
       : { item: selectedTrait(), inherited: selectedTrait() ? M.inheritedLayerTags(state, category(), selectedTrait()) : [] };
-    const [tag] = M.normalizeLookbookTags([value]);
-    if (!item || !tag) return;
-    const key = M.lookbookTagKey(tag);
-    if (!remove && inherited.some(label => M.lookbookTagKey(label) === key)) return;
+    const tags = M.normalizeLookbookTags(values);
+    if (!item || !tags.length) return;
+    const keys = new Set(tags.map(M.lookbookTagKey));
+    const inheritedKeys = new Set(inherited.map(M.lookbookTagKey));
+    const picker = content.querySelector('.lookbook-trait-tag-editor .lookbook-tag-picker[open]');
+    const pending = picker && !fromPicker ? new Set(checkedPickerTags(picker)) : null;
     const current = item.lookbookTags || [];
-    const next = remove ? current.filter(label => M.lookbookTagKey(label) !== key)
-      : M.normalizeLookbookTags([...current, tag]);
+    const next = remove ? current.filter(label => !keys.has(M.lookbookTagKey(label)))
+      : M.normalizeLookbookTags([...current, ...tags.filter(tag => !inheritedKeys.has(M.lookbookTagKey(tag)))]);
     if (next.length !== current.length) {
       if (view === 'traits') saveCard();
       change(() => {
@@ -339,8 +338,13 @@
     if (editor && item === selected) {
       editor.outerHTML = tagEditor(item, inherited, true);
       const input = content.querySelector('[data-lookbook-tag-input]');
-      const picker = content.querySelector('.lookbook-tag-picker > summary');
-      (fromPicker && picker ? picker : input).focus({ preventScroll: true });
+      const updatedPicker = content.querySelector('.lookbook-tag-picker');
+      if (pending && updatedPicker) {
+        updatedPicker.open = true;
+        for (const option of updatedPicker.querySelectorAll('[data-layer-tag-option]')) option.checked = pending.has(option.value);
+        updatedPicker.querySelector('[data-lookbook-tag-apply]').disabled = !checkedPickerTags(updatedPicker).length;
+      }
+      (fromPicker && updatedPicker ? updatedPicker.querySelector('summary') : input).focus({ preventScroll: true });
     } else filterRoot.querySelector('summary').focus({ preventScroll: true });
   }
 
@@ -661,7 +665,7 @@
     }
     refreshResults(layerFilterBar);
   });
-  filterRoot.addEventListener('click', event => {
+  $('lookbookFilterBar').addEventListener('click', event => {
     const toggle = event.target.closest('[data-tag-group-toggle]');
     if (toggle) {
       toggleTagFilter(expandedLookbookTagGroups, toggle.value);
@@ -672,33 +676,7 @@
     if (!control) return;
     saveCard();
     toggleTagFilter(tagFilters[view], control.value);
-    refreshResults(filterRoot);
-  });
-  assignGroup.elements.namedItem('tag').addEventListener('change', showAssignedGroup);
-  $('lookbookTagGroups').addEventListener('toggle', event => {
-    if (event.target.open) showAssignedGroup();
-  });
-  assignGroup.addEventListener('submit', event => {
-    event.preventDefault();
-    const tag = assignGroup.elements.namedItem('tag').value;
-    if (!tag) return;
-    const groups = { ...state.lookbookTagGroups, [tag]: assignGroup.elements.namedItem('group').value };
-    saveTagGroups(groups);
-  });
-  renameGroup.addEventListener('submit', event => {
-    event.preventDefault();
-    const key = renameGroup.elements.namedItem('group').value;
-    const input = renameGroup.elements.namedItem('name');
-    const [title] = M.normalizeLookbookTags([input.value]);
-    if (!key || !title) return;
-    const groups = Object.fromEntries(Object.entries(state.lookbookTagGroups || {}).map(([tag, group]) =>
-      [tag, M.lookbookTagKey(group) === key ? title : group]));
-    const titles = { ...state.lookbookTagGroupTitles };
-    for (const [type, current] of Object.entries(tagDefaultGroupTitles())) {
-      if (M.lookbookTagKey(current) === key) titles[type] = title;
-    }
-    saveTagGroups(groups, titles);
-    input.value = '';
+    refreshResults(tagIcons.contains(control) ? tagIcons : filterRoot);
   });
   $('lookbookUseRules').addEventListener('click', () => {
     ruleTags = new Set(tagFilters.traits);
@@ -710,16 +688,17 @@
       editScope(scope);
       return;
     }
-    const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove], [data-tag-option]');
+    const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove], [data-tag-option], [data-lookbook-tag-apply]');
     if (!control) return;
-    if (control.hasAttribute('data-tag-option')) editTag(control.value, false, true);
-    else if (control.hasAttribute('data-lookbook-tag-remove')) editTag(control.value, true);
-    else editTag(control.parentElement.querySelector('[data-lookbook-tag-input]').value);
+    if (control.hasAttribute('data-lookbook-tag-apply')) editTags(checkedPickerTags(control.closest('.lookbook-tag-picker')), false, true);
+    else if (control.hasAttribute('data-tag-option')) editTags([control.value], false, true);
+    else if (control.hasAttribute('data-lookbook-tag-remove')) editTags([control.value], true);
+    else editTags([control.parentElement.querySelector('[data-lookbook-tag-input]').value]);
   });
   content.addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing || !event.target.matches('[data-lookbook-tag-input]')) return;
     event.preventDefault();
-    editTag(event.target.value);
+    editTags([event.target.value]);
   });
 
   dialog.addEventListener('click', event => {
@@ -761,6 +740,11 @@
   });
   content.addEventListener('change', event => {
     const field = event.target;
+    if (field.matches('[data-layer-tag-option]')) {
+      const picker = field.closest('.lookbook-tag-picker');
+      picker.querySelector('[data-lookbook-tag-apply]').disabled = !checkedPickerTags(picker).length;
+      return;
+    }
     if (field.name === 'rarity') {
       const weight = field.form.elements.weight;
       if (field.value === 'custom') { weight.focus(); weight.select(); return; }

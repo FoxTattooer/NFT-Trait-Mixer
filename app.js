@@ -1432,7 +1432,7 @@ const lookbookIconAliases = new Map(Object.entries({
   cowboyhat: 'cowboy', buckethat: 'bucket', klobouk: 'headwear', klobouky: 'headwear',
   pokryvkyhlavy: 'headwear', bezpokryvky: 'basic',
 }));
-function tagSample(label) {
+function illustratedTagSample(label) {
   const material = window.TraitShowroom?.materialId(label);
   if (material) return `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`;
   const key = foldTraitName(label).replace(/[^a-z0-9]/g, '');
@@ -1442,7 +1442,10 @@ function tagSample(label) {
     const x = (index % 6) * 20, y = Math.floor(index / 6) * 25;
     return `<span class="tag-swatch tag-swatch-art" style="--tag-x:${x}%;--tag-y:${y}%" aria-hidden="true"></span>`;
   }
-  return `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
+  return '';
+}
+function tagSample(label) {
+  return illustratedTagSample(label) || `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
 }
 const expandedLookbookTagGroups = new Set();
 const LOOKBOOK_TAG_GROUP_PREVIEW = 4;

@@ -260,7 +260,9 @@
 }
 .tag-picker-options :is(button, .tag-picker-choice) { min-height: 44px; font-size: 13px; }
 .tag-picker-choice { position: relative; border: 1px solid var(--scheme-stroke, #4d4550); cursor: pointer; }
-#layerTagsForm .tag-picker-checkbox { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0; }
+:is(#layerTagsForm, .lookbook-trait-tag-editor) .tag-picker-checkbox {
+  position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0;
+}
 .tag-picker-circle {
   display: grid; place-items: center; flex: none; width: 20px; height: 20px;
   margin-inline-start: auto; border: 1px solid #918593; border-radius: 50%;
@@ -272,19 +274,24 @@
   border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(-45deg);
 }
 .tag-picker-choice:has(.tag-picker-checkbox:focus-visible) { outline: 2px solid var(--ui-feedback, #ee6dae); outline-offset: -2px; }
+.lookbook-trait-tag-editor > :not(summary) { margin: 0 5px 5px; }
+.lookbook-trait-tag-editor .tag-picker-options { gap: 2px; }
+.tag-picker-apply { min-height: 44px; margin: 2px 5px 5px; padding: 4px 9px; font-size: 12px; }
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }
 .lookbook-tag-add button { min-height: 44px; padding: 4px 8px; font-size: 12px; }
-.lookbook-tag-group-form {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px; margin: 0 7px 7px;
+.lookbook-tag-icons:not([hidden]) {
+  display: flex; flex: 1 0 100%; min-width: 0; gap: 4px; overflow-x: auto;
+  scrollbar-width: thin; padding: 2px; border: 1px solid var(--scheme-stroke, #54505a);
+  border-radius: 9px; background: #252128;
 }
-.lookbook-tag-group-form[hidden] { display: none; }
-.lookbook-tag-group-form label { min-width: 0; color: #ded1db; font-size: 12px; }
-.lookbook-tag-group-form input, .lookbook-tag-group-form select {
-  display: block; width: 100%; min-width: 0; min-height: 42px; margin-top: 4px; font-size: 16px;
+.lookbook-tag-icons > button {
+  --tag-icon-size: 28px; flex: 0 0 44px; width: 44px; min-height: 44px;
+  padding: 4px; border: 1px solid transparent; border-radius: 7px; background: transparent; box-shadow: none;
 }
-.lookbook-tag-group-form button { grid-column: 1 / -1; justify-self: start; min-height: 44px; font-size: 12px; }
+.lookbook-tag-icons > button[aria-pressed="true"] {
+  border-color: var(--ui-feedback, #ee6dae); background: var(--ui-feedback-wash, #382938);
+}
 .lookbook-chapter-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
 .lookbook-sheet .lookbook-chapter-heading h3 { min-width: 0; margin: 0; }
 .lookbook-chapter-meta { display: flex; align-items: center; gap: 2px; flex: none; }
