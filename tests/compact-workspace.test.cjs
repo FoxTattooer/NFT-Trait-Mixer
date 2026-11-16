@@ -1378,6 +1378,97 @@ const rarityDatabase = await S.open();
 const savedRarities = M.normalize(await S.read(rarityDatabase,undefined,{lazy:true}),{allowStoredAssets:true});
 rarityDatabase.close();
 assert.deepEqual(savedRarities.cats[0].traits.map(M.rarityWeight),[320,40,20,20,100]);
+// Bulk selection can mix categories, nested folders and traits while retaining their paths.
+const bulkProject = M.empty();
+bulkProject.cats = [
+  { id:'bulk-a', name:'Source A', traits:[{ id:'bulk-a1', name:'Hat', data:rarityAsset }] },
+  { id:'bulk-b', name:'Source B', traits:[
+    { id:'bulk-b1', name:'Glasses', data:rarityAsset }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
+  ] },
+  { id:'bulk-c', name:'Destination', traits:[] },
+];
+bulkProject.organizer = {
+  'bulk-b': { folders:[
+    { id:'bulk-folder', name:'Accessories', parentId:null },
+    { id:'bulk-subfolder', name:'Eyes', parentId:'bulk-folder' },
+  ], assignments:{ 'bulk-b1':'bulk-subfolder', 'bulk-b2':'bulk-subfolder' } },
+  'bulk-c': { folders:[{ id:'bulk-target', name:'Final', parentId:null }], assignments:{} },
+};
+bulkProject.selected['bulk-b'] = 'bulk-b2';
+w.useTestProject(bulkProject);
+click('#layersTab');
+const bulkAction = id => click(`#editorLayerBulk [data-id="${id}"]`);
+const bulkRow = id => click(`#cats [data-layer-bulk-row][data-id="${id}"]`);
+const bulkExpand = id => click(`#cats [data-layer-bulk-expand][data-id="${id}"]`);
+const bulkCheckbox = id => find(`#cats [data-layer-bulk-pick][value="${id}"]`);
+const countBulk = n => assert.equal(get('editorLayerBulkCount').textContent, `Vybráno ${n}`);
+assert(get('editorLayerBulk').hidden);
+click('#categoryOverview [data-action="start-layer-bulk"]');
+assert(get('appLayout').hasAttribute('data-layer-bulk'));
+countBulk(0);
+const beforeBulk = JSON.stringify(w.inspectState());
+bulkRow('bulk-a');
+bulkExpand('bulk-b'); bulkExpand('bulk-folder'); bulkExpand('bulk-subfolder');
+bulkRow('bulk-subfolder');
+bulkCheckbox('bulk-b1').click();
+assert(bulkCheckbox('bulk-a').checked);
+assert(bulkCheckbox('bulk-subfolder').checked);
+assert(bulkCheckbox('bulk-b1').checked);
+countBulk(3);
+assert.equal(JSON.stringify(w.inspectState()), beforeBulk, 'selecting rows leaves preview and project data intact');
+bulkExpand('bulk-folder');
+bulkAction('review');
+assert(get('layerBulkDialog').open);
+assert.match(get('layerBulkDialogBody').textContent, /Source B \/ Accessories \/ Eyes \/ Glasses/);
+click('#layerBulkDialogClose');
+bulkAction('rename');
+find('#layerBulkDialog [data-rename-id="bulk-a"]').value='Hats';
+find('#layerBulkDialog [data-rename-id="bulk-b1"]').value='Red Glasses';
+const submitBulk = () => get('layerBulkForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+submitBulk();
+assert.equal(M.category(w.inspectState(),'bulk-a').name,'Hats');
+assert.equal(M.locate(w.inspectState(),'bulk-b1').trait.name,'Red Glasses');
+bulkAction('mark');
+find('#layerBulkForm [name="mark"]').value='fin:add';
+submitBulk();
+assert.equal(M.category(w.inspectState(),'bulk-a').fin,true);
+assert.equal(w.inspectState().organizer['bulk-b'].folders[1].fin,true);
+assert.equal(M.locate(w.inspectState(),'bulk-b1').trait.fin,true);
+assert.equal(M.locate(w.inspectState(),'bulk-b2').trait.fin,undefined);
+bulkAction('move');
+assert(!find('#layerBulkForm [name="destination"] option[value="bulk-a"]'));
+assert(!find('#layerBulkForm [name="destination"] option[value="bulk-subfolder"]'));
+find('#layerBulkForm [name="destination"]').value='bulk-target';
+submitBulk();
+const movedBulk = w.inspectState();
+assert(!M.category(movedBulk,'bulk-a'));
+assert.deepEqual(movedBulk.organizer['bulk-c'].folders.map(folder=>[folder.id,folder.parentId]),
+  [['bulk-target',null],['bulk-a','bulk-target'],['bulk-subfolder','bulk-target']]);
+assert.equal(M.locate(movedBulk,'bulk-b1').cat.id,'bulk-c');
+assert.equal(movedBulk.organizer['bulk-c'].assignments['bulk-b1'],'bulk-subfolder');
+assert.equal(movedBulk.organizer['bulk-c'].assignments['bulk-b2'],'bulk-subfolder');
+countBulk(3);
+bulkAction('delete');
+assert(get('layerBulkDialog').open);
+click('#layerBulkDialogClose');
+assert(M.locate(w.inspectState(),'bulk-b1'));
+bulkAction('delete');
+submitBulk();
+assert(!M.locate(w.inspectState(),'bulk-b1'));
+assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-c');
+assert.equal(M.locate(w.inspectState(),'bulk-a1').cat.id,'bulk-c');
+countBulk(0);
+click('#undo');
+assert(M.locate(w.inspectState(),'bulk-b1'),'one Undo restores the batch');
+bulkRow('bulk-c');
+bulkAction('review');
+click('#layerBulkDialog [data-layer-bulk-pick][value="bulk-c"]');
+countBulk(0);
+assert(!get('editorLayerBulk').hidden);
+click('#layerBulkDialogClose');
+click('#editorLayerBulkCancel');
+assert(get('editorLayerBulk').hidden);
+assert(!get('appLayout').hasAttribute('data-layer-bulk'));
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

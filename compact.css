@@ -873,3 +873,21 @@ button.trait-search-result {
   outline: 2px solid var(--control-accent, var(--scheme-accent));
   outline-offset: -2px;
 }
+
+/* The checkboxes and disclosure controls appear only during bulk selection. */
+#appLayout:not([data-layer-bulk]) :is(.layer-bulk-pick, .layer-bulk-expand, #manageCategoryBulkPick) {display:none}
+#appLayout[data-layer-bulk] :is(.layer-tree-check, .category-trait-check, .layer-tree-folder .drag-handle, [data-layer-bulk-row] > .icon:first-child:has(use[href="#i-chevron"])) {display:none}
+#appLayout[data-layer-bulk] [data-layer-bulk-row] {cursor:pointer}
+.layer-bulk-pick.bulk-pick {width:36px;height:44px}
+#appLayout[data-layer-bulk] :is(#layerTree, #traits) .layer-tree-trait {grid-template-columns:36px minmax(0,1fr) 44px 44px}
+#appLayout[data-layer-bulk] :is(#layerTree, #traits) .layer-tree-folder {grid-template-columns:36px 30px minmax(0,1fr) 44px}
+#appLayout[data-layer-bulk] .layer-bulk-expand {width:30px;min-height:44px;padding:4px;box-shadow:none;background:transparent;border:0}
+.layer-bulk-expand .icon {width:15px;height:15px}
+.layer-bulk-expand[aria-expanded=true] .icon {transform:rotate(90deg)}
+.category-filter-bar > .category-bulk-start {flex:0 0 44px;width:44px;min-height:44px;padding:0}
+#appLayout [data-action=start-layer-bulk][aria-pressed=true] {color:#92c8ff;border-color:#6a9ed4}
+.category-trait-preview {position:relative;min-width:0}
+#cats .category-trait-preview > button {width:100%}
+.category-trait-preview > .layer-bulk-pick {position:absolute;z-index:2;inset:0 0 auto auto;width:32px;height:32px}
+.category-trait-preview .bulk-pick-mark {background:#14161c}
+#appLayout[data-layer-bulk] .category-trait-preview:has(input:checked) > button {border-color:#61a9f8}

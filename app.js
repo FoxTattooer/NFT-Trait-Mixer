@@ -91,6 +91,7 @@ async function restoreLastProject() {
       return;
     }
     change(() => {
+      resetLayerBulk();
       state = record.project;
       active = record.categoryId;
       layerBrowseHistory.length = 0;
@@ -669,8 +670,10 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     const indent = Math.min(7, depth);
     const image = folder || safeMode ? '' : layerThumbnail(c, item, manage ? '' : 'layer-cropped-thumbnail');
     return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${item.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
+      ${layerBulkPick(item)}
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
-      <button type="button" class="layer-tree-main layer-drag-row" data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
+      ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
+      <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
         <span class="layer-tree-label">${esc(item.name)}</span>${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
@@ -689,6 +692,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     tree.innerHTML = markup;
     treeMarkup.set(tree, markup);
   }
+  syncLayerBulkPicks(tree);
   const selected = new Set(M.selectedIds(state, c.id));
   const hiddenTraits = new Set(c.traits.filter(trait => trait.hidden).map(trait => trait.id));
   for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
@@ -727,9 +731,11 @@ function positionLayerContext(trigger) {
   menu.style.top = `${Math.max(8, top)}px`;
 }
 const layerBulkSelection = new Set();
+let layerBulkMode = false;
+const isLayerBulkActive = () => layerBulkMode || layerBulkSelection.size > 0;
 const layerStatusLabels = Object.freeze({ wip: 'WIP', fin: 'FIN', trash: 'TRASH', draw: 'DRAW' });
 const layerStatusIcons = Object.freeze({ wip: 'clock', fin: 'check', trash: 'trash', draw: 'brush' });
-const layerSelectionLabel = id => layerBulkSelection.has(id) ? 'Odebrat z výběru' : layerBulkSelection.size ? 'Přidat do výběru' : 'Vybrat položky';
+const layerSelectionLabel = id => layerBulkSelection.has(id) ? 'Odebrat z výběru' : isLayerBulkActive() ? 'Přidat do výběru' : 'Vybrat položky';
 let layerInventoryView, layerInventoryReturn;
 
 function inventoryTree() {
@@ -761,27 +767,202 @@ function setLayerStatuses(ids, mark, enabled) {
     }
   }, `${enabled ? 'Přidáno' : 'Odebráno'} ${layerStatusLabels[mark]} · ${counted(affected.length, 'položka', 'položky', 'položek')}`, true);
 }
+function layerBulkPick(item) {
+  return `<label class="layer-bulk-pick bulk-pick"><input type="checkbox" value="${esc(item.id)}" data-layer-bulk-pick aria-label="Vybrat · ${esc(item.name)}"><span class="bulk-pick-mark" aria-hidden="true">${icon('check')}</span></label>`;
+}
+function layerBulkExpand(action, item, categoryId, expanded) {
+  return button('expand-layer-bulk', '', item.id, 'chevron', `type="button" class="layer-bulk-expand" data-expand-action="${action}" data-layer-bulk-expand data-category="${esc(categoryId)}" aria-expanded="${expanded}" aria-label="${expanded ? 'Sbalit' : 'Rozbalit'} · ${esc(item.name)}"`);
+}
+function syncLayerBulkPicks(root) {
+  for (const input of root.querySelectorAll('[data-layer-bulk-pick]')) {
+    input.checked = layerBulkSelection.has(input.value);
+    input.disabled = busy;
+  }
+}
+function setLayerBulkPick(id, checked = !layerBulkSelection.has(id)) {
+  if (checked) layerBulkSelection.add(id);
+  else layerBulkSelection.delete(id);
+  renderLayerBulk();
+}
+function resetLayerBulk() {
+  layerBulkMode = false;
+  layerBulkSelection.clear();
+}
 function renderLayerBulk() {
   if (layerBulkSelection.size) {
     const valid = layerItemIndex();
     for (const id of layerBulkSelection) if (!valid.has(id)) layerBulkSelection.delete(id);
   }
+  const layout = $('appLayout');
+  const enabled = isLayerBulkActive();
+  layout.toggleAttribute('data-layer-bulk', enabled);
   const bar = $('editorLayerBulk');
-  bar.hidden = !layerBulkSelection.size;
-  if (bar.hidden) return;
-  bar.innerHTML = `<span aria-live="polite">Vybráno ${layerBulkSelection.size}</span>` +
-    Object.entries(layerStatusLabels).map(([key, label]) => button('apply-layer-bulk', label, key, '', `type="button" title="Označit výběr ${label}"`)).join('') +
-    button('open-layer-inventory', 'Výběr', '', '', 'type="button"') +
-    button('clear-layer-bulk', 'Zrušit', '', '', 'type="button"');
+  bar.hidden = !enabled;
+  const count = layerBulkSelection.size;
+  const countLabel = $('editorLayerBulkCount');
+  const caption = `Vybráno ${count}`;
+  if (countLabel.textContent !== caption) countLabel.textContent = caption;
+  for (const control of bar.querySelectorAll('[data-action="open-layer-bulk"]')) control.disabled = !count;
+  for (const control of layout.querySelectorAll('[data-action="start-layer-bulk"]')) {
+    control.setAttribute('aria-pressed', String(enabled));
+    control.disabled = !state.cats.length;
+  }
+  syncLayerBulkPicks(layout);
 }
+const layerBulkTitles = { review: 'Vybrané položky', mark: 'Označit jako…', rename: 'Přejmenovat výběr', move: 'Přesunout výběr', delete: 'Smazat výběr' };
+const layerBulkKind = { category: 'Kategorie', folder: 'Složka', layer: 'Trait' };
+let layerBulkDialogMode = 'review', layerBulkReturn;
+function layerBulkItems() {
+  const selected = [], roots = [], destinations = [];
+  // Keep all explicit selections for editing and omit duplicate subtree moves.
+  function visit(nodes, ancestorSelected = false) {
+    for (const node of nodes) {
+      const picked = layerBulkSelection.has(node.id);
+      if (picked) selected.push(node);
+      if (picked && !ancestorSelected) roots.push(node);
+      if (node.kind !== 'layer' && !picked && !ancestorSelected) destinations.push(node);
+      if (node.children) visit(node.children, ancestorSelected || picked);
+    }
+  }
+  visit(inventoryTree());
+  return { selected, roots, destinations };
+}
+function renderLayerBulkDialog() {
+  const { selected, destinations } = layerBulkItems();
+  const mode = layerBulkDialogMode;
+  const body = $('layerBulkDialogBody'), submit = $('layerBulkSubmit');
+  $('layerBulkDialogTitle').textContent = layerBulkTitles[mode];
+  $('layerBulkDialogCount').textContent = `Vybráno ${selected.length}`;
+  submit.hidden = mode === 'review';
+  submit.disabled = !selected.length || mode === 'move' && !destinations.length;
+  submit.classList.toggle('danger', mode === 'delete');
+  submit.textContent = { mark: 'Použít označení', rename: 'Uložit názvy', move: 'Přesunout', delete: 'Smazat' }[mode] || '';
+  let controls = '';
+  if (mode === 'mark') {
+    controls = `<label>Označení<select name="mark" required><option value="">Vyber označení…</option>${Object.entries(layerStatusLabels).flatMap(([key, label]) =>
+      [`<option value="${key}:add">${label}</option>`, `<option value="${key}:remove">Odebrat ${label}</option>`]).join('')}</select></label>`;
+  } else if (mode === 'move') {
+    controls = destinations.length
+      ? `<label>Cílové umístění<select name="destination" required><option value="">Vyber kategorii nebo složku…</option>${
+        destinations.map(node => `<option value="${esc(node.id)}">${esc(node.path)}${node.kind === 'category' ? ' · hlavní úroveň' : ''}</option>`).join('')}</select></label>
+        <p>Přesouvané kategorie se změní na podsložky. Obsah složek se přesune s nimi. Při přesunu mezi kategoriemi se mohou změnit sestavy a pravidla.</p>`
+      : '<p>Pro tento výběr není k dispozici žádná cílová kategorie ani složka.</p>';
+  } else if (mode === 'delete') {
+    controls = '<p>Kategorie se smažou i s obsahem. U samostatně vybraných složek zůstanou traity v kategorii, pokud je také nevybereš. Smazání můžeš vrátit tlačítkem Zpět.</p>';
+  }
+  body.innerHTML = controls + (selected.length ? `<ul class="layer-bulk-dialog-list">${selected.map(node => {
+    const name = esc(node.name), path = esc(node.path);
+    const copy = mode === 'rename'
+      ? `<label><span>${layerBulkKind[node.kind]} · ${path}</span><input type="text" data-rename-id="${esc(node.id)}" value="${name}" required maxlength="120"></label>`
+      : `<div><strong>${name}</strong><small>${layerBulkKind[node.kind]} · ${path}</small></div>`;
+    return `<li>${mode === 'review' ? layerBulkPick(node) : icon(node.kind === 'layer' ? 'layers' : 'folder')}${copy}</li>`;
+  }).join('')}</ul>` : '<p>Výběr je prázdný.</p>');
+  syncLayerBulkPicks(body);
+}
+function showLayerBulkDialog(mode, trigger) {
+  if (!Object.hasOwn(layerBulkTitles, mode) || !layerBulkSelection.size) return;
+  const dialog = $('layerBulkDialog');
+  layerBulkDialogMode = mode;
+  layerBulkReturn = trigger;
+  $('layerBulkDialogError').textContent = '';
+  renderLayerBulkDialog();
+  dialog.showModal();
+}
+$('layerBulkDialog').addEventListener('close', () => {
+  const control = layerBulkReturn?.disabled ? $('editorLayerBulkCancel') : layerBulkReturn;
+  control?.focus({ preventScroll: true });
+});
+function removeLayerFolders(categoryId, folderIds, selectionFallback = null) {
+  const org = organizerFolders(categoryId);
+  const removed = new Set(folderIds.flatMap(id => [...organizerDescendants(org.folders, id)]));
+  org.folders = org.folders.filter(folder => !removed.has(folder.id));
+  for (const [traitId, folderId] of Object.entries(org.assignments)) if (removed.has(folderId)) delete org.assignments[traitId];
+  if (removed.has(organizerSelection[categoryId])) organizerSelection[categoryId] = selectionFallback;
+  for (const id of removed) organizerExpanded[categoryId]?.delete(id);
+  if (!org.folders.length) delete state.organizer[categoryId];
+}
+$('layerBulkForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!ready || busy) return;
+  const form = event.currentTarget, dialog = $('layerBulkDialog');
+  const { selected, roots, destinations } = layerBulkItems();
+  if (!selected.length) return;
+  const ids = selected.map(node => node.id);
+  const count = counted(ids.length, 'položka', 'položky', 'položek');
+  try {
+    if (layerBulkDialogMode === 'mark') {
+      const [mark, operation] = form.elements.namedItem('mark').value.split(':');
+      if (!Object.hasOwn(layerStatusLabels, mark)) return;
+      setLayerStatuses(ids, mark, operation === 'add');
+    } else if (layerBulkDialogMode === 'rename') {
+      const items = layerItemIndex();
+      const names = [...form.querySelectorAll('[data-rename-id]')].map(input => [items.get(input.dataset.renameId), input.value.trim()]);
+      const empty = names.findIndex(([, name]) => !name);
+      if (empty !== -1) {
+        const input = form.querySelectorAll('[data-rename-id]')[empty];
+        input.setCustomValidity('Zadej název.');
+        input.reportValidity();
+        return;
+      }
+      const renamed = names.filter(([item, name]) => item && item.name !== name);
+      if (renamed.length) change(() => {
+        for (const [item, name] of renamed) item.name = name;
+      }, `Přejmenováno · ${counted(renamed.length, 'položka', 'položky', 'položek')}`, true);
+    } else if (layerBulkDialogMode === 'move') {
+      const destination = destinations.find(node => node.id === form.elements.namedItem('destination')?.value);
+      if (!destination) return;
+      const targetId = destination.categoryId, folderId = destination.kind === 'folder' ? destination.id : null;
+      const next = M.clone(state);
+      let moved = 0;
+      for (const node of roots) {
+        if (node.kind === 'category') M.moveCategoryIntoFolder(next, node.id, targetId, folderId);
+        else if (node.kind === 'folder') {
+          const folder = next.organizer[node.categoryId].folders.find(item => item.id === node.id);
+          if (node.categoryId === targetId && (folder.parentId || null) === folderId) continue;
+          if (!M.moveFolder(next, node.categoryId, node.id, targetId, folderId)) throw new Error('Složku se nepodařilo přesunout.');
+        } else {
+          const assignedTo = next.organizer?.[node.categoryId]?.assignments[node.id] || null;
+          if (node.categoryId === targetId && assignedTo === folderId) continue;
+          if (node.categoryId !== targetId) M.moveTrait(next, node.id, targetId);
+          if (folderId) next.organizer[targetId].assignments[node.id] = folderId;
+          else if (next.organizer?.[targetId]) delete next.organizer[targetId].assignments[node.id];
+        }
+        moved++;
+      }
+      if (moved) change(() => {
+        state = next;
+        active = targetId;
+        openLayerCategories.set(targetId, Math.max(openLayerCategories.get(targetId) || 0, LAYER_BATCH));
+        const expanded = organizerExpanded[targetId] ||= new Set();
+        const folders = organizerFolders(targetId).folders;
+        for (let id = folderId; id; id = folders.find(folder => folder.id === id)?.parentId) expanded.add(id);
+      }, `Přesunuto · ${counted(moved, 'položka', 'položky', 'položek')} · ${destination.path}`);
+      else toast('Výběr už je v cílovém umístění.');
+    } else if (layerBulkDialogMode === 'delete') {
+      const categories = new Set(selected.filter(node => node.kind === 'category').map(node => node.id));
+      change(() => {
+        for (const node of roots) {
+          if (node.kind === 'category') M.removeCategory(state, node.id);
+          if (node.kind === 'folder') removeLayerFolders(node.categoryId, [node.id]);
+        }
+        for (const node of selected) if (node.kind === 'layer' && !categories.has(node.categoryId)) M.removeTrait(state, node.categoryId, node.id);
+      }, `Smazáno · ${count} · změnu můžeš vrátit tlačítkem Zpět`);
+    } else return;
+    dialog.close();
+  } catch (error) {
+    $('layerBulkDialogError').textContent = error.message;
+  }
+});
+$('layerBulkForm').addEventListener('input', event => {
+  if (event.target.matches('[data-rename-id]')) event.target.setCustomValidity('');
+});
 function openLayerInventory(trigger, mode) {
   const dialog = $('layerInventoryDialog');
   const header = trigger.closest('.header-menu');
   layerInventoryReturn = header?.querySelector('summary') || trigger;
   if (header) header.open = false;
   if (!dialog.open) dialog.showModal();
-  if (trigger.closest('#editorLayerBulk')) window.TraitInventoryBaseUI.showProject();
-  else window.TraitInventoryBaseUI.open(mode);
+  window.TraitInventoryBaseUI.open(mode);
 }
 function showInventoryProject() {
   if (!layerInventoryView) layerInventoryView = window.TraitInventory.mount($('layerInventory'), {
@@ -944,8 +1125,8 @@ function renderCategoryPreviews(category, traits, categoryHidden) {
     const shown = picked.has(trait.id) && !trait.hidden && !categoryHidden;
     const check = shown ? `<span class="category-trait-check" aria-hidden="true">${icon('check')}</span>` : '';
     const name = esc(trait.name);
-    return button('inspect-category-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>${check}`, trait.id, '',
-      `type="button" data-category="${esc(category.id)}" aria-label="${name}${shown ? ' · V kompozici' : ''}" title="${name}" aria-expanded="${trait === inspected}" aria-controls="${detailsId}"`);
+    return `<div class="category-trait-preview">${layerBulkPick(trait)}${button('inspect-category-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>${check}`, trait.id, '',
+      `type="button" data-category="${esc(category.id)}" aria-label="${name}${shown ? ' · V kompozici' : ''}" title="${name}" aria-expanded="${trait === inspected}" aria-controls="${detailsId}" data-layer-bulk-row`)}</div>`;
   }).join('')}</div>
   <div id="${detailsId}" class="category-trait-details" ${inspected ? '' : 'hidden'}>${categoryTraitDetails(category, inspected, categoryHidden, picked.has(inspected?.id))}</div>`;
 }
@@ -1063,7 +1244,8 @@ function renderCategories(hidden, categories) {
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
     const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
-        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
+        ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
           <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
@@ -1125,6 +1307,7 @@ function traitNoteEditor(trait) {
 function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
   const c = categories.find(cat => cat.id === active), traits = c ? listedTraits(c) : [];
   const selected = c && traits.find(t => t.id === state.selected[c.id]);
+  $('manageCategoryBulkPick').innerHTML = c ? layerBulkPick(c) : '';
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
   $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerMarkBadges(c)}` : '';
   const rename = $('manageRenameCategory');
@@ -1827,6 +2010,7 @@ async function loadProject(file) {
     openLayerCategories.clear();
     organizerExpanded = {};
     resetCategoryFilters();
+    resetLayerBulk();
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     const recentId = recent?.record(file, undefined, fallback);
     if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
@@ -2271,14 +2455,22 @@ async function handleAction(action, id, element) {
     }
     case 'open-layer-inventory': openLayerInventory(element); break;
     case 'open-inventory-proposals': openLayerInventory(element,'review'); break;
-    case 'toggle-layer-bulk-item':
-      if (layerBulkSelection.has(id)) layerBulkSelection.delete(id);
-      else if (layerItemIndex().has(id)) layerBulkSelection.add(id);
+    case 'start-layer-bulk':
+      layerBulkMode = true;
       renderLayerBulk();
-      toast(layerBulkSelection.size ? `Vybráno ${layerBulkSelection.size}` : 'Výběr zrušen');
       break;
-    case 'clear-layer-bulk': layerBulkSelection.clear(); renderLayerBulk(); break;
-    case 'apply-layer-bulk': setLayerStatuses([...layerBulkSelection], id, true); break;
+    case 'toggle-layer-bulk-item':
+      layerBulkMode = true;
+      setLayerBulkPick(id);
+      break;
+    case 'clear-layer-bulk':
+      resetLayerBulk();
+      renderLayerBulk();
+      $('appLayout').querySelector(`#${mobilePanel === 'traits' ? 'traitsPanel' : 'categoryOverview'} [data-action="start-layer-bulk"]`)?.focus({ preventScroll: true });
+      break;
+    case 'expand-layer-bulk': await handleAction(element.dataset.expandAction, id, element); break;
+    case 'open-layer-bulk': showLayerBulkDialog(id, element); break;
+    case 'close-layer-bulk': $('layerBulkDialog').close(); break;
     case 'toggle-layer-status': {
       const mark = element.dataset.mark;
       const item = layerItemIndex().get(id);
@@ -2354,7 +2546,8 @@ async function handleAction(action, id, element) {
         }
       }
       renderLayerTree();
-      [...(branch?.querySelectorAll('[data-action="toggle-tree-folder"]') || [])].find(b => b.dataset.id === id)?.focus({ preventScroll: true });
+      [...(branch?.querySelectorAll(element.hasAttribute('data-layer-bulk-expand') ? '[data-layer-bulk-expand]' : '.layer-tree-main') || [])]
+        .find(b => b.dataset.id === id)?.focus({ preventScroll: true });
       break;
     }
     case 'cycle-category': {
@@ -2383,7 +2576,7 @@ async function handleAction(action, id, element) {
     case 'select-category': {
       if (!c) break;
       const picker = element === $('layerCategory');
-      if (!picker && element?.classList.contains('category-pick') && openLayerCategories.has(id)) {
+      if (!picker && (element?.classList.contains('category-pick') || element?.hasAttribute('data-layer-bulk-expand')) && openLayerCategories.has(id)) {
         openLayerCategories.delete(id);
       } else {
         if (picker && active !== id) layerBrowseHistory.push(captureLayerView(element));
@@ -2393,11 +2586,11 @@ async function handleAction(action, id, element) {
         if (picker) selectWorkspaceTab(true);
       }
       render(true);
-      const row = $(`layer-branch-${id}`)?.previousElementSibling.querySelector('.category-pick');
+      const row = $(`layer-branch-${id}`)?.previousElementSibling.querySelector(element?.hasAttribute('data-layer-bulk-expand') ? '[data-layer-bulk-expand]' : '.category-pick');
       if (picker) {
         row?.scrollIntoView({ block: 'nearest' });
         resetWorkspaceScroll();
-      } else if (element?.classList.contains('category-pick')) row?.focus({ preventScroll: true });
+      } else if (element?.matches('.category-pick, [data-layer-bulk-expand]')) row?.focus({ preventScroll: true });
       break;
     }
     case 'add-organizer-folder': case 'add-organizer-subfolder': {
@@ -2423,14 +2616,7 @@ async function handleAction(action, id, element) {
       const categoryId = element?.dataset.category || active, org = organizerFolders(categoryId), folder = org.folders.find(f => f.id === id);
       if (!folder) break;
       if (await ask({ title: `Smazat organizační složku „${folder.name}“?`, description: 'Smaže se i její podsložky. Traity zůstanou v kategorii a jen se odřadí ze složek.', confirm: true, submit: 'Smazat složku', danger: true })) {
-        const removed = new Set([id]);
-        for (let changed = true; changed;) { changed = false; for (const f of org.folders) if (f.parentId && removed.has(f.parentId) && !removed.has(f.id)) { removed.add(f.id); changed = true; } }
-        change(() => {
-          org.folders = org.folders.filter(f => !removed.has(f.id));
-          for (const [traitId, folderId] of Object.entries(org.assignments)) if (removed.has(folderId)) delete org.assignments[traitId];
-          organizerSelection[categoryId] = removed.has(organizerSelection[categoryId]) ? folder.parentId : organizerSelection[categoryId];
-          if (!org.folders.length) delete state.organizer[categoryId];
-        }, 'Organizační složka smazána');
+        change(() => removeLayerFolders(categoryId, [id], folder.parentId), 'Organizační složka smazána');
       }
       break;
     }
@@ -2536,6 +2722,7 @@ async function handleAction(action, id, element) {
         organizerExpanded = {};
         resetCategoryFilters();
         selectWorkspaceTab(false);
+        resetLayerBulk();
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');
         showPanel('layers');
@@ -2776,6 +2963,17 @@ document.addEventListener('keydown', event => {
 });
 document.addEventListener('change', event => {
   if ($('layerContext').contains(event.target)) closeLayerContext(true);
+  if (event.target.matches('[data-layer-bulk-pick]')) {
+    setLayerBulkPick(event.target.value, event.target.checked);
+    if ($('layerBulkDialog').open) {
+      const row = event.target.closest('li');
+      const nextId = (row?.nextElementSibling || row?.previousElementSibling)?.querySelector('input')?.value;
+      renderLayerBulkDialog();
+      const next = [...$('layerBulkDialogBody').querySelectorAll('input')].find(input => input.value === nextId);
+      (next || $('layerBulkDialogClose')).focus({ preventScroll: true });
+    }
+    return;
+  }
   const moveCategory = event.target.closest('[data-action="move-category-into-folder"]');
   if (moveCategory) {
     const destination = moveCategory.selectedOptions[0]?.dataset;
@@ -2840,6 +3038,10 @@ document.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   const insideLayerMenu = $('layerContext').contains(event.target);
   if (target?.dataset.action !== 'open-layer-menu' && (!insideLayerMenu || target?.tagName === 'BUTTON')) closeLayerContext(insideLayerMenu);
+  if (target && !target.disabled && isLayerBulkActive() && target.hasAttribute('data-layer-bulk-row')) {
+    if (!busy) setLayerBulkPick(target.dataset.id);
+    return;
+  }
   if (target && !target.disabled) handleAction(target.dataset.action, target.dataset.id, target).catch(error => toast(error.message, true));
 });
 for (const id of ['layerReviewCategory', 'layerReviewFolder', 'layerReviewOrder']) $(id).addEventListener('change', event => {

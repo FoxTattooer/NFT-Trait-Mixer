@@ -100,7 +100,7 @@
   }
   document.addEventListener('pointerdown', event => {
     const handle = event.target.closest(handleSelector);
-    if (!handle || !ready || busy || event.button !== 0 || drag) return;
+    if (!handle || handle.closest('[data-layer-bulk]') || !ready || busy || event.button !== 0 || drag) return;
     const row = handle.classList.contains('layer-drag-row');
     if (row && event.pointerType === 'touch') return;
     if (!row) event.preventDefault();
@@ -145,7 +145,7 @@
   document.addEventListener('touchstart', event => {
     if (event.touches.length !== 1) { if (drag?.touchRow) cleanup(); return; }
     const handle = event.target.closest('.layer-drag-row');
-    if (!handle || !ready || busy || drag) return;
+    if (!handle || handle.closest('[data-layer-bulk]') || !ready || busy || drag) return;
     const touch = event.changedTouches[0];
     begin(handle,touch.identifier,touch.clientX,touch.clientY,true);
     drag.pressTimer = setTimeout(lift,holdDelay);
