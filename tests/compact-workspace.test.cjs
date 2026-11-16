@@ -1812,6 +1812,34 @@ assert.equal(w.inspectState().organizer['bulk-c'].assignments['bulk-b1'],'bulk-s
 assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-c');
 click('#undo');
 assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-b');
+const swatchProject = M.empty();
+swatchProject.cats = [{
+  id: 'swatch-skin', name: 'SKIN', traits: [
+    { id: 'swatch-palette', name: 'Vlastní barva', data: rarityAsset, lookbookTags: ['Tyrkysová', 'Afro'] },
+    { id: 'swatch-material', name: 'Vlastní materiál', data: rarityAsset, lookbookTags: ['Emerald'] },
+  ],
+}];
+w.useTestProject(swatchProject);
+showroom.click();
+const paletteTile = find('.showroom-swatch[aria-label="Vlastní barva"]');
+assert.equal(paletteTile.style.getPropertyValue('--swatch'), '#4dcac9');
+paletteTile.click();
+assert(find('#showroomChoiceTags .palette-swatch'));
+assert(find('#showroomChoiceTags .tag-swatch-art'));
+const materialTile = find('.showroom-swatch[aria-label="Vlastní materiál"]');
+assert.equal(materialTile.dataset.material, 'emerald');
+materialTile.click();
+assert(find('#showroomChoiceTags [data-material="emerald"]'));
+get('showroomClearStep').click();
+assert(get('showroomChoiceTags').hidden);
+get('showroomExit').click();
+await waitFor(() => !get('showroomDialog').open);
+click('#openLookbook');
+assert.equal(find('#lookbookTagIcons [value="tyrkysová"] .palette-swatch').style.getPropertyValue('--swatch'), '#4dcac9');
+assert(find('#lookbookTagIcons [value="emerald"] [data-material="emerald"]'));
+assert(find('#lookbookDetailArea .lookbook-tag-picker [value="Silver"]').closest('label').querySelector('[data-material="silver"]'));
+click('#lookbookExit');
+await waitFor(() => !get('lookbookDialog').open);
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

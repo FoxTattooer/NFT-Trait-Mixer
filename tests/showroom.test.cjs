@@ -64,6 +64,26 @@ test('the eleven SKIN materials have distinct Showroom and tag samples', () => {
   assert.equal(Showroom.materialId('Odstín bez názvu'), undefined);
 });
 
+test('Showroom uses the same assigned materials and palette colors as Lookbook tags', () => {
+  const project = M.empty();
+  project.cats = [{
+    id: 'skin', name: 'SKIN', lookbookTags: ['Silver'],
+    traits: [
+      { id: 'first', name: 'Gold', lookbookTags: ['Tyrkysová', 'Afro'] },
+      { id: 'second', name: 'Vlastní odstín' },
+    ],
+  }];
+  const [first, second] = Showroom.create(project, M).steps[0].variants;
+  assert.equal(first.material, undefined);
+  assert.equal(first.color, Showroom.colorHex('Turquoise'));
+  assert.deepEqual(first.tags, ['Tyrkysová', 'Afro', 'Silver']);
+  assert.equal(second.material, 'silver');
+  assert.deepEqual(second.tags, ['Silver']);
+  assert.deepEqual(materialNames.filter(name => !Showroom.swatchLabels.includes(name)), []);
+  assert(Showroom.swatchLabels.includes('Blue'));
+  assert.equal(Showroom.colorHex('Blueprint'), undefined);
+});
+
 test('installed Showroom serves intro and material artwork before consulting the network', async () => {
   const scope = 'https://example.test/NFT-Trait-Mixer/';
   const listeners = new Map();

@@ -449,3 +449,12 @@ body:has(#showroomDialog[open]) { overflow: hidden; }
   --material-image: url('art/skin-relief/water.webp');
   --material-tag: url('art/skin-relief/water-tag.webp');
 }
+
+.showroom-choice-tags:not([hidden]) {
+  display: flex; gap: 5px; overflow-x: auto; scrollbar-width: thin; margin-top: 7px;
+}
+.showroom-choice-tags > span {
+  --tag-icon-size: 19px;
+  display: flex; align-items: center; gap: 4px; flex: none; padding: 2px 5px 2px 3px;
+  border: 1px solid var(--showroom-line); border-radius: 6px; font-size: 11px;
+}

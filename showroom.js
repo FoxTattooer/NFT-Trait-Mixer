@@ -25,17 +25,25 @@
     return materials.find(([, pattern]) => pattern.test(name))?.[0];
   }
   const palette = [
-    [/pink|rose|ruzov/, '#ec8eb4'],
-    [/turquoise|teal|cyan|tyrkys/, '#4dcac9'],
-    [/blue|modr/, '#5d9de8'],
-    [/green|zelen/, '#81be79'],
-    [/yellow|zlut/, '#f2c96a'],
-    [/black|cern/, '#242835'],
-    [/white|bil/, '#f1eff0'],
-    [/grey|gray|sed/, '#8a93a0'],
-    [/brown|hned/, '#91624e'],
-    [/peach|beige|tan|nude|broskv|bezov/, '#ddb89c'],
+    ['Pink', /\b(?:pink|rose|ruzov[a-z]*)\b/, '#ec8eb4'],
+    ['Turquoise', /\b(?:turquoise|teal|cyan|tyrkys[a-z]*)\b/, '#4dcac9'],
+    ['Blue', /\b(?:blue|modr[a-z]*)\b/, '#5d9de8'],
+    ['Green', /\b(?:green|zelen[a-z]*)\b/, '#81be79'],
+    ['Yellow', /\b(?:yellow|zlut[a-z]*)\b/, '#f2c96a'],
+    ['Black', /\b(?:black|cern[a-z]*)\b/, '#242835'],
+    ['White', /\b(?:white|bil[a-z]*)\b/, '#f1eff0'],
+    ['Grey', /\b(?:grey|gray|sed[a-z]*)\b/, '#8a93a0'],
+    ['Brown', /\b(?:brown|hned[a-z]*)\b/, '#91624e'],
+    ['Beige', /\b(?:peach|beige|tan|nude|broskv[a-z]*|bezov[a-z]*)\b/, '#ddb89c'],
   ];
+  const swatchLabels = Object.freeze([
+    ...materials.map(([id]) => id[0].toUpperCase() + id.slice(1)),
+    ...palette.map(([label]) => label),
+  ]);
+  function colorHex(label) {
+    const name = normalize(label.replace(/([a-z])([A-Z])/g, '$1 $2'));
+    return palette.find(([, pattern]) => pattern.test(name))?.[2];
+  }
 
   function create(project, model) {
     // Working visibility in the editor does not curate the public catalogue.
@@ -47,11 +55,15 @@
     function add(label, categories, swatches = false, required = false) {
       if (!categories.length) return;
       for (const cat of categories) remaining.delete(cat);
-      const variants = categories.flatMap(cat => cat.traits.map(trait => ({
-        catId: cat.id, traitId: trait.id, label: trait.name,
-        material: swatches ? materialId(trait.name) : undefined,
-        color: swatches ? palette.find(([pattern]) => pattern.test(normalize(trait.name)))?.[1] || '#68717e' : null,
-      })));
+      const variants = categories.flatMap(cat => cat.traits.map(trait => {
+        const tags = model.effectiveLayerTags(project, cat, trait);
+        const swatch = swatches ? tags.find(tag => materialId(tag) || colorHex(tag)) || trait.name : null;
+        return {
+          catId: cat.id, traitId: trait.id, label: trait.name, tags,
+          material: swatch ? materialId(swatch) : undefined,
+          color: swatch ? colorHex(swatch) || '#68717e' : null,
+        };
+      }));
       steps.push({ label, swatches, variants: required ? variants : [null, ...variants] });
     }
     for (const [index, { label, matches, swatches }] of featured.entries()) {
@@ -91,7 +103,7 @@
   }
 
   function mount(dialog, dependencies) {
-    const { model, visibleLayers, paintLayers, download, onError, confirmReset } = dependencies;
+    const { model, visibleLayers, paintLayers, download, onError, confirmReset, tagSample } = dependencies;
     const get = id => dialog.querySelector('#' + id);
     const canvas = get('showroomCanvas'), empty = get('showroomCanvasEmpty');
     const status = get('showroomStatus'), swatches = get('showroomSwatches');
@@ -100,8 +112,19 @@
     const save = get('showroomSave'), reset = get('showroomReset'), clearStep = get('showroomClearStep');
     const layout = dialog.querySelector('.showroom-layout');
     const choice = get('showroomChoice');
+    const choiceTags = get('showroomChoiceTags');
     let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false, confirmingReset = false;
 
+    function updateChoiceTags(variant) {
+      const tags = variant?.tags || [];
+      choiceTags.hidden = !tags.length;
+      choiceTags.replaceChildren(...tags.map(tag => {
+        const chip = document.createElement('span');
+        chip.innerHTML = tagSample(tag);
+        chip.append(document.createTextNode(tag));
+        return chip;
+      }));
+    }
     function update() {
       const { index, builder } = session;
       const { steps, picks } = builder;
@@ -120,6 +143,7 @@
           !variants.length ? 'Bez dostupných variant' : current === null ? 'Bez doplňku' : 'Vyber variantu');
       carousel.hidden = !step || step.swatches || !variants.length;
       choice.parentElement.hidden = carousel.hidden && !choice.textContent;
+      updateChoiceTags(current);
       previous.disabled = next.disabled = available.length < 2 && !!current;
       swatches.hidden = !step?.swatches || !variants.length;
       swatches.replaceChildren(...(step?.swatches ? variants.map(variant => {
@@ -143,6 +167,7 @@
           for (const tile of swatches.children) tile.setAttribute('aria-pressed', String(tile === button));
           choice.textContent = variant.label;
           choice.parentElement.hidden = false;
+          updateChoiceTags(variant);
           advance.disabled = false;
           advance.setAttribute('data-selected', '');
           updateExport();
@@ -308,7 +333,7 @@
     };
   }
 
-  const api = { create, mount, materialId };
+  const api = { create, mount, materialId, colorHex, swatchLabels };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.TraitShowroom = api;
 })();

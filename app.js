@@ -1442,6 +1442,8 @@ function illustratedTagSample(label) {
     const x = (index % 6) * 20, y = Math.floor(index / 6) * 25;
     return `<span class="tag-swatch tag-swatch-art" style="--tag-x:${x}%;--tag-y:${y}%" aria-hidden="true"></span>`;
   }
+  const color = window.TraitShowroom?.colorHex(label);
+  if (color) return `<span class="material-swatch palette-swatch" style="--swatch:${color}" aria-hidden="true"></span>`;
   return '';
 }
 function tagSample(label) {
@@ -1456,7 +1458,7 @@ function tagGroupTitle(key, name) {
   const groups = state.lookbookTagGroups || {};
   if (Object.hasOwn(groups, key)) return groups[key];
   const titles = tagDefaultGroupTitles();
-  return window.TraitShowroom?.materialId(name) ? titles.materials : titles.other;
+  return (window.TraitShowroom?.materialId(name) || window.TraitShowroom?.colorHex(name)) ? titles.materials : titles.other;
 }
 function renderTagFilter(root, options, selected, label) {
   for (const key of selected) if (!options.has(key)) selected.delete(key);
@@ -2586,7 +2588,7 @@ async function handleAction(action, id, element) {
       const menu = element.closest('.header-menu');
       if (menu) menu.open = false;
       openShowroom ||= window.TraitShowroom.mount($('showroomDialog'), {
-        model: M, paintLayers, visibleLayers, download,
+        model: M, paintLayers, visibleLayers, download, tagSample,
         confirmReset: () => ask({
           title: 'Začít od začátku?',
           description: 'Vymažou se všechny výběry této postavy v Showroomu.',

@@ -244,6 +244,9 @@
 .material-swatch {
   background: var(--material-base, #17151a) var(--material-tag, none) center / cover no-repeat;
 }
+.palette-swatch {
+  background: linear-gradient(145deg, #ffffff42, transparent 56%, #00000038), var(--swatch);
+}
 .tag-clear {
   justify-self: start; min-height: 40px; padding: 4px 8px; font-size: 12px;
 }
