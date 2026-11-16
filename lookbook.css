@@ -92,9 +92,13 @@
 .lookbook-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .lookbook-detail-head h3 { margin: 0 0 2px; font-size: 19px; letter-spacing: -.045em; overflow-wrap: anywhere; }
 .lookbook-detail-head p { margin: 0; color: #c7bbc5; font: 11px/1.25 "Courier Prime", "Courier New", monospace; overflow-wrap: anywhere; }
-.lookbook-chance-box { display: grid; gap: 2px; flex: 0 0 auto; text-align: right; }
-.lookbook-chance { color: #ffd6e7; font: bold 19px/1.05 "Courier Prime", "Courier New", monospace; }
-.lookbook-rarity-label { color: #d5c6d0; font-size: 11px; }
+.lookbook-detail-compact { align-items: baseline; gap: 7px; }
+.lookbook-detail-compact .lookbook-detail-copy { display: flex; align-items: baseline; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.lookbook-detail-compact :is(h3, p) { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lookbook-detail-compact p { flex: 1 2 auto; font-size: 10px; }
+.lookbook-chance-box { display: flex; align-items: baseline; gap: 5px; flex: none; white-space: nowrap; }
+.lookbook-chance { color: #ffd6e7; font: bold 17px/1.05 "Courier Prime", "Courier New", monospace; }
+.lookbook-rarity-label { color: #d5c6d0; font-size: 10px; }
 .lookbook-story { margin: 0; color: #efe6eb; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
 .lookbook-edit { margin-top: 7px; }
 .lookbook-edit summary { width: fit-content; min-height: 32px; padding: 7px 0; color: #e2b6d1; font-size: 12px; cursor: pointer; }
@@ -312,4 +316,7 @@
 #layerTagsPath, #layerTagsInherited { color: var(--scheme-muted, #beb2bf); font-size: 12px; }
 #layerTagsAssigned:empty { display: none; }
 #layerTagsForm :is(input, select) { min-width: 0; min-height: 44px; width: 100%; font-size: 16px; }
+#layerTagsPropagateLabel { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--scheme-text, #f0edf2); font-size: 13px; }
+#layerTagsPropagateLabel[hidden] { display: none; }
+#layerTagsForm #layerTagsPropagate { flex: none; width: 18px; min-height: 0; height: 18px; margin: 0; accent-color: var(--ui-feedback, #ee6dae); }
 #layerTagsForm .dialog-actions { margin-top: 3px; }

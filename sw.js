@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.149';
+const CACHE = PREFIX + 'v0.7.150';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SKIN_ART = ['cup', 'emerald', 'gold', 'lime', 'mosaic', 'orange', 'purple', 'rainbow', 'red', 'silver', 'water']
@@ -17,9 +17,9 @@ const SHELL = [
   './inventory-base.js?build=07131', './inventory-base-ui.js?build=07131', './inventory-preview.js?build=07112', './inventory-review.js?build=07113', './inventory-dripd.json?build=07111',
   './pdf-info.css?build=07101', './pdf-info.js?build=07101',
   './trait-comparison.css?build=07104', './trait-comparison.js?build=07112',
-  './lookbook.css?build=07148', './lookbook-cards.js?build=07148', './lookbook.js?build=07149',
+  './lookbook.css?build=07150', './lookbook-cards.js?build=07148', './lookbook.js?build=07150',
   './', './index.html', ROADMAP, './styles.css?build=07120', './design.css?build=07128', './compact.css?build=07137',
-  './schemes.css?build=07122', './drag.js?build=07135', './project.js?build=07144', './diagnostics.js?build=07149',
+  './schemes.css?build=07122', './drag.js?build=07135', './project.js?build=07144', './diagnostics.js?build=07150',
   './showroom.css?build=07147', './showroom.js?build=07145', SHOWROOM_ART, LOOKBOOK_ART, ...SKIN_ART, './art/fox-credit-drop.png',
   './app.js?build=07149', './recent.js?build=0789', './storage.js?build=07109', './final.js?build=07112', './final-ui.js?build=07118', './final-builder.js?build=07112',
   './psd-core.js?build=0786', './psd-core.js',
