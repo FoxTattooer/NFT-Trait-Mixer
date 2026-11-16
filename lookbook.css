@@ -168,6 +168,22 @@
   font-size: 11px;
   font-weight: 650;
 }
+.tag-group-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px; margin-bottom: 4px; min-height: 27px;
+}
+.tag-group-head p { margin: 0; overflow-wrap: anywhere; }
+.tag-group-head .tag-group-more {
+  min-height: 30px; padding: 3px 5px; border: 0; border-radius: 5px;
+  background: transparent; color: #d3c3d1; box-shadow: none; font-size: 11px; white-space: nowrap;
+}
+@media (pointer: coarse) {
+  .tag-group-head .tag-group-more { min-height: 44px; }
+}
+#lookbookTags .tag-filter-options { max-height: none; overflow: visible; gap: 8px; }
+#lookbookTags .tag-filter-group + .tag-filter-group {
+  border-top: 1px solid var(--scheme-stroke, #48414d); padding-top: 4px;
+}
 .tag-grid, .lookbook-assigned-tags {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 126px), 1fr));
@@ -180,6 +196,12 @@
 }
 .tag-grid button span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #4c2d43; color: #fff3f9; }
+#lookbookTags .tag-grid button, .lookbook-assigned-tags button { min-height: 44px; }
+#lookbookTags .tag-grid button[aria-pressed=true] { border-color: #ee6dae; background: #382938; }
+.tag-grid button[hidden] { display: none; }
+@media (max-width: 600px) and (orientation: portrait) {
+  #lookbookTags .tag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .tag-grid button[aria-pressed=true]::after {
   content: ""; width: 7px; height: 4px; flex: 0 0 7px; margin-inline-start: auto;
   border: solid #ffd4ec; border-width: 0 0 2px 2px; transform: rotate(-45deg);
@@ -189,6 +211,14 @@
   border-radius: 4px; color: #c9bccb; background: #ffffff12;
 }
 .tag-swatch .icon { width: 11px; height: 11px; }
+.tag-swatch-art {
+  flex-basis: 26px; width: 26px; height: 26px;
+  border: 1px solid #39343d; border-radius: 5px;
+  background: #030303 url('art/lookbook/tag-icons.webp') var(--tag-x) var(--tag-y) / 600% 500% no-repeat;
+}
+#lookbookTags .material-swatch, .lookbook-assigned-tags .material-swatch {
+  flex-basis: 26px; width: 26px; height: 26px;
+}
 .tag-clear {
   justify-self: start; min-height: 40px; padding: 4px 8px; font-size: 12px;
 }
@@ -201,3 +231,13 @@
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }
 .lookbook-tag-add button { min-height: 44px; padding: 4px 8px; font-size: 12px; }
+.lookbook-tag-group-form {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px; margin: 0 7px 7px;
+}
+.lookbook-tag-group-form[hidden] { display: none; }
+.lookbook-tag-group-form label { min-width: 0; color: #ded1db; font-size: 12px; }
+.lookbook-tag-group-form input, .lookbook-tag-group-form select {
+  display: block; width: 100%; min-width: 0; min-height: 42px; margin-top: 4px; font-size: 16px;
+}
+.lookbook-tag-group-form button { grid-column: 1 / -1; justify-self: start; min-height: 44px; font-size: 12px; }

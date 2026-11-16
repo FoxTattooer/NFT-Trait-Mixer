@@ -1342,11 +1342,41 @@ function fillSelect(element, values, placeholder) {
   element.disabled = !values.length;
 }
 const ruleTagFilters = { source: new Set(), target: new Set() };
+const lookbookIconLabels = [
+  'Hair', 'Sunglasses', 'Shoulder', 'Facemask', 'Chains', 'Straps',
+  'Eyes', 'Skin', 'Backtrait', 'Background', 'Clothes', 'Cape',
+  'Goku', 'Spaghetti', 'Afro', 'Mohawk', 'Dreads', 'Man Bun',
+  'Fisherman', 'Doggy', 'Snapback', 'Hat', 'Cowboy', 'Beanie',
+  'Baret', 'Bucket', 'Crown', 'Samurai', 'Basic', 'Headwear',
+];
+const lookbookIconKeys = new Map(lookbookIconLabels.map((label, index) => [label.toLowerCase().replaceAll(' ', ''), index]));
+const lookbookIconAliases = new Map(Object.entries({
+  hairs: 'hair', vlasy: 'hair', ucesy: 'hair', bryle: 'sunglasses', slunecnibryle: 'sunglasses',
+  oci: 'eyes', kuze: 'skin', plet: 'skin', pozadi: 'background', obleceni: 'clothes',
+  plast: 'cape', retez: 'chains', retezy: 'chains', popruhy: 'straps',
+  maska: 'facemask', batoh: 'backtrait', spiky: 'goku', dreadlocks: 'dreads',
+  dredy: 'dreads', dripsnapback: 'snapback', dripdsnapback: 'snapback', dripdhat: 'hat',
+  cowboyhat: 'cowboy', buckethat: 'bucket', klobouk: 'headwear', klobouky: 'headwear',
+  pokryvkyhlavy: 'headwear', bezpokryvky: 'basic',
+}));
 function tagSample(label) {
   const material = window.TraitShowroom?.materialId(label);
-  return material
-    ? `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`
-    : `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
+  if (material) return `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`;
+  const key = foldTraitName(label).replace(/[^a-z0-9]/g, '');
+  const index = lookbookIconKeys.get(lookbookIconAliases.get(key) || key);
+  if (index !== undefined) {
+    // The six-column sprite follows the order of lookbookIconLabels.
+    const x = (index % 6) * 20, y = Math.floor(index / 6) * 25;
+    return `<span class="tag-swatch tag-swatch-art" style="--tag-x:${x}%;--tag-y:${y}%" aria-hidden="true"></span>`;
+  }
+  return `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
+}
+const expandedLookbookTagGroups = new Set();
+const LOOKBOOK_TAG_GROUP_PREVIEW = 4;
+function tagGroupTitle(key, name) {
+  const groups = state.lookbookTagGroups || {};
+  if (Object.hasOwn(groups, key)) return groups[key];
+  return window.TraitShowroom?.materialId(name) ? 'Materiály' : 'Ostatní štítky';
 }
 function renderTagFilter(root, options, selected, label) {
   for (const key of selected) if (!options.has(key)) selected.delete(key);
@@ -1355,18 +1385,30 @@ function renderTagFilter(root, options, selected, label) {
   const scrollTop = list.scrollTop;
   root.hidden = !options.size;
   root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
-  const materials = [], otherTags = [];
+  const compactGroups = root.id === 'lookbookTags';
+  const groups = new Map();
   for (const [key, name] of options) {
-    const group = window.TraitShowroom?.materialId(name) ? materials : otherTags;
-    group.push(`<button type="button" data-tag-filter value="${esc(key)}" aria-pressed="${selected.has(key)}">${tagSample(name)}<span>${esc(name)}</span></button>`);
+    const title = tagGroupTitle(key, name);
+    const groupKey = M.lookbookTagKey(title);
+    if (!groups.has(groupKey)) groups.set(groupKey, { key: groupKey, title, items: [] });
+    groups.get(groupKey).items.push([key, name]);
   }
-  const groups = [[materials, 'Materiály'], [otherTags, 'Ostatní štítky']];
-  list.innerHTML = groups.filter(([items]) => items.length).map(([items, title]) =>
-    `<div class="tag-filter-group" role="group" aria-label="${title}">${materials.length && otherTags.length ? `<p>${title}</p>` : ''}<div class="tag-grid">${items.join('')}</div></div>`
-  ).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
+  const order = key => key === 'materiály' ? 0 : key === 'ostatní štítky' ? 2 : 1;
+  const sorted = [...groups.values()].sort((a, b) => order(a.key) - order(b.key) || a.title.localeCompare(b.title, 'cs'));
+  list.innerHTML = sorted.map(({ key, title, items }, groupIndex) => {
+    const expandable = compactGroups && items.length > LOOKBOOK_TAG_GROUP_PREVIEW;
+    const expanded = expandedLookbookTagGroups.has(key);
+    const groupId = `${root.id}-group-${groupIndex}`;
+    return `<div class="tag-filter-group" role="group" aria-label="${esc(title)}">
+      ${compactGroups || sorted.length > 1 ? `<div class="tag-group-head"><p>${esc(title)}</p>
+        ${expandable ? `<button type="button" class="tag-group-more" data-tag-group-toggle value="${esc(key)}" aria-controls="${groupId}" aria-expanded="${expanded}">${expanded ? 'Méně' : `Všechny (${items.length})`}</button>` : ''}</div>` : ''}
+      <div class="tag-grid" id="${groupId}">${items.map(([tagKey, name], index) =>
+        `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}" ${expandable && !expanded && index >= LOOKBOOK_TAG_GROUP_PREVIEW && !selected.has(tagKey) ? 'hidden' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
+      ).join('')}</div></div>`;
+  }).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
   list.scrollTop = scrollTop;
   if (focused !== undefined) {
-    const next = [...list.querySelectorAll('button')].find(button => button.value === focused);
+    const next = [...list.querySelectorAll('button')].find(button => button.value === focused && !button.hidden);
     (next || root.querySelector('summary')).focus({ preventScroll: true });
   }
 }

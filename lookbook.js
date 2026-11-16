@@ -10,8 +10,10 @@
   const pageSize = 4;
   const tagFilters = { traits: new Set(), cards: new Set() };
   const filterRoot = $('lookbookTags');
+  const assignGroup = $('lookbookAssignTagGroup'), renameGroup = $('lookbookRenameTagGroup');
   const projectTraits = () => state.cats.flatMap(cat => cat.traits);
   const projectCards = () => state.lookbookCards.flatMap(card => [card, ...card.variants]);
+  const projectTagOptions = () => M.lookbookTagOptions([...projectTraits(), ...projectCards()]);
   const visibleTraits = cat => cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits));
   let ruleTags;
   let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
@@ -31,15 +33,45 @@
     const items = view === 'traits' ? projectTraits() : view === 'cards' ? projectCards() : [];
     const selected = tagFilters[view] || new Set();
     renderTagFilter(filterRoot, M.lookbookTagOptions(items), selected, 'Filtrovat štítky');
-    $('lookbookFilterBar').hidden = filterRoot.hidden;
+    const options = view === 'looks' ? new Map() : projectTagOptions();
+    $('lookbookTagGroups').hidden = !options.size;
+    $('lookbookFilterBar').hidden = filterRoot.hidden && !options.size;
     $('lookbookUseRules').hidden = view !== 'traits' || !selected.size;
+    if (!options.size) return;
+    const groups = M.lookbookTagGroupOptions(state.lookbookTagGroups);
+    const tagField = assignGroup.elements.namedItem('tag');
+    const previous = tagField.value;
+    fillSelect(tagField, [...options], 'Vyber štítek');
+    if (tagField.value !== previous) showAssignedGroup();
+    const names = groups.map(([, title]) => new Option(title, title));
+    $('lookbookTagGroupNames').replaceChildren(...names);
+    renameGroup.hidden = !groups.length;
+    fillSelect(renameGroup.elements.namedItem('group'), groups, 'Vyber skupinu');
+  }
+
+  function showAssignedGroup() {
+    const key = assignGroup.elements.namedItem('tag').value;
+    const groups = state.lookbookTagGroups || {};
+    assignGroup.elements.namedItem('group').value = Object.hasOwn(groups, key) ? groups[key] : '';
+  }
+
+  function saveTagGroups(groups) {
+    if (busy) return;
+    saveCard();
+    change(() => {
+      state.lookbookTagGroups = M.normalizeLookbookTagGroups(groups);
+    }, 'Skupiny štítků uloženy', true);
+    renderFilters();
+    showAssignedGroup();
   }
 
   function tagEditor(item, inherited = [], expanded = false) {
     const assigned = [...(item.lookbookTags || [])].sort((a, b) => a.localeCompare(b, 'cs'));
     const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
     const keys = new Set(effective.map(M.lookbookTagKey));
-    const available = [...M.lookbookTagOptions([...projectTraits(), ...projectCards()])].filter(([key]) => !keys.has(key));
+    const existing = projectTagOptions();
+    const iconOptions = lookbookIconLabels.map(tag => [M.lookbookTagKey(tag), tag]).filter(([key]) => !existing.has(key));
+    const available = [...existing, ...iconOptions.sort(([, a], [, b]) => a.localeCompare(b, 'cs'))].filter(([key]) => !keys.has(key));
     return `<details class="lookbook-tag-editor" ${expanded ? 'open' : ''}>
       <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
       ${inherited.length ? `<p class="lookbook-help">Z karty · ${inherited.map(esc).join(' · ')}</p>` : ''}
@@ -306,11 +338,39 @@
   });
 
   filterRoot.addEventListener('click', event => {
+    const toggle = event.target.closest('[data-tag-group-toggle]');
+    if (toggle) {
+      toggleTagFilter(expandedLookbookTagGroups, toggle.value);
+      renderFilters();
+      return;
+    }
     const control = event.target.closest('[data-tag-filter]');
     if (!control) return;
     saveCard();
     toggleTagFilter(tagFilters[view], control.value);
     refreshTagResults();
+  });
+  assignGroup.elements.namedItem('tag').addEventListener('change', showAssignedGroup);
+  $('lookbookTagGroups').addEventListener('toggle', event => {
+    if (event.target.open) showAssignedGroup();
+  });
+  assignGroup.addEventListener('submit', event => {
+    event.preventDefault();
+    const tag = assignGroup.elements.namedItem('tag').value;
+    if (!tag) return;
+    const groups = { ...state.lookbookTagGroups, [tag]: assignGroup.elements.namedItem('group').value };
+    saveTagGroups(groups);
+  });
+  renameGroup.addEventListener('submit', event => {
+    event.preventDefault();
+    const key = renameGroup.elements.namedItem('group').value;
+    const input = renameGroup.elements.namedItem('name');
+    const [title] = M.normalizeLookbookTags([input.value]);
+    if (!key || !title) return;
+    const groups = Object.fromEntries(Object.entries(state.lookbookTagGroups || {}).map(([tag, group]) =>
+      [tag, M.lookbookTagKey(group) === key ? title : group]));
+    saveTagGroups(groups);
+    input.value = '';
   });
   $('lookbookUseRules').addEventListener('click', () => {
     ruleTags = new Set(tagFilters.traits);

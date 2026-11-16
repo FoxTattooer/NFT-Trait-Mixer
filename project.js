@@ -10,7 +10,8 @@
   const cloneLookbookCards = (cards = []) => cards.map(card => ({ ...cloneCardItem(card), variants: card.variants.map(cloneCardItem) }));
   function clone(p) {
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
-    return { ...p, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
+    const groups = p.lookbookTagGroups ? { lookbookTagGroups: { ...p.lookbookTagGroups } } : {};
+    return { ...p, ...groups, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -104,6 +105,20 @@
   function lookbookTagOptions(items) {
     const tags = normalizeLookbookTags(items.flatMap(item => item.lookbookTags || []));
     return new Map(tags.sort((a, b) => a.localeCompare(b, 'cs')).map(tag => [lookbookTagKey(tag), tag]));
+  }
+  function lookbookTagGroupOptions(groups) {
+    const names = normalizeLookbookTags(Object.values(groups || {}));
+    return names.sort((a, b) => a.localeCompare(b, 'cs')).map(name => [lookbookTagKey(name), name]);
+  }
+  function normalizeLookbookTagGroups(values) {
+    if (!values || typeof values !== 'object' || Array.isArray(values)) return {};
+    const names = new Map(lookbookTagGroupOptions(values));
+    const groups = new Map();
+    for (const [rawTag, rawGroup] of Object.entries(values)) {
+      const [tag, group] = [rawTag, rawGroup].map(value => normalizeLookbookTags([value])[0]);
+      if (tag && group) groups.set(lookbookTagKey(tag), names.get(lookbookTagKey(group)));
+    }
+    return Object.fromEntries(groups);
   }
   function matchesLookbookTags(item, selected, inherited = []) {
     if (!selected.size) return true;
@@ -210,6 +225,8 @@
     if (raw.version != null && ![1, 2].includes(raw.version)) fail('Projekt pochází z novější, nepodporované verze aplikace.');
     const name = (v, fallback) => typeof v === 'string' && v.trim() ? v.trim().slice(0, 200) : fallback;
     const p = { ...empty(), name: name(raw.name, 'Můj NFT projekt'), rulesEnabled: raw.rulesEnabled !== false };
+    const tagGroups = normalizeLookbookTagGroups(raw.lookbookTagGroups);
+    if (Object.keys(tagGroups).length) p.lookbookTagGroups = tagGroups;
     const ids = new Set();
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
     const validImage = data => typeof data === 'string' &&
@@ -478,7 +495,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, matchesLookbookTags,
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags,
     DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
