@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.144 | checkpoint/v0.7.144-sprava-stitku | Přiřazení štítků kategoriím, složkám a traitům, výběr existujících štítků, tvorba nových a přejmenování skupiny Materiály. |
 | 0.7.143 | checkpoint/v0.7.143-oznaceni-v-lookbooku | Kategorie ukazují stav a počet štítků. Traity zobrazují stručný výpis štítků přímo na kartě a vybraná kategorie se vejde do posuvné lišty. |
 | 0.7.142 | checkpoint/v0.7.142-ikonove-stitky | Ikony účesů, pokrývek hlavy a doplňků vedle materiálů. Vlastní skupiny pojmenuješ a štítky do nich zařadíš přímo v Lookbooku. |
 | 0.7.141 | checkpoint/v0.7.141-protlacene-materialy-skin | Jedenáct reliéfních kostiček v Showroomu a jejich varianty pro štítky v Lookbooku. |

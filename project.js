@@ -11,7 +11,8 @@
   function clone(p) {
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
     const groups = p.lookbookTagGroups ? { lookbookTagGroups: { ...p.lookbookTagGroups } } : {};
-    return { ...p, ...groups, cats: p.cats.map(c => ({ ...c, traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f })), assignments: { ...org.assignments } }])) };
+    const titles = p.lookbookTagGroupTitles ? { lookbookTagGroupTitles: { ...p.lookbookTagGroupTitles } } : {};
+    return { ...p, ...groups, ...titles, cats: p.cats.map(c => ({ ...c, ...cloneTags(c), traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f, ...cloneTags(f) })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -125,6 +126,29 @@
     const keys = new Set([...(item.lookbookTags || []), ...inherited].map(lookbookTagKey));
     return [...selected].every(key => keys.has(key));
   }
+  function inheritedLayerTags(project, cat, item, kind = 'trait') {
+    if (kind === 'category') return [];
+    const organizer = project.organizer?.[cat.id];
+    let parent = kind === 'folder' ? item.parentId : organizer?.assignments[item.id];
+    const categoryTags = cat.lookbookTags || [];
+    if (!parent) return categoryTags;
+    const tags = [...categoryTags];
+    while (parent) {
+      const folder = organizer?.folders.find(candidate => candidate.id === parent);
+      if (!folder) break;
+      tags.push(...(folder.lookbookTags || []));
+      parent = folder.parentId;
+    }
+    return normalizeLookbookTags(tags);
+  }
+  function effectiveLayerTags(project, cat, trait) {
+    const inherited = inheritedLayerTags(project, cat, trait);
+    const own = trait.lookbookTags || [];
+    return !inherited.length ? own : !own.length ? inherited : normalizeLookbookTags([...own, ...inherited]);
+  }
+  function layerTagOptions(project, cats = project.cats) {
+    return lookbookTagOptions(cats.flatMap(cat => cat.traits.map(trait => ({ lookbookTags: effectiveLayerTags(project, cat, trait) }))));
+  }
   function lookbookTagFields(item) {
     const lookbookTags = normalizeLookbookTags(item.lookbookTags);
     return lookbookTags.length ? { lookbookTags } : {};
@@ -227,13 +251,18 @@
     const p = { ...empty(), name: name(raw.name, 'Můj NFT projekt'), rulesEnabled: raw.rulesEnabled !== false };
     const tagGroups = normalizeLookbookTagGroups(raw.lookbookTagGroups);
     if (Object.keys(tagGroups).length) p.lookbookTagGroups = tagGroups;
+    const groupTitles = Object.fromEntries(['materials', 'other'].flatMap(key => {
+      const [title] = normalizeLookbookTags([raw.lookbookTagGroupTitles?.[key]]);
+      return title ? [[key, title]] : [];
+    }));
+    if (Object.keys(groupTitles).length) p.lookbookTagGroupTitles = groupTitles;
     const ids = new Set();
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
     const validImage = data => typeof data === 'string' &&
       (allowStoredAssets && /^asset:image:[a-f0-9]{64}$/.test(data) || /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=\r\n]*$/.test(data));
     p.cats = raw.cats.map(c => {
       if (!c || !Array.isArray(c.traits)) fail('Některá kategorie nemá platný seznam traitů.');
-      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c),
+      return { id: unique(c.id), name: name(c.name, 'Kategorie'), ...psdOrigin(c), ...layerMarks(c), ...lookbookTagFields(c),
         visible: c.visible !== false, traits: c.traits.map(t => {
         if (!t || !validImage(t.data)) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
@@ -257,7 +286,7 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 200), ...psdOrigin(f), ...layerMarks(f),
+        return { id: unique(f.id), name: f.name.trim().slice(0, 200), ...psdOrigin(f), ...layerMarks(f), ...lookbookTagFields(f),
           parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
@@ -359,7 +388,7 @@
 
     const sourceOrg = p.organizer?.[sourceId];
     const nextOrg = (p.organizer ||= {})[targetId] ||= { folders: [], assignments: {} };
-    nextOrg.folders.push({ id: sourceId, name: source.name, ...psdOrigin(source), ...layerMarks(source), parentId });
+    nextOrg.folders.push({ id: sourceId, name: source.name, ...psdOrigin(source), ...layerMarks(source), ...cloneTags(source), parentId });
     for (const folder of sourceOrg?.folders || []) nextOrg.folders.push({ ...folder, parentId: folder.parentId || sourceId });
     const moved = new Set();
     for (const trait of source.traits) {
@@ -495,7 +524,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags,
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
     DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };

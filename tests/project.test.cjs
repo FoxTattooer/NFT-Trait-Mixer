@@ -16,6 +16,25 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('category and nested folder tags are inherited and survive saving, undo copies, and moves', () => {
+  const p = project();
+  p.cats[0].lookbookTags = ['Skin'];
+  p.cats[0].traits[0].lookbookTags = ['Red'];
+  p.organizer.a = {
+    folders: [{ id: 'parent', name: 'Skupina', parentId: null, lookbookTags: ['Doplňky'] },
+      { id: 'child', name: 'Varianta', parentId: 'parent', lookbookTags: ['Povrch', 'SKIN'] }],
+    assignments: { red: 'child' },
+  };
+  p.lookbookTagGroupTitles = { materials: 'Povrchy' };
+  const saved = M.normalize(JSON.parse(JSON.stringify(p)));
+  const original = M.clone(saved);
+  assert.deepEqual(M.effectiveLayerTags(saved, saved.cats[0], saved.cats[0].traits[0]), ['Red', 'Skin', 'Povrch', 'Doplňky']);
+  assert.equal(saved.lookbookTagGroupTitles.materials, 'Povrchy');
+  M.moveCategoryIntoFolder(saved, 'a', 'b');
+  assert.deepEqual(M.effectiveLayerTags(saved, saved.cats[0], M.locate(saved, 'red').trait), ['Red', 'Povrch', 'SKIN', 'Doplňky']);
+  assert.deepEqual(original.organizer.a.folders[1].lookbookTags, ['Povrch', 'SKIN']);
+  assert.deepEqual(original.cats[0].lookbookTags, ['Skin']);
+});
 test('moving a whole category preserves the subtree and updates selections and rules', () => {
   const p = project();
   Object.assign(p.cats[0], { draw:true, flag:'blue', name:'A'.repeat(140) });

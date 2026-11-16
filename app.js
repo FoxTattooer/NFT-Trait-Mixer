@@ -496,6 +496,10 @@ function layerMarkBadges(item) {
     (item.trash ? '<span class="layer-trash-mark">TRASH</span>' : '') +
     (item.draw ? '<span class="layer-draw-mark">DRAW</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
 }
+function layerTagMarker(item) {
+  const count = item.lookbookTags?.length || 0;
+  return count ? `<span class="layer-tag-marker" role="img" aria-label="${counted(count, 'štítek', 'štítky', 'štítků')}">${icon('tag')}${count > 1 ? `<span aria-hidden="true">${count}</span>` : ''}</span>` : '';
+}
 const counted = (count, one, few, many) => `${count} ${count === 1 ? one : count >= 2 && count <= 4 ? few : many}`;
 function reviewLink({ cat, trait }, label, showFlag = false) {
   const org = organizerFolders(cat.id);
@@ -675,7 +679,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label">${esc(item.name)}</span>${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label">${esc(item.name)}</span>${layerTagMarker(item)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -1079,6 +1083,7 @@ function openLayerContext(trigger, id) {
   }
   menu.innerHTML = `<div class="layer-menu-title" data-tone="item" title="${esc(item.name)}">${layerMenuIcon(kind === 'trait' ? 'layers' : 'folder')}<strong>${esc(item.name)}</strong></div>` +
     (kind === 'trait' ? layerMenuButton('open-trait-preview', 'Náhled', id, 'search', 'visibility', 'aria-haspopup="dialog"') : '') +
+    layerMenuButton('open-layer-tags', 'Štítky', id, 'tag', 'edit', `${markAttributes} aria-haspopup="dialog"`) +
     layerMarkActions(item, markAttributes) + `<section class="layer-menu-section" aria-label="Úpravy a přesuny">${edits}</section>` +
     (other ? `<section class="layer-menu-section" aria-label="Další akce">${other}</section>` : '');
   layerContextTrigger = trigger;
@@ -1117,7 +1122,7 @@ function categoryTraitDetails(category, trait, categoryHidden, picked) {
   }
   const visibility = enabled ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
   const name = esc(trait.name);
-  return `<div class="category-trait-copy"><strong title="${name}">${name}</strong><small>${status}</small></div>
+  return `<div class="category-trait-copy"><strong title="${name}">${name}${layerTagMarker(trait)}</strong><small>${status}</small></div>
     ${button('toggle-trait-visibility', '', trait.id, shown ? 'eye' : 'eye-off', `type="button" class="icon-button subtle category-trait-eye" aria-pressed="${shown}" aria-label="${visibility} · ${name}" title="${visibility}"`)}
     ${tool('rename-trait', `Přejmenovat ${trait.name}`, trait.id, 'edit')}
     ${button('open-layer-menu', '', trait.id, 'more', `type="button" class="icon-button subtle" data-kind="trait" data-category="${esc(category.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${name}" title="Další akce"`)}`;
@@ -1252,7 +1257,7 @@ function renderCategories(hidden, categories) {
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
         <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
-          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerMarkBadges(c)}
+          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c)}${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
@@ -1373,10 +1378,14 @@ function tagSample(label) {
 }
 const expandedLookbookTagGroups = new Set();
 const LOOKBOOK_TAG_GROUP_PREVIEW = 4;
+function tagDefaultGroupTitles() {
+  return { materials: 'Materiály', other: 'Ostatní štítky', ...state.lookbookTagGroupTitles };
+}
 function tagGroupTitle(key, name) {
   const groups = state.lookbookTagGroups || {};
   if (Object.hasOwn(groups, key)) return groups[key];
-  return window.TraitShowroom?.materialId(name) ? 'Materiály' : 'Ostatní štítky';
+  const titles = tagDefaultGroupTitles();
+  return window.TraitShowroom?.materialId(name) ? titles.materials : titles.other;
 }
 function renderTagFilter(root, options, selected, label) {
   for (const key of selected) if (!options.has(key)) selected.delete(key);
@@ -1393,7 +1402,9 @@ function renderTagFilter(root, options, selected, label) {
     if (!groups.has(groupKey)) groups.set(groupKey, { key: groupKey, title, items: [] });
     groups.get(groupKey).items.push([key, name]);
   }
-  const order = key => key === 'materiály' ? 0 : key === 'ostatní štítky' ? 2 : 1;
+  const { materials, other } = tagDefaultGroupTitles();
+  const materialKey = M.lookbookTagKey(materials), otherKey = M.lookbookTagKey(other);
+  const order = key => key === materialKey ? 0 : key === otherKey ? 2 : 1;
   const sorted = [...groups.values()].sort((a, b) => order(a.key) - order(b.key) || a.title.localeCompare(b.title, 'cs'));
   list.innerHTML = sorted.map(({ key, title, items }, groupIndex) => {
     const expandable = compactGroups && items.length > LOOKBOOK_TAG_GROUP_PREVIEW;
@@ -1435,8 +1446,8 @@ function updateTargetTraits() {
   const target = M.category(state, $('ruleTargetCat').value), block = $('ruleAction').value === 'block';
   const traits = target?.traits || [];
   const tags = ruleTagFilters.target;
-  renderTagFilter($('ruleTargetTags'), M.lookbookTagOptions(traits), tags, 'Štítky cíle');
-  fillSelect($('ruleTargetTrait'), traits.filter(trait => M.matchesLookbookTags(trait, tags)).map(t => [t.id, t.name]),
+  renderTagFilter($('ruleTargetTags'), M.layerTagOptions(state, target ? [target] : []), tags, 'Štítky cíle');
+  fillSelect($('ruleTargetTrait'), traits.filter(trait => !tags.size || M.matchesLookbookTags(trait, tags, M.inheritedLayerTags(state, target, trait))).map(t => [t.id, t.name]),
     tags.size ? 'Žádný trait neodpovídá štítkům' : 'Nejdřív nahraj PNG do cílové kategorie');
   $('targetTraitField').hidden = !block;
   $('ruleTargetTrait').required = block;
@@ -1445,9 +1456,9 @@ function updateTargetTraits() {
 function renderRules() {
   $('rulesEnabled').checked = state.rulesEnabled;
   const tags = ruleTagFilters.source;
-  renderTagFilter($('ruleSourceTags'), M.lookbookTagOptions(state.cats.flatMap(cat => cat.traits)), tags, 'Štítky zdroje');
+  renderTagFilter($('ruleSourceTags'), M.layerTagOptions(state), tags, 'Štítky zdroje');
   fillSelect($('ruleSource'), state.cats.flatMap(c => c.traits
-    .filter(trait => M.matchesLookbookTags(trait, tags))
+    .filter(trait => !tags.size || M.matchesLookbookTags(trait, tags, M.inheritedLayerTags(state, c, trait)))
     .map(t => [t.id, `${c.name} / ${t.name}`])),
   tags.size ? 'Žádný trait neodpovídá štítkům' : 'Nejdřív nahraj PNG');
   updateRuleTargets();
@@ -2664,6 +2675,9 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'open-layer-menu': openLayerContext(element, id); break;
+    case 'open-layer-tags':
+      window.TraitLookbook?.openLayerTags(element.dataset.kind, element.dataset.category, id);
+      break;
     case 'open-trait-preview': if (located) await openTraitPreview(located); break;
     case 'close-trait-preview': $('traitPreviewDialog').close(); break;
     case 'open-final': await openFinalDialog(); break;

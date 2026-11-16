@@ -11,11 +11,24 @@
   const tagFilters = { traits: new Set(), cards: new Set() };
   const filterRoot = $('lookbookTags');
   const assignGroup = $('lookbookAssignTagGroup'), renameGroup = $('lookbookRenameTagGroup');
-  const projectTraits = () => state.cats.flatMap(cat => cat.traits);
+  const layerTagsDialog = $('layerTagsDialog');
   const projectCards = () => state.lookbookCards.flatMap(card => [card, ...card.variants]);
-  const projectTagOptions = () => M.lookbookTagOptions([...projectTraits(), ...projectCards()]);
-  const visibleTraits = cat => cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits));
+  const projectTagOptions = () => M.lookbookTagOptions([
+    ...state.cats.flatMap(cat => [cat, ...cat.traits, ...organizerFolders(cat.id).folders]), ...projectCards(),
+  ]);
+  function availableTagOptions() {
+    const options = projectTagOptions();
+    for (const label of lookbookIconLabels) {
+      const key = M.lookbookTagKey(label);
+      if (!options.has(key)) options.set(key, label);
+    }
+    return [...options].sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
+  }
+  const visibleTraits = cat => tagFilters.traits.size
+    ? cat.traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait)))
+    : cat.traits;
   let ruleTags;
+  let layerTagTarget, draftLayerTags = [];
   let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
 
   const label = item => item.lookbookName || item.name;
@@ -29,24 +42,131 @@
     updateFilters: renderFilters,
   });
 
+  function resolveLayerTagTarget() {
+    if (!layerTagTarget) return {};
+    const { kind, catId, id } = layerTagTarget;
+    const cat = M.category(state, catId);
+    if (!cat) return {};
+    const item = kind === 'category' ? cat : kind === 'folder' ? organizerFolders(cat.id).folders.find(folder => folder.id === id)
+      : cat.traits.find(trait => trait.id === id);
+    return { cat, item };
+  }
+
+  function renderLayerTagDraft() {
+    const { cat, item } = resolveLayerTagTarget();
+    if (!item) return;
+    const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
+    const inheritedField = $('layerTagsInherited');
+    inheritedField.hidden = !inherited.length;
+    inheritedField.textContent = inherited.length ? 'Z kategorie nebo složky · ' + inherited.join(' · ') : '';
+    $('layerTagsAssigned').innerHTML = draftLayerTags.map(tag =>
+      `<button type="button" data-layer-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
+    ).join('');
+    const options = $('layerTagsOptions');
+    const keys = new Set([...draftLayerTags, ...inherited].map(M.lookbookTagKey));
+    const available = availableTagOptions().filter(([key]) => !keys.has(key));
+    options.replaceChildren(new Option('Přiřadit existující štítek…', ''), ...available.map(([, label]) => new Option(label, label)));
+    options.disabled = !available.length;
+  }
+
+  function openLayerTags(kind, catId, id, onSave) {
+    if (busy || layerTagsDialog.open) return;
+    layerTagTarget = { kind, catId, id, onSave, returnTo: document.activeElement };
+    const { cat, item } = resolveLayerTagTarget();
+    if (!item) { layerTagTarget = undefined; return; }
+    const { folders, assignments } = organizerFolders(cat.id);
+    const path = kind === 'category' ? cat.name : [cat.name, organizerPath(folders, kind === 'folder' ? id : assignments[id]), kind === 'trait' ? item.name : ''].filter(Boolean).join(' / ');
+    $('layerTagsPath').textContent = path;
+    $('layerTagsNew').value = '';
+    draftLayerTags = [...(item.lookbookTags || [])];
+    renderLayerTagDraft();
+    layerTagsDialog.showModal();
+    $('layerTagsTitle').focus({ preventScroll: true });
+  }
+
+  function addLayerDraftTag(value) {
+    const { cat, item } = resolveLayerTagTarget();
+    const [tag] = M.normalizeLookbookTags([value]);
+    if (!item || !tag) return;
+    const key = M.lookbookTagKey(tag);
+    const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
+    if (!inherited.some(label => M.lookbookTagKey(label) === key)) {
+      draftLayerTags = M.normalizeLookbookTags([...draftLayerTags, tag]);
+    }
+  }
+
+  function addNewLayerTag() {
+    const field = $('layerTagsNew');
+    addLayerDraftTag(field.value);
+    field.value = '';
+    renderLayerTagDraft();
+    field.focus({ preventScroll: true });
+  }
+
+  $('layerTagsOptions').addEventListener('change', event => {
+    addLayerDraftTag(event.target.value);
+    renderLayerTagDraft();
+  });
+  $('layerTagsNew').addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.isComposing) return;
+    event.preventDefault();
+    addNewLayerTag();
+  });
+  $('layerTagsAdd').addEventListener('click', addNewLayerTag);
+  $('layerTagsCancel').addEventListener('click', () => layerTagsDialog.close());
+  $('layerTagsAssigned').addEventListener('click', event => {
+    const control = event.target.closest('[data-layer-tag-remove]');
+    if (!control) return;
+    draftLayerTags = draftLayerTags.filter(tag => tag !== control.value);
+    renderLayerTagDraft();
+    $('layerTagsNew').focus({ preventScroll: true });
+  });
+  $('layerTagsForm').addEventListener('submit', event => {
+    event.preventDefault();
+    if (busy) return;
+    const { item } = resolveLayerTagTarget();
+    addLayerDraftTag($('layerTagsNew').value);
+    if (item && JSON.stringify(draftLayerTags) !== JSON.stringify(item.lookbookTags || [])) {
+      change(() => {
+        if (draftLayerTags.length) item.lookbookTags = [...draftLayerTags];
+        else delete item.lookbookTags;
+      }, 'Štítky uloženy', true);
+      layerTagTarget.onSave?.();
+    }
+    layerTagsDialog.close();
+  });
+  layerTagsDialog.addEventListener('close', () => {
+    const target = layerTagTarget;
+    layerTagTarget = undefined;
+    draftLayerTags = [];
+    if (!target) return;
+    const visible = target.returnTo?.isConnected ? target.returnTo : dialog.open
+      ? content.querySelector(`[data-lookbook-scope="${target.kind}"]`) || $('lookbookTitle')
+      : [...document.querySelectorAll('[data-action="open-layer-menu"]')].find(button =>
+        button.dataset.kind === target.kind && button.dataset.category === target.catId && button.dataset.id === target.id && button.getClientRects().length);
+    visible?.focus({ preventScroll: true });
+  });
+
   function renderFilters() {
-    const items = view === 'traits' ? projectTraits() : view === 'cards' ? projectCards() : [];
+    const tags = view === 'traits' ? M.layerTagOptions(state) : M.lookbookTagOptions(view === 'cards' ? projectCards() : []);
     const selected = tagFilters[view] || new Set();
-    renderTagFilter(filterRoot, M.lookbookTagOptions(items), selected, 'Filtrovat štítky');
-    const options = view === 'looks' ? new Map() : projectTagOptions();
-    $('lookbookTagGroups').hidden = !options.size;
-    $('lookbookFilterBar').hidden = filterRoot.hidden && !options.size;
+    renderTagFilter(filterRoot, tags, selected, 'Filtrovat štítky');
+    $('lookbookTagGroups').hidden = view === 'looks';
+    $('lookbookFilterBar').hidden = view === 'looks';
     $('lookbookUseRules').hidden = view !== 'traits' || !selected.size;
-    if (!options.size) return;
-    const groups = M.lookbookTagGroupOptions(state.lookbookTagGroups);
+    if (view === 'looks') return;
+    const groups = new Map(Object.values(tagDefaultGroupTitles()).map(title => [M.lookbookTagKey(title), title]));
+    for (const [key, title] of M.lookbookTagGroupOptions(state.lookbookTagGroups)) {
+      if (!groups.has(key)) groups.set(key, title);
+    }
     const tagField = assignGroup.elements.namedItem('tag');
     const previous = tagField.value;
-    fillSelect(tagField, [...options], 'Vyber štítek');
+    fillSelect(tagField, availableTagOptions(), 'Vyber štítek');
     if (tagField.value !== previous) showAssignedGroup();
-    const names = groups.map(([, title]) => new Option(title, title));
+    const names = [...groups.values()].map(title => new Option(title, title));
     $('lookbookTagGroupNames').replaceChildren(...names);
-    renameGroup.hidden = !groups.length;
-    fillSelect(renameGroup.elements.namedItem('group'), groups, 'Vyber skupinu');
+    renameGroup.hidden = false;
+    fillSelect(renameGroup.elements.namedItem('group'), [...groups], 'Vyber skupinu');
   }
 
   function showAssignedGroup() {
@@ -55,11 +175,12 @@
     assignGroup.elements.namedItem('group').value = Object.hasOwn(groups, key) ? groups[key] : '';
   }
 
-  function saveTagGroups(groups) {
+  function saveTagGroups(groups, titles = state.lookbookTagGroupTitles) {
     if (busy) return;
     saveCard();
     change(() => {
       state.lookbookTagGroups = M.normalizeLookbookTagGroups(groups);
+      if (titles) state.lookbookTagGroupTitles = titles;
     }, 'Skupiny štítků uloženy', true);
     renderFilters();
     showAssignedGroup();
@@ -69,12 +190,10 @@
     const assigned = [...(item.lookbookTags || [])].sort((a, b) => a.localeCompare(b, 'cs'));
     const effective = M.normalizeLookbookTags([...assigned, ...inherited]);
     const keys = new Set(effective.map(M.lookbookTagKey));
-    const existing = projectTagOptions();
-    const iconOptions = lookbookIconLabels.map(tag => [M.lookbookTagKey(tag), tag]).filter(([key]) => !existing.has(key));
-    const available = [...existing, ...iconOptions.sort(([, a], [, b]) => a.localeCompare(b, 'cs'))].filter(([key]) => !keys.has(key));
+    const available = availableTagOptions().filter(([key]) => !keys.has(key));
     return `<details class="lookbook-tag-editor" ${expanded ? 'open' : ''}>
       <summary>Štítky${effective.length ? ` <small>${effective.map(esc).join(' · ')}</small>` : ''}</summary>
-      ${inherited.length ? `<p class="lookbook-help">Z karty · ${inherited.map(esc).join(' · ')}</p>` : ''}
+      ${inherited.length ? `<p class="lookbook-help">${view === 'cards' ? 'Z karty' : 'Z kategorie nebo složky'} · ${inherited.map(esc).join(' · ')}</p>` : ''}
       ${assigned.length ? `<div class="lookbook-assigned-tags">${assigned.map(tag =>
         `<button type="button" data-lookbook-tag-remove value="${esc(tag)}" aria-label="Odebrat štítek ${esc(tag)}">${tagSample(tag)}<span>${esc(tag)}</span><span class="tag-remove" aria-hidden="true">×</span></button>`
       ).join('')}</div>` : ''}
@@ -88,7 +207,8 @@
 
   function editTag(value, remove = false) {
     if (busy) return;
-    const { item, inherited } = view === 'cards' ? customCards.tagItem() : { item: selectedTrait(), inherited: [] };
+    const { item, inherited } = view === 'cards' ? customCards.tagItem()
+      : { item: selectedTrait(), inherited: selectedTrait() ? M.inheritedLayerTags(state, category(), selectedTrait()) : [] };
     const [tag] = M.normalizeLookbookTags([value]);
     if (!item || !tag) return;
     const key = M.lookbookTagKey(tag);
@@ -166,12 +286,12 @@
       <div class="lookbook-detail-head"><div><h3 data-lookbook-title>${esc(label(item))}</h3><p>${esc(path)}</p></div>
       ${trait ? `<div class="lookbook-chance-box"><output class="lookbook-chance" aria-label="Základní šance traitu"></output><span class="lookbook-rarity-label">${item.hidden ? 'Skrytý' : rarities.get(M.rarityWeight(item)) || 'Vlastní'}</span></div>` : ''}</div>
       <p class="lookbook-story" ${item.story ? '' : 'hidden'}>${esc(item.story || '')}</p>
-      ${tags}${trait ? tagEditor(item) : ''}${editor(item, trait)}
+      ${tags}${trait ? tagEditor(item, M.inheritedLayerTags(state, category(), item)) : ''}${editor(item, trait)}
     </section>`;
   }
 
-  function traitTagPreview(trait) {
-    const tags = trait.lookbookTags || [];
+  function traitTagPreview(cat, trait) {
+    const tags = M.effectiveLayerTags(state, cat, trait);
     if (!tags.length) return '';
     const labels = tags.slice(0, 2).map(tag =>
       `<span class="lookbook-card-tag">${tagSample(tag)}<span>${esc(tag)}</span></span>`
@@ -190,8 +310,8 @@
     const card = [...content.querySelectorAll('[data-lookbook-trait]')].find(button => button.dataset.lookbookTrait === trait.id);
     if (!card) return;
     const preview = card.querySelector('.lookbook-card-tags');
-    if (preview) preview.outerHTML = traitTagPreview(trait);
-    else card.querySelector('.lookbook-rate').insertAdjacentHTML('beforebegin', traitTagPreview(trait));
+    if (preview) preview.outerHTML = traitTagPreview(cat, trait);
+    else card.querySelector('.lookbook-rate').insertAdjacentHTML('beforebegin', traitTagPreview(cat, trait));
   }
 
   function renderTraits(cat) {
@@ -202,20 +322,23 @@
     if (!traits.some(trait => trait.id === traitId)) traitId = traits[0].id;
     const trait = selectedTrait();
     const { folders, assignments } = organizerFolders(cat.id);
-    const path = [cat.name, organizerPath(folders, assignments[trait.id]), trait.name].filter(Boolean).join(' / ');
+    const folderId = assignments[trait.id];
+    const path = [cat.name, organizerPath(folders, folderId), trait.name].filter(Boolean).join(' / ');
     const cards = traits.map(item => `<button type="button" class="lookbook-card" data-lookbook-trait="${esc(item.id)}" aria-pressed="${item.id === traitId}" ${item.hidden ? 'data-hidden-trait' : ''}>
       <span class="lookbook-art">${safeMode ? '' : layerThumbnail(cat, item, 'lookbook-thumbnail')}${item.flag ? flagIcon(item.flag, true) : ''}</span>
       <span class="lookbook-tag" data-lookbook-card-name="${esc(item.id)}">${esc(label(item))}</span>
-      ${traitTagPreview(item)}
+      ${traitTagPreview(cat, item)}
       <span class="lookbook-rate" data-lookbook-chance="${esc(item.id)}"></span>
     </button>`).join('');
     const pager = pages > 1 ? `<div class="lookbook-pages">
       <button type="button" data-lookbook-page="-1" ${page === 0 ? 'disabled' : ''}>‹ Předchozí</button>
       <span>${page + 1} / ${pages}</span><button type="button" data-lookbook-page="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
     </div>` : '';
+    const folderTags = folderId ? `<button type="button" class="subtle lookbook-folder-tags" data-lookbook-scope="folder" data-id="${esc(folderId)}" aria-haspopup="dialog">${icon('tag')}Štítky složky</button>` : '';
     content.innerHTML = `<section class="lookbook-sheet">
-      ${mast(counted(matches.length, 'trait', 'traity', 'traitů'))}<h3>${esc(cat.name)}</h3>
-      <div class="lookbook-grid">${cards}</div>${pager}</section>${detail(trait, path, true)}`;
+      ${mast(counted(matches.length, 'trait', 'traity', 'traitů'))}<div class="lookbook-chapter-heading"><h3>${esc(cat.name)}</h3>
+      <button type="button" class="lookbook-category-tags" data-lookbook-scope="category" data-id="${esc(cat.id)}" aria-haspopup="dialog">${icon('tag')}Štítky kategorie</button></div>
+      <div class="lookbook-grid">${cards}</div>${pager}</section>${detail(trait, path, true, folderTags)}`;
     updateChances();
     mountThumbnails();
   }
@@ -253,7 +376,7 @@
 
   function chapterButton(item, selected) {
     const title = esc(label(item));
-    const count = view === 'traits' ? M.lookbookTagOptions(item.traits).size : 0;
+    const count = view === 'traits' ? M.layerTagOptions(state, [item]).size : 0;
     const tags = count ? `<span class="lookbook-chapter-tags" role="img" aria-label="${counted(count, 'štítek', 'štítky', 'štítků')}">${icon('tag')}<span aria-hidden="true">${count}</span></span>` : '';
     const marks = view === 'traits' ? layerMarkBadges(item) : '';
     return `<button type="button" data-lookbook-chapter="${esc(item.id)}" aria-pressed="${item === selected}" title="${title}">
@@ -413,7 +536,11 @@
     if (!key || !title) return;
     const groups = Object.fromEntries(Object.entries(state.lookbookTagGroups || {}).map(([tag, group]) =>
       [tag, M.lookbookTagKey(group) === key ? title : group]));
-    saveTagGroups(groups);
+    const titles = { ...state.lookbookTagGroupTitles };
+    for (const [type, current] of Object.entries(tagDefaultGroupTitles())) {
+      if (M.lookbookTagKey(current) === key) titles[type] = title;
+    }
+    saveTagGroups(groups, titles);
     input.value = '';
   });
   $('lookbookUseRules').addEventListener('click', () => {
@@ -421,6 +548,12 @@
     close();
   });
   content.addEventListener('click', event => {
+    const scope = event.target.closest('[data-lookbook-scope]');
+    if (scope) {
+      saveCard();
+      openLayerTags(scope.dataset.lookbookScope, categoryId, scope.dataset.id, refreshTagResults);
+      return;
+    }
     const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove]');
     if (!control) return;
     if (control.hasAttribute('data-lookbook-tag-remove')) editTag(control.value, true);
@@ -449,7 +582,7 @@
       const target = M.locate(state, lookbookJump);
       if (!target) return;
       view = 'traits';
-      if (!M.matchesLookbookTags(target.trait, tagFilters.traits)) tagFilters.traits.clear();
+      if (!M.matchesLookbookTags(target.trait, tagFilters.traits, M.inheritedLayerTags(state, target.cat, target.trait))) tagFilters.traits.clear();
       selectTrait(target.cat, target.trait.id);
     }
     render();
@@ -514,5 +647,5 @@
       URL.revokeObjectURL(url);
     }
   }
-  window.TraitLookbook = { thumbnail };
+  window.TraitLookbook = { thumbnail, openLayerTags };
 })();

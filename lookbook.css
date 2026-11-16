@@ -254,3 +254,27 @@
   display: block; width: 100%; min-width: 0; min-height: 42px; margin-top: 4px; font-size: 16px;
 }
 .lookbook-tag-group-form button { grid-column: 1 / -1; justify-self: start; min-height: 44px; font-size: 12px; }
+.lookbook-chapter-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 8px; }
+.lookbook-sheet .lookbook-category-tags {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 3px 5px;
+  border: 0; background: transparent; box-shadow: none; color: var(--muted-ink); font-size: 11px;
+}
+.lookbook-category-tags .icon, .lookbook-folder-tags .icon { width: 13px; height: 13px; }
+.lookbook-folder-tags { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 3px 6px; font-size: 12px; }
+.layer-tag-marker {
+  display: inline-flex; align-items: center; gap: 2px; flex: none; vertical-align: middle;
+  color: var(--scheme-muted, #b7aebb); font-size: 11px;
+}
+.layer-tag-marker > .icon { width: 12px; height: 12px; }
+.category-trait-copy .layer-tag-marker { margin-inline-start: 5px; }
+#layerTagsDialog {
+  width: min(420px, calc(100% - 24px)); padding: 13px; max-width: calc(100% - 24px);
+  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: auto;
+}
+#layerTagsForm { display: grid; gap: 8px; }
+#layerTagsForm h2, #layerTagsForm p { margin: 0; overflow-wrap: anywhere; }
+#layerTagsForm h2 { font-size: 19px; }
+#layerTagsPath, #layerTagsInherited { color: var(--scheme-muted, #beb2bf); font-size: 12px; }
+#layerTagsAssigned:empty { display: none; }
+#layerTagsForm :is(input, select) { min-width: 0; min-height: 44px; width: 100%; font-size: 16px; }
+#layerTagsForm .dialog-actions { margin-top: 3px; }
