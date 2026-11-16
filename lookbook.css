@@ -75,13 +75,12 @@
 .lookbook-rate { color: var(--muted-ink); font: 11px/1.1 "Courier Prime", "Courier New", monospace; }
 .lookbook-card-tags { display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; max-width: 100%; }
 .lookbook-card-tag {
+  --tag-icon-size: 14px; --tag-icon-radius: 3px;
   display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%;
   padding: 1px 4px 1px 2px; border: 1px solid #25232124; border-radius: 4px;
   background: #f4efe44f; color: var(--ink); font-size: 11px; line-height: 1.2;
 }
 .lookbook-card-tag > span:last-child { overflow-wrap: anywhere; }
-.lookbook-card-tag :is(.tag-swatch, .material-swatch) { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
-.lookbook-card-tag .tag-swatch:not(.tag-swatch-art) { color: var(--ink); }
 .lookbook-card-tag-more { align-self: center; color: var(--muted-ink); font-size: 11px; }
 .lookbook-pages { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--rule); }
 .lookbook-pages button { min-height: 35px; padding: 5px; border-color: transparent; background: transparent; color: var(--ink); font-size: 11px; box-shadow: none; }
@@ -219,18 +218,19 @@
   content: ""; width: 7px; height: 4px; flex: 0 0 7px; margin-inline-start: auto;
   border: solid #ffd4ec; border-width: 0 0 2px 2px; transform: rotate(-45deg);
 }
-.tag-swatch {
-  display: grid; place-items: center; flex: 0 0 17px; width: 17px; height: 17px;
-  border-radius: 4px; color: #c9bccb; background: #ffffff12;
+.tag-swatch, .material-swatch {
+  box-sizing: border-box; display: inline-grid; place-items: center;
+  flex: 0 0 var(--tag-icon-size, 26px);
+  width: var(--tag-icon-size, 26px); height: var(--tag-icon-size, 26px);
+  border: 1px solid #39343d; border-radius: var(--tag-icon-radius, 5px);
+  background: #17151a; color: #c9bccb;
 }
 .tag-swatch .icon { width: 11px; height: 11px; }
 .tag-swatch-art {
-  flex-basis: 26px; width: 26px; height: 26px;
-  border: 1px solid #39343d; border-radius: 5px;
   background: #030303 url('art/lookbook/tag-icons.webp') var(--tag-x) var(--tag-y) / 600% 500% no-repeat;
 }
-#lookbookTags .material-swatch, .lookbook-assigned-tags .material-swatch {
-  flex-basis: 26px; width: 26px; height: 26px;
+.material-swatch {
+  background: var(--material-base, #17151a) var(--material-tag, none) center / cover no-repeat;
 }
 .tag-clear {
   justify-self: start; min-height: 40px; padding: 4px 8px; font-size: 12px;
@@ -260,7 +260,6 @@
   border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(-45deg);
 }
 .tag-picker-choice:has(.tag-picker-checkbox:focus-visible) { outline: 2px solid var(--ui-feedback, #ee6dae); outline-offset: -2px; }
-.tag-picker-options :is(.tag-swatch, .material-swatch) { flex: 0 0 26px; width: 26px; height: 26px; }
 .lookbook-tag-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; }
 .lookbook-tag-add input { width: 100%; min-width: 0; font-size: 16px; }
 .lookbook-tag-add button { min-height: 44px; padding: 4px 8px; font-size: 12px; }
@@ -288,8 +287,7 @@
 .layer-tag-fallback, .layer-tag-previews { align-items: center; gap: 2px; }
 .layer-tag-fallback { display: inline-flex; }
 .layer-tag-fallback > .icon { width: 12px; height: 12px; }
-.layer-tag-previews { display: none; font-size: 10px; }
-.layer-tag-previews :is(.tag-swatch, .material-swatch) { flex: 0 0 13px; width: 13px; height: 13px; border-radius: 3px; }
+.layer-tag-previews { --tag-icon-size: 13px; --tag-icon-radius: 3px; display: none; font-size: 10px; }
 .layer-tag-previews .tag-swatch .icon { width: 8px; height: 8px; }
 .layer-tree-trait .layer-tree-main, .category-trait-copy { container: layer-tag-space / inline-size; }
 .category-trait-copy strong { display: flex; align-items: center; gap: 5px; }

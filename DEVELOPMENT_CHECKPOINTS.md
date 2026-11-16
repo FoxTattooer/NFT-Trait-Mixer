@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.147 | checkpoint/v0.7.147-sladene-ikony-stitku | Materiály, účesy, pokrývky a doplňky mají společnou velikost, zaoblení a jemný tmavý okraj. |
 | 0.7.146 | checkpoint/v0.7.146-hromadny-vyber-stitku | V okně Štítky se označí více položek kolečky a uloží jedním krokem. |
 | 0.7.145 | checkpoint/v0.7.145-miniatury-stitku-a-reset | Náhledy štítků ve výběru i u vrstev. Úplný reset Showroomu má potvrzení, aktuální krok se čistí rovnou. |
 | 0.7.144 | checkpoint/v0.7.144-sprava-stitku | Přiřazení štítků kategoriím, složkám a traitům, výběr existujících štítků, tvorba nových a přejmenování skupiny Materiály. |
