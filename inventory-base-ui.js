@@ -6,6 +6,8 @@
   const editor = $('inventoryItemDialog'), form = $('inventoryItemForm'), source = $('inventorySourceFile');
   const status = $('inventoryBaseStatus');
   const textForm = $('inventoryTextForm'), textInput = $('inventoryTextInput'), textEdit = $('inventoryTextEdit');
+  const textAdd = $('inventoryTextAdd');
+  const expandedText = new Map();
   let base, loading, writing = Promise.resolve(), view, edit, importing = false, mode = 'base';
   let textSaving = false;
   const preview = window.TraitInventoryPreview.mount($('inventoryPreview'),id => base && model.locate(base.nodes,id)?.item);
@@ -31,6 +33,7 @@
         read: () => model.pathNodes(model.confirmedTree(base.nodes)), manage:true, showPlans:false, initialOpen:['cat-facemask'],
         update: (ids,field,value) => { mutate(nodes => model.setField(nodes,ids,field,value)); },
         edit: editItem, preview: node => addPreview(node,'base'),
+        text: node => { void addToText(node.id,'base'); },
         propose: node => { void propose(node); },
       });
       else view.render();
@@ -83,6 +86,27 @@
     }
   }
   function addPreview(node,source) { preview.add(node,source); show('preview'); }
+  async function addToText(id, origin) {
+    const sourceMode = mode;
+    const projectNodes = origin === 'project' ? model.projectTree(M,state) : null;
+    try {
+      await load();
+      if (!base) return;
+      const result = await write(next => model.copyToText(next,projectNodes || model.confirmedTree(next.nodes),id,origin));
+      if (!dialog.open || mode !== sourceMode) return;
+      const open = group => {
+        if (!group.children) return;
+        expandedText.set(group.id,true);
+        group.children.forEach(open);
+      };
+      const target = base.textGroups.find(group => group.id === result.id);
+      if (target) open(target);
+      show('text');
+      [...$('inventoryTextGroups').querySelectorAll('[data-text-toggle]')].find(button => button.dataset.textToggle === result.id)?.focus();
+      const count = result.added;
+      showStatus(count ? `${result.name} · ${count} ${count === 1 ? 'přidaná položka' : count < 5 ? 'přidané položky' : 'přidaných položek'}.` : `${result.name} je v textovém seznamu.`);
+    } catch { /* The shared inventory status displays the write error. */ }
+  }
   async function propose(node) {
     try {
       const id = await write(next => model.suggestChange(next,node),'Návrh připraven ke schválení.');
@@ -101,20 +125,95 @@
   });
   $('inventoryFromFile').addEventListener('click',() => { $('inventoryFromFile').closest('details').open = false; source.click(); });
 
+  const element = (tag, className, content) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (content !== undefined) node.textContent = content;
+    return node;
+  };
+  function beginTextItem(target, group, opener) {
+    if (!base || textSaving) return;
+    $('inventoryTextInline')?.remove();
+    const quick = element('form','inv-text-inline');
+    quick.id = 'inventoryTextInline';
+    quick.innerHTML = `<input type="text" maxlength="200" required placeholder="Název položky"><button type="submit" class="primary">Přidat</button><button type="button" class="subtle" aria-label="Zrušit přidávání">✕</button>`;
+    const input = quick.querySelector('input');
+    input.setAttribute('aria-label',group ? `Název nové položky · ${group.name}` : 'Název nového bodu');
+    function cancel() { quick.remove(); opener.focus(); }
+    quick.querySelector('[type=button]').addEventListener('click',cancel);
+    quick.addEventListener('keydown',event => {
+      if (event.key === 'Escape' && !textSaving) { event.preventDefault(); event.stopPropagation(); cancel(); }
+    });
+    quick.addEventListener('submit',async event => {
+      event.preventDefault();
+      if (textSaving) return;
+      const name = input.value.trim();
+      if (!name) { showStatus('Zadej název položky.',true); return; }
+      textSaving = true;
+      const controls = [...quick.elements];
+      controls.forEach(control => { control.disabled = true; });
+      try {
+        await write(next => model.addTextItem(next,group?.id,name), 'Položka přidána do textového seznamu.');
+        if (mode === 'text' && dialog.open) {
+          const button = group ? [...$('inventoryTextGroups').querySelectorAll('[data-text-add]')].find(node => node.dataset.textAdd === group.id) : textAdd;
+          button?.focus({ preventScroll:true });
+        }
+      } catch { /* A failed write leaves the draft available for retry. */ }
+      finally {
+        textSaving = false;
+        controls.forEach(control => { control.disabled = false; });
+        if (quick.isConnected) input.focus();
+      }
+    });
+    target.prepend(quick);
+    input.focus();
+  }
+  function renderTextGroup(group) {
+    const section = element('section','inv-text-group');
+    const header = element('div','inv-text-group-head');
+    const toggle = element('button','inv-text-toggle subtle');
+    const add = element('button','inv-text-add subtle');
+    const body = element('div','inv-text-group-body');
+    const count = item => item.children ? item.children.reduce((sum, child) => sum + count(child),0) : 1;
+    toggle.type = add.type = 'button';
+    toggle.dataset.textToggle = group.id;
+    add.dataset.textAdd = group.id;
+    add.setAttribute('aria-label',`Přidat do ${group.name}`);
+    toggle.innerHTML = `${icon('chevron')}${icon('folder')}`;
+    toggle.append(element('strong','',group.name),element('small','',String(count(group))));
+    add.innerHTML = icon('plus');
+    function setExpanded(open) {
+      expandedText.set(group.id,open);
+      toggle.setAttribute('aria-expanded',String(open));
+      body.hidden = !open;
+    }
+    setExpanded(expandedText.get(group.id) ?? true);
+    toggle.addEventListener('click',() => setExpanded(body.hidden));
+    add.addEventListener('click',() => { setExpanded(true); beginTextItem(body,group,add); });
+    let names;
+    for (const child of group.children) {
+      if (child.children) { names = null; body.append(renderTextGroup(child)); }
+      else {
+        if (!names) { names = element('ul','inv-text-names'); body.append(names); }
+        names.append(element('li','',child.name));
+      }
+    }
+    header.append(toggle,add);
+    section.append(header,body);
+    return section;
+  }
   function renderText() {
     const items = base?.textItems || [];
+    const { loose,groups } = model.textSections(items);
     const list = $('inventoryTextItems');
-    const lines = document.createDocumentFragment();
-    for (const item of items) {
-      const line = document.createElement('li');
-      line.textContent = item;
-      lines.append(line);
-    }
-    list.replaceChildren(lines);
-    list.hidden = !items.length;
+    list.replaceChildren(...loose.map(name => element('li','',name)));
+    list.hidden = !loose.length;
+    const grouped = [...(textForm.hidden ? groups : []), ...(base?.textGroups || [])];
+    $('inventoryTextGroups').replaceChildren(...grouped.map(renderTextGroup));
     $('inventoryTextRead').hidden = !textForm.hidden;
-    textEdit.disabled = !base;
-    textEdit.textContent = items.length ? 'Upravit seznam' : 'Přidat body';
+    $('inventoryTextInline')?.remove();
+    textEdit.disabled = textAdd.disabled = !base;
+    textEdit.textContent = items.length ? 'Upravit volný text' : 'Napsat více bodů';
   }
   function closeTextEditor() {
     textForm.hidden = true;
@@ -125,9 +224,10 @@
     if (!base) return;
     textInput.value = base.textItems.join('\n');
     textForm.hidden = false;
-    $('inventoryTextRead').hidden = true;
+    renderText();
     textInput.focus();
   });
+  textAdd.addEventListener('click',() => beginTextItem($('inventoryTextRead'),null,textAdd));
   $('inventoryTextCancel').addEventListener('click',closeTextEditor);
   textForm.addEventListener('submit',async event => {
     event.preventDefault();
@@ -272,15 +372,16 @@
     if (!base || importing) return;
     importing = true; updateButtons(); showStatus(`Načítám ${label}…`);
     try {
-      const { nodes,suggestions,textItems,skipped = 0 } = await read();
-      const normalized = model.normalize({ format:model.format,nodes,suggestions,textItems });
-      if (!normalized.nodes.length && !normalized.textItems.length) throw new Error('V dokumentu nebyly nalezeny vrstvy ani textové body.');
+      const { skipped = 0,...data } = await read();
+      const normalized = model.normalize({ ...data,format:model.format });
+      if (!normalized.nodes.length && !normalized.textItems.length && !normalized.textGroups.length) throw new Error('V dokumentu nebyly nalezeny vrstvy ani textové body.');
       await write(next => {
         model.includeSuggestions(next,normalized.suggestions);
         const known = new Set(next.textItems);
         const imported = normalized.textItems.filter(item => !known.has(item));
         next.textItems.push(...imported);
-        return { ...model.merge(next.nodes,normalized.nodes), textAdded:imported.length };
+        const textAdded = imported.length + model.mergeTextGroups(next.textGroups,normalized.textGroups);
+        return { ...model.merge(next.nodes,normalized.nodes), textAdded };
       }, ({ added,matched,textAdded }) =>
         `Přidáno ${added} · už v soupisu ${matched}${textAdded ? ` · textové body +${textAdded}` : ''}${skipped ? ` · ${skipped} vrstev bez miniatury` : ''}`);
     } catch (error) { showStatus(error.message,true); }
@@ -308,6 +409,7 @@
   });
   window.TraitInventoryBaseUI = {
     open: (mode = 'base') => { if (dialog.open) show(mode); }, showProject: () => show('project'),
+    addToText,
     addProjectPreview: node => addPreview(node,'project'),
     readTree: async () => { await load(); if (!base) throw new Error('Soupis vrstev se nepodařilo načíst.'); return base.nodes; },
   };

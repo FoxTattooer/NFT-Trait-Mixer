@@ -754,6 +754,7 @@ function showInventoryProject() {
       }, 'Rozhodnutí uloženo', true);
     },
     preview: node => window.TraitInventoryBaseUI.addProjectPreview(node),
+    text: node => window.TraitInventoryBaseUI.addToText(node.id,'project'),
     thumbnail: node => !safeMode && node.kind === 'layer' ? layerThumbnail({ id: node.categoryId }, node) : '',
     onRender: () => { renderLayerBulk(); mountThumbnails(); },
   });

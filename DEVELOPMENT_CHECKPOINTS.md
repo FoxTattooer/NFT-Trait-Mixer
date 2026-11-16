@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.129 | checkpoint/v0.7.129-textovy-soupis | Kompaktní soupis a přenos jednotlivých vrstev i celých kategorií do textového seznamu. |
 | 0.7.128 | checkpoint/v0.7.128-strom-vrstev | Kategorie a složky se rozbalují v jednom stromu, miniatury vrstev zvýrazní kresbu. |
 | 0.7.127 | checkpoint/v0.7.127-sbaleni-ve-dvou-krocich | Plná lišta se při rolování na výšku sbalí nejdřív na čtyři ikony a pak do kapky. |
 | 0.7.126 | checkpoint/v0.7.126-spodni-lista | Automatické sbalení plné lišty a oprava výšky iPhone aplikace z plochy. |

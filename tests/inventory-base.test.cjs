@@ -70,3 +70,26 @@ test('a fixed folder layout keeps subfolders and distinct names while skipping p
     {name:'Leafs',path:'Leafs',folders:[]},{name:'Leafs 2',path:'Leafs 2',folders:[]},
   ]);
 });
+
+test('text copies retain paths, repeated layer names and manual additions after re-import', () => {
+  let base = Base.normalize({ format:Base.format,nodes:[],textItems:['SKINS','-MOSAIC','- WATER','Dokreslit oči'] });
+  const nodes = [cat('glasses','Glasses',[
+    { id:'rounded',name:'Rounded',kind:'folder',children:[trait('fl-1','FireLook'), trait('fl-2','FireLook')] },
+    trait('solo','Solo','layer',{ note:'Poznámka',image:'data:image/png;base64,AA==' }),
+  ])];
+  Base.addTextItem(base,'legacy:0','Red');
+  assert.deepEqual(Base.textSections(base.textItems).groups[0].children.map(item => item.name),['MOSAIC','WATER','Red']);
+  assert.deepEqual(Base.textSections(base.textItems).loose,['Dokreslit oči']);
+  const first = Base.copyToText(base,nodes,'fl-1','project');
+  assert.equal(first.name,'Glasses');
+  assert.equal(first.added,1);
+  Base.addTextItem(base,first.id,'Ručně');
+  assert.equal(Base.copyToText(base,nodes,'glasses','project').added,2);
+  base = Base.normalize(JSON.parse(JSON.stringify(base)));
+  assert.equal(Base.copyToText(base,nodes,'glasses','project').added,0);
+  const [glasses] = base.textGroups;
+  assert.deepEqual(glasses.children[0].children.map(item => item.name),['FireLook','FireLook']);
+  assert.deepEqual(glasses.children.map(item => item.name),['Rounded','Ručně','Solo']);
+  assert(!JSON.stringify(glasses).includes('Poznámka'));
+  assert.equal(Base.mergeTextGroups(base.textGroups,base.textGroups),0);
+});

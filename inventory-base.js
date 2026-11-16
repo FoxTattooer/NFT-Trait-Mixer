@@ -37,7 +37,97 @@
     const suggestions = (Array.isArray(raw.suggestions) ? raw.suggestions : []).map(normalizeSuggestion).filter(Boolean);
     const textItems = Array.isArray(raw.textItems)
       ? raw.textItems.filter(item => typeof item === 'string').flatMap(textLines) : [];
-    return { format, nodes, textItems, suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
+    return { format, nodes, textItems, textGroups:normalizeTextGroups(raw.textGroups), suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
+  }
+
+  function normalizeTextGroups(groups) {
+    const used = new Set();
+    function read(items, atRoot = false) {
+      if (!Array.isArray(items)) return [];
+      return items.flatMap(item => {
+        const id = label(item?.id,240), name = label(item?.name,200);
+        const branch = Array.isArray(item?.children), source = label(item?.source,240);
+        if (!id || !name || used.has(id) || (atRoot && !branch)) return [];
+        used.add(id);
+        return [{ id,name,...(source ? { source } : {}),...(branch ? { children:read(item.children) } : {}) }];
+      });
+    }
+    return read(groups,true);
+  }
+  function textSections(items) {
+    const child = line => /^-\s*(\S.*)$/u.exec(line)?.[1];
+    const loose = [], groups = [];
+    for (let i = 0; i < items.length;) {
+      const index = i, name = items[i++];
+      if (child(name) || !child(items[i] || '')) { loose.push(name); continue; }
+      const children = [];
+      while (i < items.length && child(items[i])) children.push({ name:child(items[i++]) });
+      groups.push({ id:`legacy:${index}`, name, children, end:i });
+    }
+    return { loose,groups };
+  }
+  function mergeTextGroups(target, incoming) {
+    // A stable ID identifies each entry, including distinct layers with identical names.
+    const known = new Map(target.map(item => [item.source || item.id,item]));
+    let added = 0;
+    for (const item of incoming) {
+      const key = item.source || item.id;
+      let entry = known.get(key);
+      if (!entry) {
+        entry = { ...item,id:item.id || newId(),...(item.children ? { children:[] } : {}) };
+        target.push(entry);
+        known.set(key,entry);
+        if (!entry.children) added++;
+      }
+      if (item.children && entry.children) added += mergeTextGroups(entry.children,item.children);
+    }
+    return added;
+  }
+  function copyToText(base, nodes, id, origin) {
+    function pathTo(items) {
+      for (const item of items) {
+        if (item.id === id) return [item];
+        const path = item.children && pathTo(item.children);
+        if (path) return [item,...path];
+      }
+      return null;
+    }
+    const path = pathTo(nodes);
+    if (!path) throw new Error('Položka v soupisu už není dostupná.');
+    const textSource = item => `${origin}:${item.id}`;
+    function copy(item) {
+      return { source:textSource(item),name:item.name,...(item.children ? { children:item.children.map(copy) } : {}) };
+    }
+    const selected = path.at(-1);
+    let entry = copy(selected);
+    for (let i = path.length - 2; i >= 0; i--) {
+      entry = { source:textSource(path[i]),name:path[i].name,children:[entry] };
+    }
+    const added = mergeTextGroups(base.textGroups,[entry]);
+    const root = base.textGroups.find(group => group.source === entry.source);
+    return { id:root.id, name:root.name, added };
+  }
+  function addTextItem(base, groupId, name) {
+    name = label(name,200);
+    if (!name || /[\r\n]/u.test(name)) throw new Error('Zadej název položky na jeden řádek.');
+    if (!groupId) { base.textItems.push(name); return; }
+    if (groupId.startsWith('legacy:')) {
+      const group = textSections(base.textItems).groups.find(item => item.id === groupId);
+      if (!group) throw new Error('Skupina v textovém seznamu už není dostupná.');
+      base.textItems.splice(group.end,0,`- ${name}`);
+      return;
+    }
+    function findGroup(groups) {
+      for (const group of groups) {
+        if (!group.children) continue;
+        if (group.id === groupId) return group;
+        const target = findGroup(group.children);
+        if (target) return target;
+      }
+    }
+    const target = findGroup(base.textGroups);
+    if (!target) throw new Error('Skupina v textovém seznamu už není dostupná.');
+    target.children.push({ id:`manual:${newId()}`,name });
   }
   const pathNodes = (nodes, path = '') => nodes.map(node => {
     const next = isPlanningGroup(node) ? path : path ? `${path} / ${node.name}` : node.name;
@@ -211,7 +301,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, textLines, pathNodes, confirmedTree, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
+  const api = { format, normalize, textLines, textSections, mergeTextGroups, copyToText, addTextItem, pathNodes, confirmedTree, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);
