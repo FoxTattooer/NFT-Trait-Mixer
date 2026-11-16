@@ -6,6 +6,7 @@ const { runInNewContext } = require('node:vm');
 const assert = require('node:assert/strict');
 const M = require('../project');
 const Showroom = require('../showroom');
+const Mint = require('../showroom-mint');
 const materialNames = ['Silver', 'Red', 'Gold', 'Mosaic', 'Cup', 'Lime', 'Rainbow', 'Orange', 'Purple', 'Emerald', 'Water'];
 
 test('Showroom starts fresh, groups choices, and keeps editor state isolated', () => {
@@ -82,6 +83,40 @@ test('Showroom uses the same assigned materials and palette colors as Lookbook t
   assert.deepEqual(materialNames.filter(name => !Showroom.swatchLabels.includes(name)), []);
   assert(Showroom.swatchLabels.includes('Blue'));
   assert.equal(Showroom.colorHex('Blueprint'), undefined);
+});
+
+test('mint draws by rarity, respects Showroom rules and keeps the backdrop for the final frame', () => {
+  const project = M.empty();
+  project.cats = [
+    { id: 'hair', name: 'Headwear', traits: [{ id: 'block-hat', name: 'Hat' }, { id: 'safe-hat', name: 'Beanie' }] },
+    { id: 'eyes', name: 'Eyes', traits: [{ id: 'pixel', name: 'Pixel' }] },
+    { id: 'skin', name: 'SKIN', traits: [
+      { id: 'disabled', name: 'Gold', rarityWeight: 0 },
+      { id: 'red', name: 'Red', rarityWeight: 100 },
+      { id: 'purple', name: 'Purple', rarityWeight: 300 },
+    ] },
+    { id: 'backdrop', name: 'Background', traits: [{ id: 'night', name: 'Night' }] },
+  ];
+  project.rules = [
+    { id: 'block', source: 'purple', targetCat: 'hair', targetTrait: 'block-hat', action: 'block' },
+    { id: 'hide', source: 'purple', targetCat: 'eyes', action: 'hide' },
+  ];
+  const before = JSON.stringify(project);
+  const visibleLayers = composition => {
+    const { warnings, hidden } = M.conflicts(composition);
+    assert.deepEqual(warnings, []);
+    return [...composition.cats].reverse().filter(cat => !hidden.has(cat.id))
+      .flatMap(cat => cat.traits.filter(trait => composition.selected[cat.id] === trait.id));
+  };
+  const dependencies = { model: M, create: Showroom.create, visibleLayers };
+  const stages = Mint.plan(project, dependencies, () => .4);
+  assert.deepEqual(stages.map(stage => stage.kind), ['silhouette', 'color', 'layer', 'final']);
+  assert.deepEqual(stages.map(stage => stage.layers.map(layer => layer.id)), [
+    ['purple'], ['purple'], ['purple', 'safe-hat'], ['night', 'purple', 'safe-hat'],
+  ]);
+  assert.equal(Mint.plan(project, dependencies, () => 0)[1].label, 'Red');
+  assert.deepEqual(Mint.plan(M.empty(), dependencies), []);
+  assert.equal(JSON.stringify(project), before);
 });
 
 test('installed Showroom serves intro and material artwork before consulting the network', async () => {

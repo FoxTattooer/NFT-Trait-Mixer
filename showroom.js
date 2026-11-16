@@ -3,9 +3,9 @@
 
   const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const featured = [
-    { label: 'Pozadí', matches: /background|back\d+ground|^pozadi$/ },
-    { label: 'Barva postavy', matches: /^(skin|skintones?|skincolors?|skins|plet|kuze)$/, swatches: true },
-    { label: 'Oči', matches: /^(eyes?|oci|oko)$/ },
+    { role: 'background', label: 'Pozadí', matches: /background|back\d+ground|^pozadi$/ },
+    { role: 'skin', label: 'Barva postavy', matches: /^(skin|skintones?|skincolors?|skins|plet|kuze)$/, swatches: true },
+    { role: 'eyes', label: 'Oči', matches: /^(eyes?|oci|oko)$/ },
   ];
   const materials = [
     ['cup', /\b(?:cup|ice blue|ledov[a-z]* modr[a-z]*)\b/],
@@ -52,7 +52,7 @@
       .filter(cat => cat.traits.length);
     const remaining = new Set(cats);
     const steps = [];
-    function add(label, categories, swatches = false, required = false) {
+    function add(label, categories, swatches = false, required = false, role = 'detail') {
       if (!categories.length) return;
       for (const cat of categories) remaining.delete(cat);
       const variants = categories.flatMap(cat => cat.traits.map(trait => {
@@ -64,10 +64,10 @@
           color: swatch ? colorHex(swatch) || '#68717e' : null,
         };
       }));
-      steps.push({ label, swatches, variants: required ? variants : [null, ...variants] });
+      steps.push({ label, swatches, role, required, variants: required ? variants : [null, ...variants] });
     }
-    for (const [index, { label, matches, swatches }] of featured.entries()) {
-      add(label, cats.filter(cat => matches.test(normalize(cat.name).replace(/[^a-z0-9]/g, ''))), swatches, index < 2);
+    for (const { label, matches, swatches, role } of featured) {
+      add(label, cats.filter(cat => matches.test(normalize(cat.name).replace(/[^a-z0-9]/g, ''))), swatches, role !== 'eyes', role);
     }
     for (const cat of remaining) add(cat.name, [cat]);
     const picks = [];
@@ -113,6 +113,11 @@
     const layout = dialog.querySelector('.showroom-layout');
     const choice = get('showroomChoice');
     const choiceTags = get('showroomChoiceTags');
+    const mintButton = get('showroomMintOpen');
+    const mintDialog = document.getElementById('showroomMintDialog');
+    const openMint = window.TraitShowroomMint.mount(mintDialog, {
+      model, create, visibleLayers, paintLayers, download, onError,
+    });
     let session, returnFocus, revision = 0, rendered = 0, rendering = false, exporting = false, confirmingReset = false;
 
     function updateChoiceTags(variant) {
@@ -183,6 +188,7 @@
       save.hidden = !done;
       clearStep.hidden = !step;
       reset.hidden = !steps.length;
+      mintButton.disabled = session.safe;
       updateExport();
     }
 
@@ -278,8 +284,12 @@
       if (event.animationName === 'showroom-intro') delete dialog.dataset.intro;
     });
     get('showroomExit').addEventListener('click', () => dialog.close());
+    mintButton.addEventListener('click', () => {
+      if (session && dialog.open && !mintButton.disabled) openMint(session.project, mintButton);
+    });
     dialog.addEventListener('close', () => {
       if (dialog.open) return;
+      if (mintDialog.open) mintDialog.close();
       delete dialog.dataset.intro;
       session = null;
       revision++;
@@ -320,7 +330,7 @@
 
     return (project, safe, trigger) => {
       if (dialog.open) return;
-      session = { builder: create(project, model), index: 0, safe };
+      session = { project, builder: create(project, model), index: 0, safe };
       returnFocus = trigger;
       canvas.width = canvas.height = 512;
       empty.hidden = false;

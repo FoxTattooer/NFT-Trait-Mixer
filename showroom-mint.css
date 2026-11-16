@@ -1,0 +1,93 @@
+#showroomDialog .showroom-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 100%;
+}
+.showroom-mint-launch { display: flex; justify-content: flex-end; padding-top: 5px; }
+#showroomDialog #showroomMintOpen {
+  gap: 7px;
+  border-color: #925366;
+  background: #29191f;
+  color: #ffe0e6;
+}
+#showroomMintOpen .icon { width: 16px; height: 16px; }
+
+#showroomMintDialog {
+  --mint-stroke: #65414c;
+  --mint-highlight: #f7a6b6;
+  width: min(calc(100% - 22px), 890px);
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  padding: 0;
+  border: 1px solid var(--mint-stroke);
+  border-radius: 19px;
+  color: #f8edf0;
+  background: #100d12;
+  color-scheme: dark;
+  overscroll-behavior: contain;
+}
+#showroomMintDialog::backdrop { background: #080609e8; }
+.showroom-mint-shell { padding: 13px; }
+.showroom-mint-head, .showroom-mint-step, .showroom-mint-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.showroom-mint-head { margin-bottom: 11px; }
+.showroom-mint-head h2, .showroom-mint-step h3 { margin: 0; font-size: clamp(18px, 4.6vw, 26px); line-height: 1.12; overflow-wrap: anywhere; }
+.showroom-mint-content { display: grid; gap: 12px; align-items: center; }
+.showroom-mint-stage {
+  position: relative; display: grid; place-items: center; overflow: hidden; isolation: isolate;
+  width: min(100%, 50dvh, 510px); aspect-ratio: 1; margin: 0 auto;
+  border: 1px solid var(--mint-stroke); border-radius: 13px;
+  background:
+    radial-gradient(ellipse at 50% 65%, #60364987, transparent 63%),
+    radial-gradient(circle, #eaa2bb26 1px, transparent 1px) 50% 50% / 17px 17px,
+    #100c11;
+}
+.showroom-mint-stage::after {
+  position: absolute; content: ''; inset: 0; pointer-events: none;
+  border-radius: inherit; box-shadow: inset 0 0 28px #100a12a8;
+}
+.showroom-mint-stage canvas { display: block; width: 100%; height: auto; }
+.showroom-mint-stage canvas[hidden] { display: none; }
+.showroom-mint-stage[data-phase='silhouette'] canvas {
+  filter: brightness(0) drop-shadow(0 0 2px #ffc2d6) drop-shadow(0 0 12px #ba597e95);
+}
+.showroom-mint-stage[data-phase='final'] { border-color: var(--mint-highlight); }
+.showroom-mint-panel {
+  min-width: 0; padding: 12px; border: 1px solid var(--mint-stroke); border-radius: 13px;
+  background: #1a141b;
+}
+#showroomMintCount { flex: none; color: #cfacb8; font-size: 12px; font-variant-numeric: tabular-nums; }
+#showroomMintProgress { width: 100%; height: 4px; margin: 7px 0 8px; accent-color: var(--mint-highlight); }
+#showroomMintChoice, #showroomMintStatus { margin: 6px 0; font-size: 13px; color: #dbc1cb; overflow-wrap: anywhere; }
+#showroomMintChoice:empty, #showroomMintStatus:empty { display: none; }
+.showroom-mint-actions { justify-content: flex-start; flex-wrap: wrap; }
+#showroomMintDialog button {
+  min-height: 44px; gap: 6px; padding: 7px 11px; color: #f9e7ee;
+  border: 1px solid var(--mint-stroke); border-radius: 9px; background: #261922;
+}
+#showroomMintDialog button[hidden] { display: none; }
+#showroomMintDialog :is(#showroomMintAdvance, #showroomMintSave) {
+  border-color: #b56883; background: #583045; color: #fff0f5;
+}
+#showroomMintDialog .icon { width: 15px; height: 15px; }
+#showroomMintDialog button:focus-visible { outline: 2px solid var(--mint-highlight); outline-offset: 2px; }
+@media (orientation: landscape) and (min-width: 560px) {
+  .showroom-mint-content { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .showroom-mint-stage { width: min(100%, calc(100dvh - 105px), 510px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .showroom-mint-stage[data-phase='silhouette'] canvas { animation: showroom-mint-pose 5s ease-in-out infinite; }
+  .showroom-mint-stage[data-phase='silhouette']::before {
+    position: absolute; content: ''; inset: 0; pointer-events: none;
+    background: linear-gradient(transparent 40%, #ffa8c11f 49%, #ffa8c153 50%, transparent 51%);
+    animation: showroom-mint-scan 2.9s ease-in-out infinite;
+  }
+  @keyframes showroom-mint-pose {
+    0%, 100% { transform: translateX(-2%) rotate(-2deg) scale(.95); }
+    50% { transform: translateX(2%) rotate(2deg) scale(.97); }
+  }
+  @keyframes showroom-mint-scan {
+    0%, 100% { transform: translateY(-46%); opacity: .3; }
+    50% { transform: translateY(46%); opacity: .82; }
+  }
+}

@@ -18,15 +18,17 @@
   <link rel="stylesheet" href="compact.css?build=07137">
   <link rel="stylesheet" href="schemes.css?build=07122">
   <link rel="stylesheet" href="showroom.css?build=07155">
+  <link rel="stylesheet" href="showroom-mint.css?build=07156">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
   <link rel="stylesheet" href="lookbook.css?build=07155">
   <script src="project.js?build=07151" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07155" defer></script>
+  <script src="diagnostics.js?build=07156" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
-  <script src="showroom.js?build=07155" defer></script>
+  <script src="showroom-mint.js?build=07156" defer></script>
+  <script src="showroom.js?build=07156" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <link rel="stylesheet" href="layer-inventory.css?build=07149">
   <script src="layer-inventory.js?build=07129" defer></script>
@@ -133,8 +135,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.155" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.155</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.156" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.156</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -558,11 +560,44 @@
           <p id="showroomStatus" role="status"></p>
         </section>
       </div>
+      <footer class="showroom-mint-launch">
+        <button type="button" id="showroomMintOpen" aria-haspopup="dialog">
+          <svg class="icon" aria-hidden="true"><use href="#i-shuffle"/></svg> Režim mint
+        </button>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="showroomMintDialog" aria-labelledby="showroomMintTitle">
+    <div class="showroom-mint-shell">
+      <header class="showroom-mint-head">
+        <h2 id="showroomMintTitle">Režim mint</h2>
+        <button type="button" id="showroomMintExit"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg> Showroom</button>
+      </header>
+      <div class="showroom-mint-content">
+        <figure id="showroomMintStage" class="showroom-mint-stage">
+          <canvas id="showroomMintCanvas" width="640" height="640" role="img" aria-label="Náhled postavy" hidden></canvas>
+        </figure>
+        <section class="showroom-mint-panel" aria-labelledby="showroomMintPhase">
+          <div class="showroom-mint-step">
+            <h3 id="showroomMintPhase" aria-live="polite"></h3>
+            <span id="showroomMintCount" aria-hidden="true"></span>
+          </div>
+          <progress id="showroomMintProgress" max="1" value="0" aria-label="Odhalování postavy"></progress>
+          <p id="showroomMintChoice"></p>
+          <div class="showroom-mint-actions">
+            <button type="button" id="showroomMintAdvance">Odhalit další vrstvu</button>
+            <button type="button" id="showroomMintReplay" hidden>Losovat znovu</button>
+            <button type="button" id="showroomMintSave" hidden><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg> Stáhnout PNG</button>
+          </div>
+          <p id="showroomMintStatus" role="status"></p>
+        </section>
+      </div>
     </div>
   </dialog>
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.156-showroom-rezim-mint" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.156 – Režim mint v Showroomu</strong><small>Losování podle rarit a pravidel. Animovaná silueta, odhalování vrstev krok po kroku a stažení hotového PNG.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.155-barvy-showroom-lookbook" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.155 – Barvy a štítky Showroomu a Lookbooku</strong><small>Společný vzorník ikon a barev. Showroom zobrazuje štítky vybrané varianty a pro barvu postavy používá přiřazený odstín.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.154-vyber-stitku-traitu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.154 – Hromadný výběr štítků traitu</strong><small>V detailu traitu lze přiřadit více štítků najednou. Pod náhledem je řádek ikon pro rychlý filtr.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.153-detailni-historie-kroku" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.153 – Detailní historie kroků</strong><small>Rozbalitelné změny s časem, cestami, hodnotami před a po a přesnými štítky. V Lookbooku jsou štítky složky v liště pod náhledem.</small></span><span class="version-tag">Uloženo</span></a>

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.156 | checkpoint/v0.7.156-showroom-rezim-mint | Animované odhalování náhodně vylosované postavy podle rarit a pravidel. Závěr umožňuje stažení PNG. |
 | 0.7.155 | checkpoint/v0.7.155-barvy-showroom-lookbook | Společný vzorník materiálů, barev a ikon. Showroom používá štítky variant a jejich přiřazené odstíny. |
 | 0.7.154 | checkpoint/v0.7.154-vyber-stitku-traitu | V detailu traitu lze přiřadit více štítků najednou. Pod náhledem je řádek ikon pro rychlý filtr. |
 | 0.7.153 | checkpoint/v0.7.153-detailni-historie-kroku | Rozbalitelné změny s časem, cestami, hodnotami před a po a přesnými štítky. Štítky složky v Lookbooku jsou pod náhledem. |
