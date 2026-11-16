@@ -884,7 +884,6 @@ button.trait-search-result {
 #appLayout[data-layer-bulk] .layer-bulk-expand {width:30px;min-height:44px;padding:4px;box-shadow:none;background:transparent;border:0}
 .layer-bulk-expand .icon {width:15px;height:15px}
 .layer-bulk-expand[aria-expanded=true] .icon {transform:rotate(90deg)}
-.category-filter-bar > .category-bulk-start {flex:0 0 44px;width:44px;min-height:44px;padding:0}
 #appLayout [data-action=start-layer-bulk][aria-pressed=true] {color:#92c8ff;border-color:#6a9ed4}
 .category-trait-preview {position:relative;min-width:0}
 #cats .category-trait-preview > button {width:100%}

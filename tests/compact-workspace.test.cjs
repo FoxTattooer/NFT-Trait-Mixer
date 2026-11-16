@@ -1403,8 +1403,12 @@ const bulkExpand = id => click(`#cats [data-layer-bulk-expand][data-id="${id}"]`
 const bulkCheckbox = id => find(`#cats [data-layer-bulk-pick][value="${id}"]`);
 const countBulk = n => assert.equal(get('editorLayerBulkCount').textContent, `Vybráno ${n}`);
 assert(get('editorLayerBulk').hidden);
-click('#categoryOverview [data-action="start-layer-bulk"]');
+assert(!find('#categoryOverview [data-action="start-layer-bulk"]'));
+click('#cats [data-action="open-layer-menu"][data-id="bulk-a"]');
+click('#layerContext [data-action="toggle-layer-bulk-item"]');
 assert(get('appLayout').hasAttribute('data-layer-bulk'));
+countBulk(1);
+bulkRow('bulk-a');
 countBulk(0);
 const beforeBulk = JSON.stringify(w.inspectState());
 bulkRow('bulk-a');

@@ -2519,11 +2519,14 @@ async function handleAction(action, id, element) {
       layerBulkMode = true;
       setLayerBulkPick(id);
       break;
-    case 'clear-layer-bulk':
+    case 'clear-layer-bulk': {
       resetLayerBulk();
       renderLayerBulk();
-      $('appLayout').querySelector(`#${mobilePanel === 'traits' ? 'traitsPanel' : 'categoryOverview'} [data-action="start-layer-bulk"]`)?.focus({ preventScroll: true });
+      const control = mobilePanel === 'traits' ? $('traitsPanel').querySelector('[data-action="start-layer-bulk"]')
+        : $(`layer-branch-${active}`)?.previousElementSibling.querySelector('.category-pick') || $('layerCategory');
+      control?.focus({ preventScroll: true });
       break;
+    }
     case 'expand-layer-bulk': await handleAction(element.dataset.expandAction, id, element); break;
     case 'open-layer-bulk': showLayerBulkDialog(id, element); break;
     case 'close-layer-bulk': $('layerBulkDialog').close(); break;
