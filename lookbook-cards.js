@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  function mount({ content, scroll, mast, tagEditor, filters, clearFilters, updateFilters }) {
+  function mount({ content, detailArea, sheetArea, scroll, mast, tagEditor, filters, clearFilters, updateFilters }) {
     const pageSize = 6;
     let cardId, variantId, page = 0, layerLimit = 48;
     const card = () => state.lookbookCards.find(item => item.id === cardId);
@@ -59,7 +59,7 @@
           <span class="lookbook-art">${art(item)}</span>
           <span class="lookbook-tag" data-book-name="${esc(item.id)}">${title(item)}</span>
         </button>`;
-      content.innerHTML = `<section class="lookbook-sheet lookbook-custom-sheet">
+      sheetArea.innerHTML = `<section class="lookbook-sheet lookbook-custom-sheet">
         ${mast(counted(cards.length, 'karta', 'karty', 'karet'))}
         <div class="lookbook-custom-head"><h3>Vlastní karty</h3><button type="button" data-book-action="new-card">+ Nová karta</button></div>
         ${cards.length ? `<div class="lookbook-grid lookbook-custom-grid">${visibleCards.map(item => tile(item, 'card', cardId)).join('')}</div>` :
@@ -68,9 +68,10 @@
           <button type="button" data-book-action="page" data-id="-1" ${page === 0 ? 'disabled' : ''}>‹ Předchozí</button>
           <span>${page + 1} / ${pages}</span><button type="button" data-book-action="page" data-id="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
         </div>` : ''}
-      </section>${current ? `<section class="lookbook-detail lookbook-custom-detail">
+      </section>`;
+      detailArea.innerHTML = current ? `<section class="lookbook-detail lookbook-custom-detail">
         <div class="lookbook-detail-head">
-          <div><h3 data-book-name="${esc(current.id)}">${title(current)}</h3><p>${current.done ? 'Hotovo' : 'Rozpracováno'}</p></div>
+          <div><h3 data-book-name="${esc(current.id)}" tabindex="-1">${title(current)}</h3><p>${current.done ? 'Hotovo' : 'Rozpracováno'}</p></div>
           <button type="button" data-book-action="new-variant">+ Varianta</button>
         </div>
         <p class="lookbook-story" data-book-note ${current.note ? '' : 'hidden'}>${esc(current.note)}</p>
@@ -85,7 +86,7 @@
         </div>` : ''}
         ${tagEditor(choice || current, tagItem().inherited)}
         ${editMarkup(choice || current, !!choice, editing, picking, query)}
-      </section>` : ''}`;
+      </section>` : '';
       for (const image of content.querySelectorAll('img[data-book-image]')) image.dataset.asset = thumbnails[Number(image.dataset.bookImage)];
       const rail = content.querySelector('.lookbook-variants');
       if (rail) rail.scrollLeft = railLeft;
@@ -206,7 +207,7 @@
         case 'page':
           page += Number(id);
           render({ editing: false });
-          scroll.scrollTop = 0;
+          scroll.scrollTop += sheetArea.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
           return;
         case 'upload':
           editor().querySelector('.lookbook-card-file').click();
