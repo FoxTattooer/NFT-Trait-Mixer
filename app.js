@@ -1041,9 +1041,9 @@ function renderTraits(categories = state.cats.filter(categoryPassesWip)) {
   const rename = $('manageRenameCategory');
   rename.disabled = !c || busy;
   rename.dataset.id = c?.id || '';
-  rename.setAttribute('aria-label', c ? `Přejmenovat kategorii ${c.name}` : 'Přejmenovat kategorii');
+  rename.title = c ? `Přejmenovat kategorii ${c.name}` : '';
   const categoryIndex = categories.indexOf(c);
-  $('categoryPosition').textContent = c ? `Vrstva ${categoryIndex + 1} / ${categories.length}` : 'Žádné vrstvy';
+  $('categoryPosition').textContent = c ? `Kategorie ${categoryIndex + 1} / ${categories.length}` : 'Žádné kategorie';
   $('categoryPrev').disabled = categories.length < 2 || busy;
   $('categoryNext').disabled = categories.length < 2 || busy;
   $('addTrait').disabled = !c || busy;
@@ -1492,6 +1492,7 @@ function render(keepPreview = false) {
   renderHistoryPanel();
   $('random').disabled = !state.cats.some(c => c.traits.some(trait => !trait.hidden)) || busy;
   $('snapshot').disabled = !state.cats.length || busy;
+  $('saveSnapshot').disabled = $('snapshot').disabled;
   syncLandscapeControls();
   $('export').disabled = !layers.length || !!warnings.length || exporting || busy;
   $('exportPackage').disabled = !state.cats.length || busy || exporting;
@@ -1988,6 +1989,26 @@ $('accentGlow').addEventListener('change', () => saveAppearancePreference(scheme
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
 
 let openShowroom, diagnosticsFromHistory = false;
+function closeDiagnostics() {
+  $('diagnosticsDialog').close();
+  if (diagnosticsFromHistory) $('versionHistoryDialog').showModal();
+}
+$('diagnosticsDialog').addEventListener('cancel', event => {
+  if (!diagnosticsFromHistory) return;
+  event.preventDefault();
+  closeDiagnostics();
+});
+for (const [id, menu] of [
+  ['historyDialog', '.header-end .header-menu'],
+  ['versionHistoryDialog', '.header-end .header-menu'],
+  ['finalDialog', '.preview-menu'],
+]) {
+  $(id).addEventListener('close', () => {
+    if (!document.querySelector('dialog[open]') && document.activeElement === document.body) {
+      document.querySelector(`${menu}>summary`)?.focus({ preventScroll: true });
+    }
+  });
+}
 async function handleAction(action, id, element) {
   if (action === 'cancel-dialog') { finishDialog(null); return; }
   if (action === 'close-install') { $('installDialog').close(); return; }
@@ -2393,7 +2414,7 @@ async function handleAction(action, id, element) {
       renderQuickTraits();
       element.closest('.header-menu')?.querySelector('summary')?.focus();
       break;
-    case 'open-version-history': document.querySelector('.header-menu')?.removeAttribute('open'); $('versionHistoryDialog').showModal(); break;
+    case 'open-version-history': $('versionHistoryDialog').showModal(); break;
     case 'close-version-history': $('versionHistoryDialog').close(); break;
     case 'open-diagnostics':
       diagnosticsFromHistory = $('versionHistoryDialog').open;
@@ -2402,10 +2423,7 @@ async function handleAction(action, id, element) {
       if (diagnosticsFromHistory) $('versionHistoryDialog').close();
       $('diagnosticsDialog').showModal();
       break;
-    case 'close-diagnostics':
-      $('diagnosticsDialog').close();
-      if (diagnosticsFromHistory) $('versionHistoryDialog').showModal();
-      break;
+    case 'close-diagnostics': closeDiagnostics(); break;
     case 'download-diagnostics':
       if (window.TraitDiagnostics) download(new Blob([window.TraitDiagnostics.report()], { type: 'text/plain;charset=utf-8' }), 'trait-mixer-crash-log.txt');
       break;
@@ -2526,8 +2544,15 @@ window.addEventListener('scroll', event => {
   if (Math.abs(rect.top - layerContextAnchor.top) > 1 || Math.abs(rect.left - layerContextAnchor.left) > 1) closeLayerContext();
 }, true);
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape') return;
-  if (layerContextTrigger) closeLayerContext(true);
+  if (event.key !== 'Escape' || event.defaultPrevented) return;
+  const popover = event.target.closest?.('dialog[open] :is(.inv-import-menu,.inv-filter-menu)[open]');
+  if (popover && !event.target.closest('select')) {
+    event.preventDefault();
+    popover.open = false;
+    popover.querySelector('summary').focus({ preventScroll: true });
+    return;
+  }
+  if (layerContextTrigger) { event.preventDefault(); closeLayerContext(true); }
   closeWorkspaceToolMenus(true);
 });
 document.addEventListener('change', event => {
@@ -2656,11 +2681,12 @@ function positionLandscapeMenu() {
     const viewport = window.visualViewport;
     const width = viewport?.width || window.innerWidth;
     const height = viewport?.height || window.innerHeight;
+    const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
     panel.style.position = 'fixed';
     panel.style.top = `${rect.bottom + 6}px`;
-    panel.style.left = `${Math.max(8, Math.min(rect.left, width - Math.min(240, width - 16) - 8))}px`;
+    panel.style.left = `${Math.max(left + 8, Math.min(rect.left, left + width - Math.min(240, width - 16) - 8))}px`;
     panel.style.right = 'auto';
-    panel.style.maxHeight = `${Math.max(60, height - rect.bottom - 14)}px`;
+    panel.style.setProperty('--toolbar-menu-height', `${Math.max(60, top + height - rect.bottom - 14)}px`);
   });
 }
 const toolbarMenus = [...document.querySelectorAll('.app-header .header-menu')];
@@ -2678,8 +2704,12 @@ document.addEventListener('click', event => {
   });
 });
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape') return;
-  toolbarMenus.forEach(menu => { if (menu.open) { menu.open = false; menu.querySelector('summary').focus(); } });
+  if (event.key !== 'Escape' || event.defaultPrevented) return;
+  const menu = toolbarMenus.find(menu => menu.open);
+  if (!menu) return;
+  event.preventDefault();
+  menu.open = false;
+  menu.querySelector('summary').focus({ preventScroll: true });
 });
 $('landscapeInfo').addEventListener('click', () => {
   const bubble = $('landscapeInfoBubble');

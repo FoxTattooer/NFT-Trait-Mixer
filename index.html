@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="styles.css?build=07120">
   <link rel="stylesheet" href="design.css?build=07120">
   <link rel="stylesheet" href="compact.css?build=07121">
-  <link rel="stylesheet" href="schemes.css?build=07120">
+  <link rel="stylesheet" href="schemes.css?build=07122">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
   <link rel="stylesheet" href="trait-comparison.css?build=07104">
@@ -23,14 +23,14 @@
   <script src="project.js?build=07118" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07121" defer></script>
+  <script src="diagnostics.js?build=07122" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <link rel="stylesheet" href="layer-inventory.css?build=07118">
   <script src="layer-inventory.js?build=07117" defer></script>
   <script src="inventory-base.js?build=07116" defer></script>
-  <script src="app.js?build=07121" defer></script>
+  <script src="app.js?build=07122" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
   <script src="lookbook.js?build=07118" defer></script>
@@ -94,8 +94,8 @@
   </svg>
 
   <header class="app-header compact-header">
-    <details class="header-menu file-menu"><summary aria-label="Projekt a soubory" title="Projekt a soubory"><svg class="icon"><use href="#i-folder"/></svg></summary>
-      <div class="header-menu-content">
+    <details class="header-menu file-menu"><summary aria-label="Projekt a soubory" title="Projekt a soubory" aria-controls="projectMenuActions"><svg class="icon"><use href="#i-folder"/></svg></summary>
+      <div class="header-menu-content" id="projectMenuActions">
         <div class="file-menu-project">
           <button id="projectName" type="button" data-action="rename-project" title="Přejmenovat projekt"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg><span id="projectNameText">Můj NFT projekt</span></button>
           <span id="saveStatus" class="save-status" role="status">Načítání projektu…</span>
@@ -112,7 +112,7 @@
     <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
     <input id="procreateFile" type="file" accept=".procreate" hidden>
     <input id="projectFile" type="file" accept="application/json,.json" hidden>
-    <details class="header-menu preview-menu"><summary aria-label="Akce náhledu" title="Akce náhledu"><svg class="icon"><use href="#i-image"/></svg></summary>
+    <details class="header-menu preview-menu"><summary aria-label="Akce náhledu" title="Akce náhledu" aria-controls="landscapePreviewActions"><svg class="icon"><use href="#i-image"/></svg></summary>
       <div class="header-menu-content" id="landscapePreviewActions">
         <button type="button" id="landscapeShuffle" data-action="random" disabled><svg class="icon"><use href="#i-shuffle"/></svg>Náhodná kombinace</button>
         <button type="button" id="landscapeSnapshot" data-action="add-snapshot" disabled><svg class="icon"><use href="#i-bookmark"/></svg>Uložit sestavu</button>
@@ -130,11 +130,11 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.121" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.121</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.122" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.122</span></span>
       </button>
-      <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti"><svg class="icon"><use href="#i-more"/></svg></summary>
-        <div class="header-menu-content" aria-label="Panel možností">
+      <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
+        <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
           <a href="plan-rozvoje.html" class="header-menu-link"><svg class="icon" aria-hidden="true"><use href="#i-roadmap"/></svg><span>Plán rozvoje</span></a>
           <button type="button" id="openPdfInfo" class="subtle" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-document"/></svg><span>PDF info</span></button>
           <button type="button" data-action="open-settings" class="subtle"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Nastavení</button>
@@ -253,7 +253,7 @@
             </div>
           </div>
         </div>
-        <nav class="category-stepper" aria-label="Přepínání vrstev"><button id="categoryPrev" data-action="cycle-category" data-direction="-1" aria-label="Předchozí vrstva">‹ Předchozí</button><span id="categoryPosition" aria-live="polite"></span><button id="categoryNext" data-action="cycle-category" data-direction="1" aria-label="Další vrstva">Další ›</button></nav>
+        <nav class="category-stepper" aria-label="Přepínání kategorií"><button id="categoryPrev" data-action="cycle-category" data-direction="-1" aria-label="Předchozí kategorie">‹ Předchozí</button><span id="categoryPosition" aria-live="polite"></span><button id="categoryNext" data-action="cycle-category" data-direction="1" aria-label="Další kategorie">Další ›</button></nav>
         <div id="dropzone" class="dropzone"><svg class="icon"><use href="#i-upload"/></svg><button id="addTrait" data-action="add-traits" class="primary" disabled>Nahrát PNG</button></div>
         <input id="traitFiles" type="file" accept="image/png,.png" multiple hidden><p id="uploadStatus" class="helper" role="status"></p><p id="manageEmpty" class="helper" hidden>Nejdřív si vytvoř kategorii ve Vrstvách.</p><div id="layerReviewManage"></div><div id="traits" class="layer-tree" aria-label="Strom traitů"></div>
       </section>
@@ -276,7 +276,7 @@
           <div id="traitSearchResults" class="trait-search-results" hidden></div>
           <div id="snapshotLayerLibrary" class="layer-library"></div>
         </section>
-        <button data-action="add-snapshot" class="outline full-width">+ Uložit aktuální sestavu</button><div id="snapshots" class="saved-list" aria-label="Uložené sestavy"></div><section class="snapshot-export" aria-labelledby="snapshotExportHeading"><div class="panel-heading"><div><h3 id="snapshotExportHeading">Kompletní balíček</h3></div></div><button id="exportPackage" data-action="export-package" class="outline full-width" disabled><svg class="icon"><use href="#i-download"/></svg>Stáhnout celý projekt jako ZIP</button></section>
+        <button id="saveSnapshot" data-action="add-snapshot" class="outline full-width" disabled><svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg>Uložit aktuální sestavu</button><div id="snapshots" class="saved-list" aria-label="Uložené sestavy"></div><section class="snapshot-export" aria-labelledby="snapshotExportHeading"><div class="panel-heading"><div><h3 id="snapshotExportHeading">Kompletní balíček</h3></div></div><button id="exportPackage" data-action="export-package" class="outline full-width" disabled><svg class="icon"><use href="#i-download"/></svg>Stáhnout celý projekt jako ZIP</button></section>
         <section class="snapshot-export recent-files" aria-labelledby="recentFilesHeading">
           <div class="panel-heading"><h3 id="recentFilesHeading">Historie otevření</h3></div>
           <p id="recentFilesEmpty" class="helper">Zatím žádné otevřené soubory.</p>
@@ -355,12 +355,12 @@
     </div>
     <details id="colorSchemes" class="settings-section">
       <summary>
-        <span>Color schemes</span>
+        <span>Barevná schémata</span>
         <span id="currentSchemeName" class="current-scheme-name" aria-hidden="true">ME</span>
         <svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg>
       </summary>
       <div class="settings-choices">
-        <div class="scheme-grid" role="group" aria-label="Color schemes">
+        <div class="scheme-grid" role="group" aria-label="Barevná schémata">
           <button type="button" data-action="set-color-scheme" data-scheme="pink" aria-label="Magic Eden (ME)" aria-pressed="true"><span class="scheme-swatch" aria-hidden="true"></span><span>ME</span></button>
           <button type="button" data-action="set-color-scheme" data-scheme="blue" aria-label="Magic Eden Blue (ME Blue)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME Blue</span></button>
           <button type="button" data-action="set-color-scheme" data-scheme="eden-new" aria-label="Magic Eden New (ME New)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME New</span></button>
@@ -483,6 +483,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.122-sjednoceni-rozhrani" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.122 – Sjednocení rozhraní</strong><small>Jednotné aktivní stavy a nabídky, jemný pohyb a návrat z podnabídek klávesou Escape.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.121-sprava-traitu-v-kartach" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.121 – Správa traitů v rozšířených kartách</strong><small>Akce po klepnutí na miniaturu a jednotné označení vrstev v kompozici.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.120-karty-bez-sipek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.120 – Jednodušší karty kategorií</strong><small>Výběr z posuvné řady miniatur v rozšířených kartách.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.119-presun-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.119 – Přesun vrstev podržením</strong><small>Přetahování v kompaktním stromu, miniatury traitů a koš v rozšířených kartách.</small></span><span class="version-tag">Uloženo</span></a>

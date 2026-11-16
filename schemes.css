@@ -595,3 +595,85 @@ body.compact-workspace[data-color-scheme] button:is(.danger, .danger-icon, [data
 body.compact-workspace[data-color-scheme] button.danger {
   background: linear-gradient(145deg, #4b222a, #30181d) !important;
 }
+
+/* Open controls use neutral surfaces. Accents identify a chosen view or value. */
+body.compact-workspace[data-color-scheme] {
+  --workspace-open-surface:color-mix(in srgb,var(--scheme-control) 92%,var(--scheme-text));
+  --workspace-open-stroke:color-mix(in srgb,var(--scheme-stroke) 76%,var(--scheme-text));
+}
+body.compact-workspace .app-header .header-menu-content {
+  max-height:var(--toolbar-menu-height,min(70dvh,360px))!important;
+  background:var(--scheme-panel)!important;
+  border-color:var(--scheme-stroke)!important;
+}
+body.compact-workspace .app-header .header-menu-content :is(button,a.header-menu-link) {
+  color:var(--scheme-text)!important;
+}
+body.compact-workspace .app-header .header-menu-content :is(button,a.header-menu-link) > .icon {
+  color:var(--scheme-muted)!important;
+  background:var(--scheme-control)!important;
+  border-color:var(--scheme-stroke)!important;
+}
+body.compact-workspace[data-color-scheme] :is(
+  .app-header .header-menu[open]>summary, .workspace-tools .workspace-tool-overflow[open]>summary,
+  #layerContext .layer-menu-disclosure[open]>summary, #colorSchemes[open]>summary,
+  #compareTraits[open]>summary, #snapshotsPanel .library-category[open]>summary,
+  #layerInventoryDialog :is(.inv-import-menu,.inv-filter-menu)[open]>summary,
+  #layerInventoryDialog .inv-toggle[aria-expanded=true],
+  #finalDialog :is([data-final-draft=settings],[data-rarity-row])[aria-expanded=true]
+) {
+  background:var(--workspace-open-surface)!important;
+  border-color:var(--workspace-open-stroke)!important;
+  color:var(--scheme-text)!important;
+  box-shadow:inset 0 1px var(--scheme-sheen)!important;
+}
+body.compact-workspace[data-color-scheme] #cats[data-view=expanded] .category-card.is-active {
+  background:color-mix(in srgb,var(--workspace-accent-wash) 50%,var(--scheme-panel))!important;
+  border-color:color-mix(in srgb,var(--workspace-accent-border) 68%,var(--scheme-stroke))!important;
+  box-shadow:inset 2px 0 var(--workspace-accent-border)!important;
+}
+body.compact-workspace[data-color-scheme] :is(
+  #finalViews button, #finalDialog .final-draft-sources button, #layerInventoryDialog .inv-source-tabs button,
+  #lookbookDialog .lookbook-segments:not(.lookbook-modes) button, #lookbookDialog .lookbook-chapters button,
+  #compareTraits .compare-match-list button, #compareActionDialog .compare-action-options button,
+  #settingsDialog .accent-coverage button
+)[aria-pressed=true] {
+  background:var(--workspace-accent-wash)!important;
+  border-color:var(--workspace-accent-border)!important;
+  color:var(--scheme-text)!important;
+  box-shadow:inset 0 -2px var(--workspace-accent-border)!important;
+}
+body.compact-workspace[data-color-scheme] :is(dialog,.app-header,.workspace-tools,#snapshotsPanel) :is(button,summary,a):focus-visible {
+  outline:2px solid var(--workspace-accent-border)!important;
+  outline-offset:2px;
+}
+body.compact-workspace[data-color-scheme] #layerInventoryDialog .layer-inventory {
+  --inv-panel:var(--scheme-panel);
+  --inv-raised:var(--scheme-control);
+  --inv-edge:var(--scheme-stroke);
+  --inv-text:var(--scheme-text);
+  --inv-muted:var(--scheme-muted);
+  --inv-accent:var(--workspace-accent-icon);
+}
+body.compact-workspace #snapshotsPanel .library-category>summary::before {color:var(--scheme-muted)}
+@media (pointer:coarse) {
+  body.compact-workspace :is(#cats .category-card,.layer-tree-main,#snapshotsPanel .library-trait) {transition:none}
+  body.compact-workspace dialog::backdrop {backdrop-filter:none}
+}
+@media (prefers-reduced-motion:no-preference) {
+  body.compact-workspace :is(.header-menu[open]>.header-menu-content,#layerContext:not([hidden]),
+    .inv-import-menu[open]>div,.inv-filter-menu[open]>div,.category-trait-details:not([hidden])) {
+    animation:workspace-surface-in .14s ease-out both;
+  }
+  body.compact-workspace :is(#colorSchemes>summary .icon,.inv-chevron,.inv-caret,.compare-chevron,
+    #layerContext .layer-menu-disclosure>summary>.icon,.layer-tree-folder .layer-tree-main>.icon:first-child) {
+    transition:transform .14s ease-out;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  body.compact-workspace #snapshotsPanel .library-category>summary::before {transition:none}
+}
+@keyframes workspace-surface-in {
+  from {opacity:.78;translate:0 -3px}
+  to {opacity:1;translate:0 0}
+}
