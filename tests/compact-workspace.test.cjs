@@ -805,6 +805,18 @@ const rail = compare.querySelector('.compare-trait-cards');
 rail.scrollLeft = 228;
 rail.dispatchEvent(new w.Event('scroll'));
 assert.equal(compare.querySelector('.compare-position').textContent, '‹ 3–5 z 5');
+const previewDuplicate = compare.querySelector('[data-action="open-trait-preview"][data-id="compare-4"]');
+assert.equal(previewDuplicate.textContent.trim(), 'Náhled vrstvy');
+const beforeDuplicatePreview = JSON.stringify(w.inspectState());
+previewDuplicate.click();
+assert(get('traitPreviewDialog').open);
+assert.equal(get('traitPreviewTitle').textContent, 'Kopie 5');
+assert.equal(get('traitPreviewPath').textContent, 'Clothes');
+await waitFor(() => !get('traitPreviewImage').hidden);
+click('[data-action="close-trait-preview"]');
+await waitFor(() => w.document.activeElement === previewDuplicate);
+assert.equal(rail.scrollLeft, 228);
+assert.equal(JSON.stringify(w.inspectState()), beforeDuplicatePreview);
 const changeControl = (selector, value) => {
   const control = find(selector);
   control.value = value;

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.157 | checkpoint/v0.7.157-nahled-duplicit | Tlačítko Náhled vrstvy na každé kartě při porovnávání duplicit. |
 | 0.7.156 | checkpoint/v0.7.156-showroom-rezim-mint | Animované odhalování náhodně vylosované postavy podle rarit a pravidel. Závěr umožňuje stažení PNG. |
 | 0.7.155 | checkpoint/v0.7.155-barvy-showroom-lookbook | Společný vzorník materiálů, barev a ikon. Showroom používá štítky variant a jejich přiřazené odstíny. |
 | 0.7.154 | checkpoint/v0.7.154-vyber-stitku-traitu | V detailu traitu lze přiřadit více štítků najednou. Pod náhledem je řádek ikon pro rychlý filtr. |

@@ -1914,12 +1914,12 @@ function decodeImage(data) {
   });
 }
 let traitPreviewTicket = 0, traitPreviewReturn;
-async function openTraitPreview({ cat, trait }) {
+async function openTraitPreview({ cat, trait }, trigger) {
   const dialog = $('traitPreviewDialog'), canvas = $('traitPreviewImage');
   const status = $('traitPreviewStatus');
   const ticket = ++traitPreviewTicket;
   const current = () => dialog.open && ticket === traitPreviewTicket;
-  traitPreviewReturn = document.activeElement;
+  traitPreviewReturn = trigger && !trigger.closest('[hidden]') ? trigger : document.activeElement;
   $('traitPreviewTitle').textContent = trait.name;
   const { folders, assignments } = organizerFolders(cat.id);
   $('traitPreviewPath').textContent = [cat.name, organizerPath(folders, assignments[trait.id])].filter(Boolean).join(' / ');
@@ -2755,7 +2755,7 @@ async function handleAction(action, id, element) {
     case 'open-layer-tags':
       window.TraitLookbook?.openLayerTags(element.dataset.kind, element.dataset.category, id);
       break;
-    case 'open-trait-preview': if (located) await openTraitPreview(located); break;
+    case 'open-trait-preview': if (located) await openTraitPreview(located, element); break;
     case 'close-trait-preview': $('traitPreviewDialog').close(); break;
     case 'open-final': await openFinalDialog(); break;
     case 'save-category-final': await saveToFinal(id); break;

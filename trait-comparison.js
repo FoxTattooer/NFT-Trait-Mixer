@@ -20,6 +20,7 @@
       </div>
       <div class="compare-trait-info"><h4>${esc(trait.name)}</h4><div class="compare-trait-marks">${layerMarkBadges(trait)}</div></div>
       <div class="compare-trait-actions">
+        ${button('open-trait-preview', 'Náhled vrstvy', trait.id, 'search', 'type="button" aria-haspopup="dialog"')}
         ${button('rename-trait', 'Přejmenovat', trait.id, 'edit', 'type="button"')}
         ${canMove ? cardAction('move', 'Přesunout…', trait) : ''}
         ${button('toggle-hidden-trait', trait.hidden ? 'Zobrazit' : 'Skrýt', trait.id, trait.hidden ? 'eye' : 'eye-off', 'type="button"')}
