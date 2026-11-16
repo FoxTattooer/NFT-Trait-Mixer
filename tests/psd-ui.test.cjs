@@ -23,6 +23,7 @@ async function waitFor(check) { for(let i=0;i<300;i++){if(check())return;await n
 async function test(worker) {
   const w=new Window({url:'http://nft.test',settings:{disableCSSFileLoading:true,disableJavaScriptFileLoading:true,disableJavaScriptEvaluation:true}});
   w.document.write(fs.readFileSync(__dirname+'/../index.html','utf8'));
+  w.localStorage.setItem('nft-compact-categories', 'false');
   w.Option=function(text,value){const o=w.document.createElement('option');o.text=text;o.value=value;return o;};
   w.Image=Image;w.indexedDB=new IDBFactory();w.agPsd=ag;w.Worker=worker?BrowserWorker:undefined;w.OffscreenCanvas=worker?makeCanvas:undefined;
   w.URL.createObjectURL=()=> 'blob:test-preview';w.URL.revokeObjectURL=()=>{};
@@ -57,13 +58,12 @@ async function test(worker) {
   assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal(w.testActiveCategory().traits.length,2);assert(w.testFolders().some(folder => folder.name === 'HEADS'));
   assert.equal(w.testSelection(),'existing-trait');
   await choose(psd);$('psdConfirm').click();$('psdCancel').click();await new Promise(r=>setTimeout(r,30));assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal(w.testActiveCategory().traits.length,2);
-  const nextTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="1"]');
-  const prevTrait = () => $('cats').querySelector('[data-action="cycle-trait"][data-direction="-1"]');
-  nextTrait().click();assert.notEqual(w.testSelection(),'existing-trait');
-  nextTrait().click();assert.equal(w.testSelection(),'existing-trait');
-  prevTrait().click();assert.notEqual(w.testSelection(),'existing-trait');
+  const previews = () => [...$('cats').querySelectorAll('.category-trait-previews button')];
+  assert.equal(previews().length, 2);
+  previews().find(button => button.dataset.id !== 'existing-trait').click();
+  assert.notEqual(w.testSelection(),'existing-trait');
+  assert.equal(previews().find(button => button.getAttribute('aria-pressed') === 'true').dataset.id, w.testSelection());
   $('undo').click();assert.equal(w.testSelection(),'existing-trait');
-  assert.equal($('cats').querySelectorAll('.layer-stepper img').length,0);
   assert($('categoryNext').disabled);
   await choose(psd);
   assert($('psdConfirm').disabled);assert.equal($('psdTree').querySelectorAll('input:checked').length,0);

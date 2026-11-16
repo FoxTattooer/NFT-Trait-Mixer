@@ -836,17 +836,10 @@ function openLayerContext(trigger, id) {
 function dragHandle(kind, id, categoryId, label) {
   return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
 }
-function renderCategoryStepper(c, traits) {
-  const index = traits.findIndex(t => t.id === state.selected[c.id]);
-  const selected = traits[index];
-  return `<div class="layer-stepper"><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="-1" aria-label="Předchozí trait v kategorii ${esc(c.name)}" ${traits.length < 2 ? 'disabled' : ''}>‹</button><span class="layer-stepper-label" aria-live="polite"><strong>${selected ? esc(selected.name) : 'Bez vybraného traitu'}</strong><small>${index + 1} / ${traits.length}</small></span><button data-action="cycle-trait" data-id="${esc(c.id)}" data-direction="1" aria-label="Další trait v kategorii ${esc(c.name)}" ${!traits.length || (traits.length === 1 && selected) ? 'disabled' : ''}>›</button></div>`;
-}
 function renderCategoryPreviews(category, traits) {
   if (!traits.length || safeMode) return '';
   const selected = state.selected[category.id];
-  const index = Math.max(0,traits.findIndex(trait => trait.id === selected));
-  const start = Math.max(0,Math.min(index - 2,traits.length - 5));
-  return `<div class="category-trait-previews" role="group" aria-label="Náhledy traitů · ${esc(category.name)}">${traits.slice(start,start + 5).map(trait =>
+  return `<div class="category-trait-previews" data-category="${esc(category.id)}" role="group" aria-label="Náhledy traitů · ${esc(category.name)}">${traits.map(trait =>
     button('choose-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>`, trait.id, '',
       `type="button" data-category="${esc(category.id)}" aria-label="${esc(trait.name)}" title="${esc(trait.name)}" aria-pressed="${trait.id === selected}"`)
   ).join('')}</div>`;
@@ -912,13 +905,17 @@ function scrollQuickTraits(direction) {
  list.scrollBy({left: direction * step, behavior:'smooth'});
 }
 function renderCategories(hidden, categories) {
+  const list = $('cats');
+  const previews = () => list.querySelectorAll('.category-trait-previews');
+  const scrollPositions = new Map(Array.from(previews(), strip => [strip.dataset.category, strip.scrollLeft]));
+  const focused = document.activeElement?.closest('.category-trait-previews button');
   document.body.classList.toggle('compact-categories', compactView);
-  $('cats').dataset.view = compactView ? 'compact' : 'expanded';
+  list.dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
   $('catCountLabel').textContent = state.cats.length;
   $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
   const positions = new Map(state.cats.map((cat, index) => [cat.id, index]));
-  $('cats').innerHTML = categories.map(c => {
+  list.innerHTML = categories.map(c => {
     const id = esc(c.id), name = esc(c.name), current = c.id === active;
     const index = positions.get(c.id), marks = wipFilter ? M.workInProgress(state, c) : null;
     const traits = listedTraits(c, marks), { folders, assignments } = organizerFolders(c.id);
@@ -933,11 +930,16 @@ function renderCategories(hidden, categories) {
         ${compactView ? '' : tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}
       </div>
       ${current && folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, folders, assignments, marks)}</div>` : ''}
-      ${renderCategoryStepper(c, traits)}
       ${compactView ? '' : renderCategoryPreviews(c, traits)}
       ${current && !compactView ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}</div>` : ''}
     </div>`;
   }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
+  for (const strip of previews()) {
+    if (scrollPositions.get(strip.dataset.category)) strip.scrollLeft = scrollPositions.get(strip.dataset.category);
+    if (focused?.dataset.category === strip.dataset.category) {
+      [...strip.querySelectorAll('button')].find(button => button.dataset.id === focused.dataset.id)?.focus({ preventScroll: true });
+    }
+  }
 }
 function organizerFolders(categoryId) {
   return state.organizer?.[categoryId] || { folders: [], assignments: {} };
@@ -2109,15 +2111,6 @@ async function handleAction(action, id, element) {
       if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
       renderLayerTree();
       Array.from($(mobilePanel === 'traits' ? 'traits' : 'layerTree').querySelectorAll('[data-action="toggle-tree-folder"]')).find(b => b.dataset.id === id)?.focus();
-      break;
-    }
-    case 'cycle-trait': {
-      const traits = c && listedTraits(c);
-      if (!traits?.length) break;
-      const current = traits.findIndex(t => t.id === state.selected[c.id]);
-      const direction = Number(element.dataset.direction) < 0 ? -1 : 1;
-      const next = current < 0 ? (direction < 0 ? traits.length - 1 : 0) : (current + direction + traits.length) % traits.length;
-      if (state.selected[c.id] !== traits[next].id) change(() => M.choosePrimary(state, c.id, traits[next].id));
       break;
     }
     case 'cycle-category': {

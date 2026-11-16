@@ -243,7 +243,7 @@ body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) 
 /* Tie the older controls and drag indicators to the same palette. */
 body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) :is(
   .app-header .header-menu>summary,.app-header .history-actions>button,
-  .workspace-tabs button:not(.is-active),.layer-stepper,.quick-traits-head>button,
+  .workspace-tabs button:not(.is-active),.quick-traits-head>button,
   .quick-traits-next,.trait-visibility,.count
 ) {
   background:var(--scheme-control)!important;
@@ -336,13 +336,12 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
 /* Older controls in Správa and the preview strip share the chosen surfaces. */
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(
   .organizer-tree-actions button,.trait-folder-select,.trait-category-select,
-  .organizer-move-select,.layer-stepper button,.quick-trait:not(.is-selected),
+  .organizer-move-select,.quick-trait:not(.is-selected),
   .trait-entry .trait-card:not(.is-selected),.library-trait:not(.is-selected)
 ) {
   background:var(--scheme-control);
   border-color:var(--scheme-stroke);
 }
-body[data-color-scheme]:not([data-color-scheme=pink]) .layer-stepper button {color:var(--scheme-text)!important}
 body[data-color-scheme]:not([data-color-scheme=pink]) .trait-card.is-selected::after {
   background:var(--scheme-accent);color:var(--scheme-bg);
 }
