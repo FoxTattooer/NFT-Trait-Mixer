@@ -285,12 +285,13 @@ function jumpHistory(position) {
   pruneCache(); render(); scheduleSave();
   toast('Historie: obnoven vybraný krok');
 }
-function ask({ title, description = '', value = '', confirm = false, submit = 'Uložit', danger = false }) {
+function ask({ title, description = '', value = '', confirm = false, submit = 'Uložit', danger = false, maxLength = 120 }) {
   $('dialogTitle').textContent = title;
   $('dialogDescription').textContent = description;
   $('dialogDescription').hidden = !description;
   $('dialogInput').hidden = confirm;
   $('dialogInput').required = !confirm;
+  $('dialogInput').maxLength = maxLength;
   $('dialogInput').value = value;
   $('dialogInput').setCustomValidity('');
   $('dialogLabel').hidden = confirm;

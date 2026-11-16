@@ -6,10 +6,10 @@
   const editor = $('inventoryItemDialog'), form = $('inventoryItemForm'), source = $('inventorySourceFile');
   const status = $('inventoryBaseStatus');
   const textForm = $('inventoryTextForm'), textInput = $('inventoryTextInput'), textEdit = $('inventoryTextEdit');
-  const textAdd = $('inventoryTextAdd');
+  const textAdd = $('inventoryTextAdd'), textAddGroup = $('inventoryTextAddGroup'), textPanel = $('inventoryTextPanel');
   const expandedText = new Map();
   let base, loading, writing = Promise.resolve(), view, edit, importing = false, mode = 'base';
-  let textSaving = false;
+  let textSaving = false, textMenu;
   const preview = window.TraitInventoryPreview.mount($('inventoryPreview'),id => base && model.locate(base.nodes,id)?.item);
   const review = window.TraitInventoryReview.mount($('inventoryReview'),() => base,write);
   const showStatus = (message, error = false) => { status.textContent = message; status.classList.toggle('is-error',error); };
@@ -113,7 +113,7 @@
       show('review'); review.open(id);
     } catch { /* The shared inventory status displays the write error. */ }
   }
-  dialog.addEventListener('close',preview.clear);
+  dialog.addEventListener('close',() => { preview.clear(); closeTextMenu(); });
   $('inventoryBaseTab').addEventListener('click',() => show('base'));
   $('inventoryTextTab').addEventListener('click',() => show('text'));
   $('inventoryProjectTab').addEventListener('click',() => show('project'));
@@ -131,8 +131,121 @@
     if (content !== undefined) node.textContent = content;
     return node;
   };
+  const focusTextControl = (field, ref) => {
+    if (mode !== 'text' || !dialog.open) return;
+    const button = [...textPanel.querySelectorAll(`button[data-${field}]`)].find(node => node.getAttribute(`data-${field}`) === String(ref));
+    (button || textAdd).focus({ preventScroll:true });
+  };
+  function closeTextMenu(restore = false) {
+    if (!textMenu) return;
+    const { trigger,menu } = textMenu;
+    textMenu = null;
+    menu.hidden = true;
+    menu.replaceChildren();
+    trigger.setAttribute('aria-expanded','false');
+    if (restore) trigger.focus({ preventScroll:true });
+  }
+  textPanel.addEventListener('click', event => {
+    if (textMenu && !textMenu.menu.contains(event.target) && !textMenu.trigger.contains(event.target)) closeTextMenu();
+  });
+  textPanel.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !textMenu) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeTextMenu(true);
+  });
+  async function addTextGroup(parent) {
+    if (!base || importing || textSaving) return;
+    textSaving = true;
+    try {
+      const name = await ask({ title:parent ? 'Nová podsložka' : 'Nová kategorie v textovém seznamu', submit:'Přidat', maxLength:200 });
+      if (!name) return;
+      if (parent) expandedText.set(parent.id,true);
+      const id = await write(next => model.addTextItem(next,parent?.id,name,true),parent ? 'Podsložka přidána.' : 'Kategorie přidána.');
+      focusTextControl('text-toggle',id);
+    } catch { /* The shared inventory status displays the write error. */ }
+    finally { textSaving = false; }
+  }
+  async function changeTextRow(item, action, parent, opener) {
+    if (!base || importing || textSaving) return;
+    textSaving = true;
+    try {
+      let name;
+      if (action === 'rename') {
+        name = await ask({ title:`Přejmenovat „${item.name}“`, value:item.name, maxLength:200 });
+        if (!name || name === item.name) return;
+      }
+      if (action === 'delete') {
+        const description = item.children?.length
+          ? 'Ze seznamu se odeberou i všechny položky uvnitř.'
+          : 'Položka se odebere z textového seznamu.';
+        if (!await ask({ title:`Smazat „${item.name}“?`, description, confirm:true, submit:'Smazat', danger:true })) return;
+      }
+      const message = { rename:'Název uložen.', delete:'Položka smazána z textového seznamu.', up:'Pořadí uloženo.', down:'Pořadí uloženo.' };
+      const id = await write(next => model.editTextItem(next,item.id,action,name),message[action]);
+      focusTextControl(id === null ? 'text-toggle' : 'text-more',id ?? parent?.id);
+    } catch { /* The shared inventory status displays the write error. */ }
+    finally {
+      textSaving = false;
+      if (opener.isConnected && dialog.open && mode === 'text') opener.focus({ preventScroll:true });
+    }
+  }
+  function textRowMenu(item, parent, index, total) {
+    const trigger = element('button','inv-text-more subtle');
+    const menu = element('div','inv-text-menu');
+    trigger.type = 'button';
+    trigger.dataset.textMore = item.id;
+    trigger.setAttribute('aria-label',`Možnosti · ${item.name}`);
+    trigger.setAttribute('aria-expanded','false');
+    trigger.innerHTML = icon('more');
+    menu.hidden = true;
+    menu.setAttribute('role','group');
+    menu.setAttribute('aria-label',`Úpravy · ${item.name}`);
+    trigger.addEventListener('click',() => {
+      if (textSaving) return;
+      const opening = menu.hidden;
+      closeTextMenu();
+      if (!opening) return;
+      renderActions();
+      textMenu = { trigger,menu };
+      trigger.setAttribute('aria-expanded','true');
+      menu.hidden = false;
+      menu.scrollIntoView({ block:'nearest' });
+    });
+    function renderActions() {
+      const actions = [
+        ['rename','Přejmenovat','edit'],
+        ...(item.children ? [['folder','Přidat podsložku','folder-plus']] : []),
+        ['up','Posunout výš','up',index === 0],
+        ['down','Posunout níž','down',index === total-1],
+        ['delete','Smazat','trash'],
+      ];
+      for (const [action,caption,glyph,disabled] of actions) {
+        const control = element('button',action === 'delete' ? 'inv-text-delete subtle' : 'subtle');
+        control.type = 'button';
+        control.disabled = !!disabled;
+        control.dataset.textAction = action;
+        control.innerHTML = icon(glyph);
+        control.append(element('span','',caption));
+        control.addEventListener('click',() => {
+          closeTextMenu(true);
+          if (action === 'folder') void addTextGroup(item);
+          else void changeTextRow(item,action,parent,trigger);
+        });
+        menu.append(control);
+      }
+    }
+    return { trigger,menu };
+  }
+  function renderTextItem(item, parent, index, total) {
+    const row = element('li','inv-text-row');
+    const { trigger,menu } = textRowMenu(item,parent,index,total);
+    row.append(element('span','inv-text-name',item.name),trigger,menu);
+    return row;
+  }
   function beginTextItem(target, group, opener) {
-    if (!base || textSaving) return;
+    if (!base || importing || textSaving) return;
+    closeTextMenu();
     $('inventoryTextInline')?.remove();
     const quick = element('form','inv-text-inline');
     quick.id = 'inventoryTextInline';
@@ -168,7 +281,7 @@
     target.prepend(quick);
     input.focus();
   }
-  function renderTextGroup(group) {
+  function renderTextGroup(group, parent, index, total) {
     const section = element('section','inv-text-group');
     const header = element('div','inv-text-group-head');
     const toggle = element('button','inv-text-toggle subtle');
@@ -188,31 +301,33 @@
       body.hidden = !open;
     }
     setExpanded(expandedText.get(group.id) ?? true);
-    toggle.addEventListener('click',() => setExpanded(body.hidden));
+    toggle.addEventListener('click',() => { closeTextMenu(); setExpanded(body.hidden); });
     add.addEventListener('click',() => { setExpanded(true); beginTextItem(body,group,add); });
     let names;
-    for (const child of group.children) {
-      if (child.children) { names = null; body.append(renderTextGroup(child)); }
+    group.children.forEach((child,index) => {
+      if (child.children) { names = null; body.append(renderTextGroup(child,group,index,group.children.length)); }
       else {
         if (!names) { names = element('ul','inv-text-names'); body.append(names); }
-        names.append(element('li','',child.name));
+        names.append(renderTextItem(child,group,index,group.children.length));
       }
-    }
-    header.append(toggle,add);
-    section.append(header,body);
+    });
+    const { trigger,menu } = textRowMenu(group,parent,index,total);
+    header.append(toggle,add,trigger);
+    section.append(header,menu,body);
     return section;
   }
   function renderText() {
-    const items = base?.textItems || [];
-    const { loose,groups } = model.textSections(items);
+    closeTextMenu();
+    const items = base?.textItems || [], groups = base?.textGroups || [];
     const list = $('inventoryTextItems');
-    list.replaceChildren(...loose.map(name => element('li','',name)));
-    list.hidden = !loose.length;
-    const grouped = [...(textForm.hidden ? groups : []), ...(base?.textGroups || [])];
-    $('inventoryTextGroups').replaceChildren(...grouped.map(renderTextGroup));
+    list.replaceChildren(...items.map((name,index) => renderTextItem({ id:index,name },null,index,items.length)));
+    list.hidden = !items.length;
+    const categories = $('inventoryTextGroups');
+    categories.replaceChildren(...groups.map((group,index) => renderTextGroup(group,null,index,groups.length)));
+    categories.hidden = !textForm.hidden;
     $('inventoryTextRead').hidden = !textForm.hidden;
     $('inventoryTextInline')?.remove();
-    textEdit.disabled = textAdd.disabled = !base;
+    textEdit.disabled = textAdd.disabled = textAddGroup.disabled = !base;
     textEdit.textContent = items.length ? 'Upravit volný text' : 'Napsat více bodů';
   }
   function closeTextEditor() {
@@ -221,13 +336,14 @@
     if (mode === 'text' && dialog.open) textEdit.focus();
   }
   textEdit.addEventListener('click',() => {
-    if (!base) return;
+    if (!base || importing || textSaving) return;
     textInput.value = base.textItems.join('\n');
     textForm.hidden = false;
     renderText();
     textInput.focus();
   });
   textAdd.addEventListener('click',() => beginTextItem($('inventoryTextRead'),null,textAdd));
+  textAddGroup.addEventListener('click',() => { void addTextGroup(); });
   $('inventoryTextCancel').addEventListener('click',closeTextEditor);
   textForm.addEventListener('submit',async event => {
     event.preventDefault();
@@ -238,7 +354,7 @@
     textInput.readOnly = true;
     const items = model.textLines(textInput.value);
     try {
-      await write(next => { next.textItems = items; },'Textový seznam uložen.');
+      await write(next => model.setTextItems(next,items),'Textový seznam uložen.');
       closeTextEditor();
     } catch { /* Keep the draft for retry. The shared status shows the error. */ }
     finally {

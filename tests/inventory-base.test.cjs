@@ -77,9 +77,10 @@ test('text copies retain paths, repeated layer names and manual additions after 
     { id:'rounded',name:'Rounded',kind:'folder',children:[trait('fl-1','FireLook'), trait('fl-2','FireLook')] },
     trait('solo','Solo','layer',{ note:'Poznámka',image:'data:image/png;base64,AA==' }),
   ])];
-  Base.addTextItem(base,'legacy:0','Red');
-  assert.deepEqual(Base.textSections(base.textItems).groups[0].children.map(item => item.name),['MOSAIC','WATER','Red']);
-  assert.deepEqual(Base.textSections(base.textItems).loose,['Dokreslit oči']);
+  const [skins] = base.textGroups;
+  Base.addTextItem(base,skins.id,'Red');
+  assert.deepEqual(skins.children.map(item => item.name),['MOSAIC','WATER','Red']);
+  assert.deepEqual(base.textItems,['Dokreslit oči']);
   const first = Base.copyToText(base,nodes,'fl-1','project');
   assert.equal(first.name,'Glasses');
   assert.equal(first.added,1);
@@ -87,9 +88,35 @@ test('text copies retain paths, repeated layer names and manual additions after 
   assert.equal(Base.copyToText(base,nodes,'glasses','project').added,2);
   base = Base.normalize(JSON.parse(JSON.stringify(base)));
   assert.equal(Base.copyToText(base,nodes,'glasses','project').added,0);
-  const [glasses] = base.textGroups;
+  const glasses = base.textGroups[1];
   assert.deepEqual(glasses.children[0].children.map(item => item.name),['FireLook','FireLook']);
   assert.deepEqual(glasses.children.map(item => item.name),['Rounded','Ručně','Solo']);
   assert(!JSON.stringify(glasses).includes('Poznámka'));
   assert.equal(Base.mergeTextGroups(base.textGroups,base.textGroups),0);
+});
+
+test('text edits persist on legacy and imported groups without changing their layer sources', () => {
+  const legacy = { format:Base.format,nodes:[],textItems:['Poznámka','SKINS','- WATER','- GOLD'] };
+  const base = Base.normalize(legacy);
+  const [skins] = base.textGroups;
+  const source = [cat('chains','CHAINS',[trait('first','China'),trait('second','China')])];
+  Base.copyToText(base,source,'chains','project');
+  const chains = base.textGroups[1];
+  Base.editTextItem(base,chains.id,'up');
+  Base.editTextItem(base,chains.id,'rename','Řetězy');
+  Base.editTextItem(base,chains.children[1].id,'rename','China 2');
+  Base.editTextItem(base,skins.children[0].id,'delete');
+  Base.editTextItem(base,0,'rename','Upravená poznámka');
+  const folder = Base.addTextItem(base,skins.id,'Nová složka',true);
+  Base.addTextItem(base,folder,'Red');
+  const saved = Base.normalize(JSON.parse(JSON.stringify(base)));
+  assert.deepEqual(saved.textGroups.map(item => item.name),['Řetězy','SKINS']);
+  assert.equal(Base.copyToText(saved,source,'chains','project').added,0);
+  assert.deepEqual(saved.textGroups[0].children.map(item => item.name),['China','China 2']);
+  assert.deepEqual(saved.textGroups[1].children.map(item => item.name),['GOLD','Nová složka']);
+  assert.deepEqual(saved.textItems,['Upravená poznámka']);
+  assert.equal(source[0].name,'CHAINS');
+  assert.equal(source[0].children[1].name,'China');
+  Base.editTextItem(saved,skins.id,'delete');
+  assert.deepEqual(saved.textGroups.map(item => item.name),['Řetězy']);
 });

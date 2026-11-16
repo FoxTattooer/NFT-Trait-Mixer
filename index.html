@@ -24,14 +24,14 @@
   <script src="project.js?build=07118" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07129" defer></script>
+  <script src="diagnostics.js?build=07130" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <link rel="stylesheet" href="layer-inventory.css?build=07129">
+  <link rel="stylesheet" href="layer-inventory.css?build=07130">
   <script src="layer-inventory.js?build=07129" defer></script>
-  <script src="inventory-base.js?build=07129" defer></script>
-  <script src="app.js?build=07129" defer></script>
+  <script src="inventory-base.js?build=07130" defer></script>
+  <script src="app.js?build=07130" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
   <script src="lookbook.js?build=07128" defer></script>
@@ -39,7 +39,7 @@
   <script src="final-builder.js?build=07112" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
-  <script src="inventory-base-ui.js?build=07129" defer></script>
+  <script src="inventory-base-ui.js?build=07130" defer></script>
   <script src="drag.js?build=07125" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
@@ -132,8 +132,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.129" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.129</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.130" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.130</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -486,6 +486,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.130-upravy-textoveho-soupisu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.130 – Úpravy textového seznamu</strong><small>Přejmenování, mazání a změna pořadí bodů a kategorií v textovém soupisu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.129-textovy-soupis" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.129 – Kategorie do textového soupisu</strong><small>Kompaktní řádky, rychlé přidávání názvů a přenos kategorií včetně podsložek.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.128-strom-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.128 – Rozbalovací strom vrstev</strong><small>Kategorie a složky se otvírají přímo v seznamu. Vrstvy mají větší názvy a průhledné miniatury.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.127-sbaleni-ve-dvou-krocich" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.127 – Sbalení lišty ve dvou krocích</strong><small>Při rolování na výšku se nejdřív zobrazí čtyři ikony, při delším posunu kapka.</small></span><span class="version-tag">Uloženo</span></a>
@@ -638,6 +639,7 @@
       <div id="inventoryTextRead" class="inv-text-read">
         <ul id="inventoryTextItems" aria-label="Uložené body"></ul>
         <div class="inv-text-tools"><button id="inventoryTextAdd" type="button" class="subtle" disabled><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Přidat bod</button>
+          <button id="inventoryTextAddGroup" type="button" class="subtle" disabled><svg class="icon" aria-hidden="true"><use href="#i-folder-plus"/></svg>Přidat kategorii</button>
           <button id="inventoryTextEdit" type="button" class="subtle" disabled>Upravit seznam</button></div>
       </div>
       <form id="inventoryTextForm" class="inv-text-form" hidden>

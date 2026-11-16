@@ -37,7 +37,14 @@
     const suggestions = (Array.isArray(raw.suggestions) ? raw.suggestions : []).map(normalizeSuggestion).filter(Boolean);
     const textItems = Array.isArray(raw.textItems)
       ? raw.textItems.filter(item => typeof item === 'string').flatMap(textLines) : [];
-    return { format, nodes, textItems, textGroups:normalizeTextGroups(raw.textGroups), suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
+    const base = { format, nodes, textVersion:1, textItems, textGroups:normalizeTextGroups(raw.textGroups), suggestions:[...new Map(suggestions.map(item => [item.id,item])).values()] };
+    if (raw.textVersion !== 1) {
+      const existing = base.textGroups;
+      base.textGroups = [];
+      setTextItems(base,textItems);
+      mergeTextGroups(base.textGroups,existing);
+    }
+    return base;
   }
 
   function normalizeTextGroups(groups) {
@@ -58,13 +65,27 @@
     const child = line => /^-\s*(\S.*)$/u.exec(line)?.[1];
     const loose = [], groups = [];
     for (let i = 0; i < items.length;) {
-      const index = i, name = items[i++];
+      const name = items[i++];
       if (child(name) || !child(items[i] || '')) { loose.push(name); continue; }
       const children = [];
       while (i < items.length && child(items[i])) children.push({ name:child(items[i++]) });
-      groups.push({ id:`legacy:${index}`, name, children, end:i });
+      groups.push({ name, children });
     }
     return { loose,groups };
+  }
+  function setTextItems(base, items) {
+    const { loose,groups } = textSections(items);
+    function withSources(entries) {
+      const occurrences = new Map();
+      return entries.map(item => {
+        const name = label(item.name,200);
+        const ordinal = (occurrences.get(name) || 0) + 1;
+        occurrences.set(name,ordinal);
+        return { name,source:`legacy:${ordinal}:${name}`,...(item.children ? { children:withSources(item.children) } : {}) };
+      });
+    }
+    base.textItems = loose;
+    mergeTextGroups(base.textGroups,withSources(groups));
   }
   function mergeTextGroups(target, incoming) {
     // A stable ID identifies each entry, including distinct layers with identical names.
@@ -107,27 +128,41 @@
     const root = base.textGroups.find(group => group.source === entry.source);
     return { id:root.id, name:root.name, added };
   }
-  function addTextItem(base, groupId, name) {
+  function textName(name) {
     name = label(name,200);
     if (!name || /[\r\n]/u.test(name)) throw new Error('Zadej název položky na jeden řádek.');
-    if (!groupId) { base.textItems.push(name); return; }
-    if (groupId.startsWith('legacy:')) {
-      const group = textSections(base.textItems).groups.find(item => item.id === groupId);
-      if (!group) throw new Error('Skupina v textovém seznamu už není dostupná.');
-      base.textItems.splice(group.end,0,`- ${name}`);
-      return;
-    }
-    function findGroup(groups) {
-      for (const group of groups) {
-        if (!group.children) continue;
-        if (group.id === groupId) return group;
-        const target = findGroup(group.children);
-        if (target) return target;
+    return name;
+  }
+  function addTextItem(base, groupId, name, group = false) {
+    name = textName(name);
+    if (!groupId && !group) { base.textItems.push(name); return; }
+    const siblings = groupId ? locate(base.textGroups,groupId)?.item.children : base.textGroups;
+    if (!siblings) throw new Error('Skupina v textovém seznamu už není dostupná.');
+    const id = newId();
+    siblings.push({ id,name,...(group ? { children:[] } : {}) });
+    return id;
+  }
+  function editTextItem(base, ref, action, name) {
+    const located = typeof ref === 'number' ? { siblings:base.textItems, index:ref } : locate(base.textGroups,ref);
+    if (!located) throw new Error('Položka v textovém seznamu už není dostupná.');
+    const { item,siblings } = located;
+    let index = item ? siblings.indexOf(item) : located.index;
+    if (!Object.hasOwn(siblings,index)) throw new Error('Položka v textovém seznamu už není dostupná.');
+    if (action === 'rename') {
+      const next = textName(name);
+      if (item) item.name = next;
+      else siblings[index] = next;
+    } else if (action === 'delete') {
+      siblings.splice(index,1);
+      return null;
+    } else if (action === 'up' || action === 'down') {
+      const next = index + (action === 'up' ? -1 : 1);
+      if (next >= 0 && next < siblings.length) {
+        [siblings[index],siblings[next]] = [siblings[next],siblings[index]];
+        index = next;
       }
     }
-    const target = findGroup(base.textGroups);
-    if (!target) throw new Error('Skupina v textovém seznamu už není dostupná.');
-    target.children.push({ id:`manual:${newId()}`,name });
+    return item?.id ?? index;
   }
   const pathNodes = (nodes, path = '') => nodes.map(node => {
     const next = isPlanningGroup(node) ? path : path ? `${path} / ${node.name}` : node.name;
@@ -143,7 +178,7 @@
   function locate(nodes,id,parent = null) {
     for (const item of nodes) {
       if (item.id === id) return { item, siblings:nodes,parent };
-      if (isBranch(item)) {
+      if (item.children) {
         const found = locate(item.children,id,item);
         if (found) return found;
       }
@@ -301,7 +336,7 @@
     if (rootLayers.length) nodes.push({ id:'document-root',name:fileName.replace(/\.[^.]+$/,''),kind:'category',evidence:'seen',sources:[source+'root'],children:map(rootLayers) });
     return { format,nodes };
   }
-  const api = { format, normalize, textLines, textSections, mergeTextGroups, copyToText, addTextItem, pathNodes, confirmedTree, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
+  const api = { format, normalize, textLines, setTextItems, mergeTextGroups, copyToText, addTextItem, editTextItem, pathNodes, confirmedTree, locate, applyEdit, merge, setField, projectTree, fromDocument, isBranch, isPlanningGroup, includeSuggestions, approveSuggestion, suggestChange, folderLayout };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitInventoryBase = api;
 })(globalThis);
