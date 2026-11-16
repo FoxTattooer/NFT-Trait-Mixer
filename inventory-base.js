@@ -56,7 +56,8 @@
         const branch = Array.isArray(item?.children), source = label(item?.source,240);
         if (!id || !name || used.has(id) || (atRoot && !branch)) return [];
         used.add(id);
-        return [{ id,name,...(source ? { source } : {}),...(branch ? { children:read(item.children) } : {}) }];
+        return [{ id,name,...(source ? { source } : {}),...(branch ? { children:read(item.children) }
+          : isThumbnail(item.image) ? { image:item.image } : {}) }];
       });
     }
     return read(groups,true);
@@ -101,6 +102,7 @@
         if (!entry.children) added++;
       }
       if (item.children && entry.children) added += mergeTextGroups(entry.children,item.children);
+      else if (!entry.children && !entry.image && isThumbnail(item.image)) entry.image = item.image;
     }
     return added;
   }
@@ -117,7 +119,8 @@
     if (!path) throw new Error('Položka v soupisu už není dostupná.');
     const textSource = item => `${origin}:${item.id}`;
     function copy(item) {
-      return { source:textSource(item),name:item.name,...(item.children ? { children:item.children.map(copy) } : {}) };
+      return { source:textSource(item),name:item.name,...(item.children ? { children:item.children.map(copy) }
+        : isThumbnail(item.image) ? { image:item.image } : {}) };
     }
     const selected = path.at(-1);
     let entry = copy(selected);

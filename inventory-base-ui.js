@@ -113,7 +113,12 @@
       show('review'); review.open(id);
     } catch { /* The shared inventory status displays the write error. */ }
   }
-  dialog.addEventListener('close',() => { preview.clear(); closeTextMenu(); });
+  dialog.addEventListener('close',() => {
+    preview.clear();
+    closeTextMenu();
+    $('inventoryTextGroups').replaceChildren();
+    mountThumbnails();
+  });
   $('inventoryBaseTab').addEventListener('click',() => show('base'));
   $('inventoryTextTab').addEventListener('click',() => show('text'));
   $('inventoryProjectTab').addEventListener('click',() => show('project'));
@@ -237,9 +242,44 @@
     }
     return { trigger,menu };
   }
-  function renderTextItem(item, parent, index, total) {
+  function textThumbnails() {
+    const previews = new Map();
+    if (safeMode) return previews;
+    function collect(nodes) {
+      for (const node of nodes) {
+        if (node.children) collect(node.children);
+        else if (node.kind === 'layer' && node.image) {
+          const preview = { image:node.image };
+          previews.set(`base:${node.id}`,preview);
+          for (const source of node.sources || []) if (source.startsWith('project:')) previews.set(source,preview);
+        }
+      }
+    }
+    collect(base?.nodes || []);
+    for (const category of state.cats) for (const trait of category.traits) {
+      if (trait.data) previews.set(`project:${trait.id}`,{ category,trait });
+    }
+    return previews;
+  }
+  function renderTextItem(item, parent, index, total, previews) {
     const row = element('li','inv-text-row');
     const { trigger,menu } = textRowMenu(item,parent,index,total);
+    const preview = previews?.get(item.source);
+    const source = !safeMode && (preview?.image || item.image);
+    if (preview?.trait || source) {
+      const thumbnail = element('span','inv-text-thumb');
+      if (preview?.trait) thumbnail.innerHTML = layerThumbnail(preview.category,preview.trait,'layer-cropped-thumbnail');
+      else {
+        const img = element('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = source;
+        thumbnail.append(img);
+      }
+      row.classList.add('has-thumb');
+      row.append(thumbnail);
+    }
     row.append(element('span','inv-text-name',item.name),trigger,menu);
     return row;
   }
@@ -281,7 +321,7 @@
     target.prepend(quick);
     input.focus();
   }
-  function renderTextGroup(group, parent, index, total) {
+  function renderTextGroup(group, parent, index, total, previews) {
     const section = element('section','inv-text-group');
     const header = element('div','inv-text-group-head');
     const toggle = element('button','inv-text-toggle subtle');
@@ -305,10 +345,10 @@
     add.addEventListener('click',() => { setExpanded(true); beginTextItem(body,group,add); });
     let names;
     group.children.forEach((child,index) => {
-      if (child.children) { names = null; body.append(renderTextGroup(child,group,index,group.children.length)); }
+      if (child.children) { names = null; body.append(renderTextGroup(child,group,index,group.children.length,previews)); }
       else {
         if (!names) { names = element('ul','inv-text-names'); body.append(names); }
-        names.append(renderTextItem(child,group,index,group.children.length));
+        names.append(renderTextItem(child,group,index,group.children.length,previews));
       }
     });
     const { trigger,menu } = textRowMenu(group,parent,index,total);
@@ -323,12 +363,14 @@
     list.replaceChildren(...items.map((name,index) => renderTextItem({ id:index,name },null,index,items.length)));
     list.hidden = !items.length;
     const categories = $('inventoryTextGroups');
-    categories.replaceChildren(...groups.map((group,index) => renderTextGroup(group,null,index,groups.length)));
+    const previews = groups.length ? textThumbnails() : new Map();
+    categories.replaceChildren(...groups.map((group,index) => renderTextGroup(group,null,index,groups.length,previews)));
     categories.hidden = !textForm.hidden;
     $('inventoryTextRead').hidden = !textForm.hidden;
     $('inventoryTextInline')?.remove();
     textEdit.disabled = textAdd.disabled = textAddGroup.disabled = !base;
     textEdit.textContent = items.length ? 'Upravit volný text' : 'Napsat více bodů';
+    mountThumbnails();
   }
   function closeTextEditor() {
     textForm.hidden = true;

@@ -91,6 +91,8 @@ test('text copies retain paths, repeated layer names and manual additions after 
   const glasses = base.textGroups[1];
   assert.deepEqual(glasses.children[0].children.map(item => item.name),['FireLook','FireLook']);
   assert.deepEqual(glasses.children.map(item => item.name),['Rounded','Ručně','Solo']);
+  assert.equal(glasses.children[2].image,'data:image/png;base64,AA==');
+  assert.equal(glasses.children[1].image,undefined);
   assert(!JSON.stringify(glasses).includes('Poznámka'));
   assert.equal(Base.mergeTextGroups(base.textGroups,base.textGroups),0);
 });
