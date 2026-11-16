@@ -24,17 +24,17 @@
   <script src="project.js?build=07144" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07148" defer></script>
+  <script src="diagnostics.js?build=07149" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07145" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <link rel="stylesheet" href="layer-inventory.css?build=07135">
+  <link rel="stylesheet" href="layer-inventory.css?build=07149">
   <script src="layer-inventory.js?build=07129" defer></script>
   <script src="inventory-base.js?build=07131" defer></script>
-  <script src="app.js?build=07145" defer></script>
+  <script src="app.js?build=07149" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
-  <script src="lookbook.js?build=07148" defer></script>
+  <script src="lookbook.js?build=07149" defer></script>
   <script src="final-ui.js?build=07118" defer></script>
   <script src="final-builder.js?build=07112" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
@@ -132,8 +132,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.148" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.148</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.149" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.149</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -559,6 +559,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.149-hromadne-stitky-vrstev" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.149 – Hromadné štítky vrstev</strong><small>Vybraným traitům, složkám a kategoriím lze přidat jeden nebo více štítků jedním uložením.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.148-prehlednejsi-lookbook" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.148 – Přehlednější rozložení Lookbooku</strong><small>Detail je nad výběrem, přepínač a filtry pod ním. Světlý list má kratší záhlaví a štítky bez textových popisků.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.147-sladene-ikony-stitku" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.147 – Sladěné ikony štítků</strong><small>Materiály, účesy, pokrývky a doplňky mají společnou velikost, zaoblení a jemný tmavý okraj.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.146-hromadny-vyber-stitku" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.146 – Výběr více štítků</strong><small>V okně Štítky se označí více položek kolečky a uloží jedním krokem.</small></span><span class="version-tag">Uloženo</span></a>
@@ -709,7 +710,8 @@
       <button id="editorLayerBulkCancel" type="button" class="subtle icon-button" data-action="clear-layer-bulk" aria-label="Ukončit výběr" title="Ukončit výběr"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
     <div class="editor-bulk-actions" role="group" aria-label="Hromadné úpravy">
-      <button type="button" data-action="open-layer-bulk" data-id="mark" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg>Označit</button>
+      <button type="button" data-action="open-layer-bulk" data-id="mark" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Označit</button>
+      <button type="button" data-action="open-layer-bulk" data-id="tags" aria-haspopup="dialog" aria-label="Přidat štítky" title="Přidat štítky"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg>Štítky</button>
       <button type="button" data-action="open-layer-bulk" data-id="rename" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Přejmenovat</button>
       <button type="button" data-action="open-layer-bulk" data-id="move" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-folder-move"/></svg>Přesunout</button>
       <button type="button" data-action="open-layer-bulk" data-id="delete" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Smazat</button>

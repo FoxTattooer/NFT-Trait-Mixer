@@ -868,7 +868,12 @@ function renderLayerBulkDialog() {
   syncLayerBulkPicks(body);
 }
 function showLayerBulkDialog(mode, trigger) {
-  if (!Object.hasOwn(layerBulkTitles, mode) || !layerBulkSelection.size) return;
+  if (!layerBulkSelection.size) return;
+  if (mode === 'tags') {
+    window.TraitLookbook?.openBulkLayerTags([...layerBulkSelection], trigger);
+    return;
+  }
+  if (!Object.hasOwn(layerBulkTitles, mode)) return;
   const dialog = $('layerBulkDialog');
   layerBulkDialogMode = mode;
   layerBulkReturn = trigger;

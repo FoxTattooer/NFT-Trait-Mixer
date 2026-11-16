@@ -1535,7 +1535,7 @@ const bulkProject = M.empty();
 bulkProject.cats = [
   { id:'bulk-a', name:'Source A', traits:[{ id:'bulk-a1', name:'Hat', data:rarityAsset }] },
   { id:'bulk-b', name:'Source B', traits:[
-    { id:'bulk-b1', name:'Glasses', data:rarityAsset }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
+    { id:'bulk-b1', name:'Glasses', data:rarityAsset, lookbookTags:['Afro', 'Původní'] }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
   ] },
   { id:'bulk-c', name:'Destination', traits:[] },
 ];
@@ -1562,6 +1562,7 @@ assert(get('appLayout').hasAttribute('data-layer-bulk'));
 countBulk(1);
 bulkRow('bulk-a');
 countBulk(0);
+assert(find('#editorLayerBulk [data-id="tags"]').disabled);
 const beforeBulk = JSON.stringify(w.inspectState());
 bulkRow('bulk-a');
 bulkExpand('bulk-b'); bulkExpand('bulk-folder'); bulkExpand('bulk-subfolder');
@@ -1572,6 +1573,25 @@ assert(bulkCheckbox('bulk-subfolder').checked);
 assert(bulkCheckbox('bulk-b1').checked);
 countBulk(3);
 assert.equal(JSON.stringify(w.inspectState()), beforeBulk, 'selecting rows leaves preview and project data intact');
+bulkAction('tags');
+assert(get('layerTagsDialog').open);
+assert.equal(get('layerTagsTitle').textContent, 'Přidat štítky');
+assert.equal(get('layerTagsPath').textContent, 'Vybráno 3 položky');
+find('#layerTagsOptions .lookbook-tag-picker').open = true;
+click('#layerTagsOptions [data-layer-tag-option][value="Afro"]');
+click('#layerTagsOptions [data-layer-tag-option][value="Cowboy"]');
+get('layerTagsNew').value = 'Výběr A';
+assert.equal(JSON.stringify(w.inspectState()), beforeBulk);
+get('layerTagsForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+await waitFor(() => !get('layerTagsDialog').open);
+assert.deepEqual([...M.category(w.inspectState(), 'bulk-a').lookbookTags], ['Afro', 'Cowboy', 'Výběr A']);
+assert.deepEqual([...w.inspectState().organizer['bulk-b'].folders.find(folder => folder.id === 'bulk-subfolder').lookbookTags], ['Afro', 'Cowboy', 'Výběr A']);
+assert.deepEqual([...M.locate(w.inspectState(), 'bulk-b1').trait.lookbookTags], ['Afro', 'Původní', 'Cowboy', 'Výběr A']);
+assert.equal(M.locate(w.inspectState(), 'bulk-b2').trait.lookbookTags, undefined);
+countBulk(3);
+click('#undo');
+assert.equal(JSON.stringify(w.inspectState()), beforeBulk, 'one undo restores all affected tag assignments');
+countBulk(3);
 bulkExpand('bulk-folder');
 bulkAction('review');
 assert(get('layerBulkDialog').open);

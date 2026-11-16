@@ -73,10 +73,11 @@
     return { cat, item };
   }
 
-  function renderLayerTagDraft() {
-    const { cat, item } = resolveLayerTagTarget();
-    if (!item) return;
-    const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
+  function showLayerTagDialog(title, path, tags = [], inherited = []) {
+    $('layerTagsTitle').textContent = title;
+    $('layerTagsPath').textContent = path;
+    $('layerTagsNew').value = '';
+    draftLayerTags = [...tags];
     const inheritedField = $('layerTagsInherited');
     inheritedField.hidden = !inherited.length;
     inheritedField.textContent = inherited.length ? 'Z kategorie nebo složky · ' + inherited.join(' · ') : '';
@@ -86,6 +87,8 @@
     options.innerHTML = illustratedTagPicker(available, true);
     options.hidden = !available.length;
     renderLayerTagSelection();
+    layerTagsDialog.showModal();
+    $('layerTagsTitle').focus({ preventScroll: true });
   }
 
   function renderLayerTagSelection() {
@@ -105,23 +108,43 @@
     if (!item) { layerTagTarget = undefined; return; }
     const { folders, assignments } = organizerFolders(cat.id);
     const path = kind === 'category' ? cat.name : [cat.name, organizerPath(folders, kind === 'folder' ? id : assignments[id]), kind === 'trait' ? item.name : ''].filter(Boolean).join(' / ');
-    $('layerTagsPath').textContent = path;
-    $('layerTagsNew').value = '';
-    draftLayerTags = [...(item.lookbookTags || [])];
-    renderLayerTagDraft();
-    layerTagsDialog.showModal();
-    $('layerTagsTitle').focus({ preventScroll: true });
+    showLayerTagDialog('Štítky', path, item.lookbookTags, M.inheritedLayerTags(state, cat, item, kind));
+  }
+
+  function openBulkLayerTags(ids, returnTo) {
+    if (busy || layerTagsDialog.open || !ids.length) return;
+    layerTagTarget = { ids, returnTo };
+    showLayerTagDialog('Přidat štítky', 'Vybráno ' + counted(ids.length, 'položka', 'položky', 'položek'));
+  }
+
+  function saveBulkLayerTags(ids) {
+    if (!draftLayerTags.length) return;
+    const items = layerItemIndex();
+    const updates = [];
+    for (const id of ids) {
+      const item = items.get(id);
+      if (!item) continue;
+      const current = item.lookbookTags || [];
+      const next = M.normalizeLookbookTags([...current, ...draftLayerTags]);
+      if (next.length > current.length) updates.push([item, next]);
+    }
+    if (!updates.length) return;
+    change(() => {
+      for (const [item, tags] of updates) item.lookbookTags = tags;
+    }, `Štítky přidány · ${counted(updates.length, 'položka', 'položky', 'položek')}`, true);
   }
 
   function addLayerDraftTag(value) {
-    const { cat, item } = resolveLayerTagTarget();
     const [tag] = M.normalizeLookbookTags([value]);
-    if (!item || !tag) return;
-    const key = M.lookbookTagKey(tag);
-    const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
-    if (!inherited.some(label => M.lookbookTagKey(label) === key)) {
-      draftLayerTags = M.normalizeLookbookTags([...draftLayerTags, tag]);
+    if (!layerTagTarget || !tag) return;
+    if (!layerTagTarget.ids) {
+      const { cat, item } = resolveLayerTagTarget();
+      if (!item) return;
+      const key = M.lookbookTagKey(tag);
+      const inherited = M.inheritedLayerTags(state, cat, item, layerTagTarget.kind);
+      if (inherited.some(label => M.lookbookTagKey(label) === key)) return;
     }
+    draftLayerTags = M.normalizeLookbookTags([...draftLayerTags, tag]);
   }
 
   function addNewLayerTag() {
@@ -159,9 +182,14 @@
   });
   $('layerTagsForm').addEventListener('submit', event => {
     event.preventDefault();
-    if (busy) return;
-    const { item } = resolveLayerTagTarget();
+    if (busy || !layerTagTarget) return;
     addLayerDraftTag($('layerTagsNew').value);
+    if (layerTagTarget.ids) {
+      saveBulkLayerTags(layerTagTarget.ids);
+      layerTagsDialog.close();
+      return;
+    }
+    const { item } = resolveLayerTagTarget();
     if (item && JSON.stringify(draftLayerTags) !== JSON.stringify(item.lookbookTags || [])) {
       change(() => {
         if (draftLayerTags.length) item.lookbookTags = [...draftLayerTags];
@@ -699,5 +727,5 @@
       URL.revokeObjectURL(url);
     }
   }
-  window.TraitLookbook = { thumbnail, openLayerTags };
+  window.TraitLookbook = { thumbnail, openLayerTags, openBulkLayerTags };
 })();

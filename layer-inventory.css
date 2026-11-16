@@ -129,7 +129,7 @@
 .editor-bulk-head strong {margin-inline:4px auto; font-size:13px; font-variant-numeric:tabular-nums}
 .editor-bulk-head button {min-height:44px;padding:4px 8px;font-size:12px}
 .editor-bulk-head .icon-button {width:44px}
-.editor-bulk-actions {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.editor-bulk-actions {display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:4px}
 .editor-bulk-actions button {min-width:0;min-height:44px;padding:3px;flex-direction:column;gap:2px;font-size:clamp(9px,2.9vw,11px)}
 .editor-bulk-actions .icon {width:16px;height:16px;color:var(--scheme-muted,#bec0cc)}
 .editor-bulk-actions [data-id=delete] .icon {color:var(--danger,#f7a7b4)}
