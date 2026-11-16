@@ -1910,13 +1910,22 @@ function syncWorkspaceTabs() {
   const collapsed = portrait && workspaceTabsCollapsed;
   const showComparison = compact || landscapeWorkspace.matches;
   const tabs = $('workspaceTabs'), toggle = $('workspaceTabsToggle');
+  const dock = $('workspaceDock'), handle = $('workspaceTabsHandle');
+  const target = portrait ? dock : $('appLayout');
+  const movedTab = tabs.parentElement !== target && tabs.contains(document.activeElement) ? document.activeElement : null;
+  // Keep both portrait controls in one viewport-fixed layer outside the scrolling layout.
+  if (tabs.parentElement !== target) {
+    if (portrait) dock.append(tabs, handle);
+    else target.querySelector('.inspector').before(tabs, handle);
+  }
+  dock.hidden = !portrait;
   const previous = layerBrowseHistory.at(-1);
   const back = mobilePanel === 'layers' && (previous || !$('layerTree').hidden) && (!portrait || compact);
   document.body.dataset.workspaceNavigation = collapsed ? 'drop' : compact ? 'compact' : 'full';
   tabs.toggleAttribute('data-compact', compact);
   tabs.hidden = collapsed;
   $('comparisonTab').hidden = !showComparison;
-  $('workspaceTabsHandle').hidden = !collapsed;
+  handle.hidden = !collapsed;
   toggle.hidden = !portrait;
   toggle.setAttribute('aria-expanded', String(!collapsed));
   toggle.querySelector('span').textContent = collapsed ? 'Rozbalit spodní lištu' : 'Sbalit spodní lištu';
@@ -1931,6 +1940,7 @@ function syncWorkspaceTabs() {
   const backToCategories = !previous || (previous.panel === 'layers' && previous.overview);
   $('layersTab').setAttribute('aria-label', !back ? 'Vrstvy' : backToCategories
     ? 'Vrstvy · zpět na kategorie' : 'Vrstvy · zpět do předchozího pohledu');
+  if (!collapsed && movedTab && !movedTab.hidden) movedTab.focus({ preventScroll: true });
 }
 function setWorkspaceTabsCollapsed(collapsed, focus = false) {
   workspaceTabsCollapsed = portraitWorkspace.matches && collapsed;
@@ -1960,7 +1970,8 @@ window.addEventListener('scroll', event => {
   }
   if (delta > 0) workspaceScrollDistance += delta;
   if (workspaceScrollDistance >= 24 && !$('workspaceTabs').hidden) {
-    setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(document.activeElement));
+    const focused = document.activeElement;
+    setWorkspaceTabsCollapsed(true, $('workspaceTabs').contains(focused) && focused.matches(':focus-visible'));
   }
 }, { capture: true, passive: true });
 portraitWorkspace.addEventListener('change', () => setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle')));

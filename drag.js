@@ -47,9 +47,9 @@
     const viewport=window.visualViewport;
     const top=viewport?.offsetTop || 0;
     let bottom=top+(viewport?.height || innerHeight);
-    const tabs=document.querySelector('.workspace-tabs');
-    if(tabs && getComputedStyle(tabs).position==='fixed') {
-      const rect=tabs.getBoundingClientRect();if(rect.top>top && rect.top<bottom)bottom=rect.top;
+    const dock=$('workspaceDock');
+    if(dock && !dock.hidden) {
+      const rect=dock.getBoundingClientRect();if(rect.top>top && rect.top<bottom)bottom=rect.top;
     }
     const element=document.elementFromPoint(drag.x,Math.max(top,Math.min(bottom-1,drag.y)));
     let node=element || drag.row,carry=0,moved=false;

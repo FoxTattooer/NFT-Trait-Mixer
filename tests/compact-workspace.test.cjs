@@ -99,6 +99,12 @@ for(const [width,height] of [[852,393],[393,852],[667,375],[375,667]]) {
  assert.equal(w.document.getElementById('landscapeShuffle').disabled,false);
  assert.equal(w.document.getElementById('landscapeSnapshot').disabled,false);
  assert.equal(w.document.getElementById('comparisonTab').hidden,width<height);
+ const dock = w.document.getElementById('workspaceDock');
+ assert.equal(dock.hidden, width > height);
+ assert.equal(dock.parentElement, w.document.body);
+ for (const id of ['workspaceTabs', 'workspaceTabsHandle']) {
+   assert.equal(w.document.getElementById(id).parentElement.id, width < height ? 'workspaceDock' : 'appLayout');
+ }
 }
 menus[0].open=true;w.document.getElementById('save').click();
 await waitFor(()=>w.__downloads.length>0);assert.equal(menus[0].open,false);
@@ -412,6 +418,23 @@ const categorySource = find('#cats [data-action="select-category"]').dataset.id;
 click('#cats [data-action="select-category"]');assert(!get('layerTree').hidden);
 assert(get('layersTab').hasAttribute('data-back'));
 assert.equal(get('layersTab').getAttribute('aria-label'),'Vrstvy · zpět na kategorie');
+click('#workspaceTabsToggle');
+click('#workspaceTabsHandle');
+windowTop += 16;
+w.document.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'compact');
+windowTop += 12;
+w.document.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'drop');
+assert.equal(get('workspaceTabsHandle').parentElement, get('workspaceDock'));
+assert(!get('workspaceTabsHandle').hidden);
+windowTop += 100;
+w.document.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'drop');
+click('#workspaceTabsHandle');
+assert.equal(windowTop, 611, 'showing the bar leaves the current scroll position alone');
+assert.equal(get('workspaceTabs').parentElement, get('workspaceDock'));
+windowTop = 483;
 assert.deepEqual(treeIds().slice(0,3),['t0','folder-a','t2'],'PSD root preserves mixed folder/layer order');
 assert.equal(treeIds().length,48,'large trees render in bounded batches');
 assert(find('#layerTree .layer-drag-row[data-drag-kind="trait"]'));

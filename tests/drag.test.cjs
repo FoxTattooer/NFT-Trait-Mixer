@@ -42,6 +42,12 @@ pointer('pointermove',20,790);tick(16.67);const fast=scrolls.pop();assert(slow>0
 scrolls=[];pointer('pointermove',20,400);tick(33.34);assert.equal(scrolls.length,0,'center does not scroll');
 pointer('pointermove',20,5);tick(50);assert(scrolls.pop()<0,'top scrolls upward');
 pointer('pointercancel',20,5);assert.equal(scheduled,null,'cancel stops frame loop');
+const dock=w.document.createElement('div');dock.id='workspaceDock';w.document.body.append(dock);
+dock.getBoundingClientRect=()=>({top:740,bottom:800,height:60});
+scrolls=[];
+pointer('pointerdown',10,10);pointer('pointermove',20,655);tick(70);
+assert(scrolls.pop()>0,'the lower auto-scroll zone starts above the visible dock');
+pointer('pointercancel',20,655);dock.hidden=true;
 // A full inner scroller hands scrolling to the page instead of trapping the drag.
 const panel=w.document.createElement('div');panel.style.overflowY='auto';target.before(panel);panel.append(target);
 Object.defineProperty(panel,'scrollHeight',{value:1000});Object.defineProperty(panel,'clientHeight',{value:300});panel.scrollTop=700;

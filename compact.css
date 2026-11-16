@@ -540,14 +540,21 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 @media (max-width:900px) and (orientation:portrait) {
   body.compact-workspace {
     --workspace-bottom-inset:env(safe-area-inset-bottom,0px);
-    --workspace-nav-height:90px;
-    padding-bottom:calc(var(--workspace-nav-height) + var(--workspace-bottom-inset));
+    --workspace-nav-reserve:90px;
+    --workspace-nav-height:var(--workspace-nav-reserve);
+    /* Switching controls during a swipe must not change the document's height. */
+    padding-bottom:calc(var(--workspace-nav-reserve) + var(--workspace-bottom-inset));
   }
   body.compact-workspace .toast {
     bottom:calc(var(--workspace-nav-height) + var(--workspace-bottom-inset) + 4px);
   }
   body.compact-workspace[data-workspace-navigation=compact] {--workspace-nav-height:47px}
   body.compact-workspace[data-workspace-navigation=drop] {--workspace-nav-height:44px}
+  #workspaceDock:not([hidden]) {
+    position:fixed;inset:auto 0 0;z-index:25;
+    display:flex;flex-direction:column;align-items:center;
+    pointer-events:none;transform:translateZ(0);
+  }
   #workspaceTabs:not([data-compact]) #workspaceCredit {
     grid-column: 1 / -1;
     justify-self: center;
@@ -570,18 +577,20 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   }
   .workspace-credit img { width: 8px; height: 13px; }
   body.compact-workspace #appLayout {gap:7px}
-  #appLayout .workspace-tabs {
+  #workspaceDock > #workspaceTabs {
+    position:static;inset:auto;width:100%;
     align-items:center;gap:7px;padding:5px 10px calc(5px + var(--workspace-bottom-inset));
+    pointer-events:auto;backdrop-filter:none;
   }
-  #appLayout .workspace-tabs button[data-panel] {
+  #workspaceDock #workspaceTabs button[data-panel] {
     min-height:52px;padding:5px 6px;gap:4px;flex-direction:column;
   }
-  #appLayout #workspaceTabs[data-compact] {
-    inset:auto auto var(--workspace-bottom-inset) 50%;
-    transform:translateX(-50%);grid-template-columns:repeat(4,54px);width:max-content;
+  #workspaceDock > #workspaceTabs[data-compact] {
+    margin-bottom:var(--workspace-bottom-inset);
+    grid-template-columns:repeat(4,54px);width:max-content;
     gap:4px;padding:0;border:0;background:transparent!important;box-shadow:none;backdrop-filter:none;
   }
-  #appLayout #workspaceTabs[data-compact] button[data-panel] {
+  #workspaceDock #workspaceTabs[data-compact] button[data-panel] {
     min-height:44px;height:44px;padding:0;gap:4px;flex-direction:row;border-radius:11px;
   }
   #workspaceTabs[data-compact] :is(.layer-tab-label,#layersTab[data-back] .layer-tab-icon) {display:none}
@@ -592,7 +601,7 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   #workspaceTabs[data-compact] .layer-tab-back .icon {display:block;flex:0 0 16px}
 }
 @media (max-width:900px) and (orientation:portrait) and (prefers-reduced-motion:no-preference) {
-  #appLayout .workspace-tabs button {transition:min-height .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .14s ease}
+  #workspaceDock #workspaceTabs button {transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .14s ease}
   #layersTab[data-back] .layer-tab-back {animation:layer-back-appear .17s ease-out}
   @keyframes layer-back-appear {
     from {opacity:.35;transform:translateX(4px)}
@@ -665,12 +674,10 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 .layer-review-copy .layer-flag { margin-inline-start: 5px; }
 @media (max-width:900px) and (orientation:portrait) {
 #workspaceTabs[hidden] {display:none!important}
-#workspaceTabsHandle {
-  position: fixed;
-  z-index: 25;
-  left: 50%;
-  bottom:var(--workspace-bottom-inset);
-  transform: translateX(-50%);
+#workspaceDock > #workspaceTabsHandle {
+  position:relative;
+  margin-bottom:var(--workspace-bottom-inset);
+  pointer-events:auto;
   align-items: center;
   justify-content: center;
   width: 44px;
@@ -686,10 +693,8 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 #workspaceTabsHandle:not([hidden]) {display:inline-flex!important}
 #workspaceTabsHandle::before {
   content: ""; position: absolute; inset: 7px; box-sizing: border-box; border-radius: 50%;
-  border: 1px solid #ffffff35; background: #b7c0d225;
+  border: 1px solid #ffffff35; background: color-mix(in srgb,var(--scheme-panel,#252832) 90%,transparent);
   box-shadow: inset 0 1px 0 #ffffff30, 0 2px 8px #0002;
-  backdrop-filter: blur(11px) saturate(1.35);
-  -webkit-backdrop-filter: blur(11px) saturate(1.35);
   pointer-events: none;
 }
 #workspaceTabsHandle img { position: relative; width: 16px; height: 21px; object-fit: contain; filter: drop-shadow(0 0 2px #fff7); }

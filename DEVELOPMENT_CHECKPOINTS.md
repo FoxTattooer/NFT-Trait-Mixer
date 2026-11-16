@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.124 | checkpoint/v0.7.124-stabilni-spodni-lista | Plná lišta, ikony a kapka mají při rolování na výšku společné ukotvení. |
 | 0.7.123 | checkpoint/v0.7.123-prehledne-kategorie | Jednodušší karty s miniaturami a akcemi traitu. Řazení a smazání v nabídce kategorie. |
 | 0.7.122 | checkpoint/v0.7.122-sjednoceni-rozhrani | Sjednocené akcenty a nabídky, krátké animace rozkliků a lepší ovládání klávesnicí. |
 | 0.7.121 | checkpoint/v0.7.121-sprava-traitu-v-kartach | Správa traitů z miniatur a fajfky u vrstev zobrazených v kompozici. |
