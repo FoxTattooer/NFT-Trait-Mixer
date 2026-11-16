@@ -94,6 +94,7 @@ async function restoreLastProject() {
       state = record.project;
       active = record.categoryId;
       layerBrowseHistory.length = 0;
+      inspectedTrait = null;
       layerOverview = false;
       wipFilter = 0;
       imageCache.clear();
@@ -836,13 +837,58 @@ function openLayerContext(trigger, id) {
 function dragHandle(kind, id, categoryId, label) {
   return `<button class="drag-handle" data-drag-kind="${kind}" data-drag-id="${esc(id)}" data-category="${esc(categoryId)}" aria-label="Přetáhnout ${esc(label)}" title="Podrž úchyt a přetáhni" type="button">⠿</button>`;
 }
-function renderCategoryPreviews(category, traits) {
+const categoryTraitDetailsId = categoryId => `category-trait-details-${categoryId}`;
+let inspectedTrait = null;
+function categoryTraitDetails(category, trait, categoryHidden, picked) {
+  if (!trait) return '';
+  const enabled = picked && !trait.hidden && category.visible !== false;
+  const shown = enabled && !categoryHidden;
+  let status = 'Mimo kompozici';
+  if (trait.hidden) status = 'Skrytý trait';
+  else if (picked) {
+    if (category.visible === false) status = 'Skrytá kategorie';
+    else status = shown ? 'V kompozici' : 'Skryto pravidlem';
+  }
+  const visibility = enabled ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
+  const name = esc(trait.name);
+  return `<div class="category-trait-copy"><strong title="${name}">${name}</strong><small>${status}</small></div>
+    ${button('toggle-trait-visibility', '', trait.id, shown ? 'eye' : 'eye-off', `type="button" class="icon-button subtle category-trait-eye" aria-pressed="${shown}" aria-label="${visibility} · ${name}" title="${visibility}"`)}
+    ${tool('rename-trait', `Přejmenovat ${trait.name}`, trait.id, 'edit')}
+    ${button('open-layer-menu', '', trait.id, 'more', `type="button" class="icon-button subtle" data-kind="trait" data-category="${esc(category.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${name}" title="Další akce"`)}`;
+}
+function renderCategoryPreviews(category, traits, categoryHidden) {
   if (!traits.length || safeMode) return '';
-  const selected = state.selected[category.id];
-  return `<div class="category-trait-previews" data-category="${esc(category.id)}" role="group" aria-label="Náhledy traitů · ${esc(category.name)}">${traits.map(trait =>
-    button('choose-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>`, trait.id, '',
-      `type="button" data-category="${esc(category.id)}" aria-label="${esc(trait.name)}" title="${esc(trait.name)}" aria-pressed="${trait.id === selected}"`)
-  ).join('')}</div>`;
+  const picked = new Set(M.selectedIds(state, category.id));
+  const detailsId = esc(categoryTraitDetailsId(category.id));
+  const inspected = inspectedTrait?.categoryId === category.id && traits.find(trait => trait.id === inspectedTrait.id);
+  return `<div class="category-trait-previews" data-category="${esc(category.id)}" role="group" aria-label="Náhledy traitů · ${esc(category.name)}">${traits.map(trait => {
+    const shown = picked.has(trait.id) && !trait.hidden && !categoryHidden;
+    const check = shown ? `<span class="category-trait-check" aria-hidden="true">${icon('check')}</span>` : '';
+    const name = esc(trait.name);
+    return button('inspect-category-trait', `<span class="layer-thumb">${layerThumbnail(category,trait)}</span>${check}`, trait.id, '',
+      `type="button" data-category="${esc(category.id)}" aria-label="${name}${shown ? ' · V kompozici' : ''}" title="${name}" aria-expanded="${trait === inspected}" aria-controls="${detailsId}"`);
+  }).join('')}</div>
+  <div id="${detailsId}" class="category-trait-details" ${inspected ? '' : 'hidden'}>${categoryTraitDetails(category, inspected, categoryHidden, picked.has(inspected?.id))}</div>`;
+}
+function inspectCategoryTrait(trigger, category, trait) {
+  const previous = inspectedTrait;
+  const isOpen = previous?.categoryId === category.id && previous.id === trait.id;
+  if (previous) {
+    const details = $(categoryTraitDetailsId(previous.categoryId));
+    if (details) {
+      details.previousElementSibling.querySelector('[aria-expanded="true"]')?.setAttribute('aria-expanded', 'false');
+      details.hidden = true;
+      details.replaceChildren();
+    }
+  }
+  inspectedTrait = isOpen ? null : { categoryId: category.id, id: trait.id };
+  if (isOpen) return;
+  const details = $(categoryTraitDetailsId(category.id));
+  details.innerHTML = categoryTraitDetails(category, trait, M.conflicts(state).hidden.has(category.id), M.isSelected(state, category.id, trait.id));
+  details.hidden = false;
+  trigger.setAttribute('aria-expanded', 'true');
+  details.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (trigger.matches(':focus-visible')) details.querySelector('button').focus({ preventScroll: true });
 }
 let compactView = localStorage.getItem('nft-compact-categories') !== 'false';
 let quickCategoryId = null;
@@ -908,7 +954,7 @@ function renderCategories(hidden, categories) {
   const list = $('cats');
   const previews = () => list.querySelectorAll('.category-trait-previews');
   const scrollPositions = new Map(Array.from(previews(), strip => [strip.dataset.category, strip.scrollLeft]));
-  const focused = document.activeElement?.closest('.category-trait-previews button');
+  const focused = document.activeElement?.closest('#cats :is(.category-trait-previews, .category-trait-details) button');
   document.body.classList.toggle('compact-categories', compactView);
   list.dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
@@ -923,22 +969,23 @@ function renderCategories(hidden, categories) {
     return `<div class="category-card ${current ? 'is-active' : ''} ${hidden.has(c.id) ? 'is-hidden' : ''}" data-category="${id}">
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         <button class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}" data-category="${id}"` : ''} data-action="select-category" data-id="${id}" aria-pressed="${current}">${icon('folder')}
-          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${traits.length} traitů${hiddenLabel}</span></span>${layerMarkBadges(c)}
+          <span class="category-copy"><span class="category-name">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerMarkBadges(c)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
         ${compactView ? '' : tool('delete-category', `Smazat kategorii ${c.name}`, c.id, 'trash', false, true)}
       </div>
       ${current && folders.length ? `<div class="layer-folder-tree">${renderOrganizerFolderRows(c, folders, assignments, marks)}</div>` : ''}
-      ${compactView ? '' : renderCategoryPreviews(c, traits)}
+      ${compactView ? '' : renderCategoryPreviews(c, traits, hidden.has(c.id))}
       ${current && !compactView ? `<div class="category-tools">${tool('move-up', `Přesunout kategorii ${c.name} výš`, c.id, 'up', index === 0)}${tool('move-down', `Přesunout kategorii ${c.name} níž`, c.id, 'down', index === state.cats.length - 1)}</div>` : ''}
     </div>`;
   }).join('') || `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
   for (const strip of previews()) {
     if (scrollPositions.get(strip.dataset.category)) strip.scrollLeft = scrollPositions.get(strip.dataset.category);
-    if (focused?.dataset.category === strip.dataset.category) {
-      [...strip.querySelectorAll('button')].find(button => button.dataset.id === focused.dataset.id)?.focus({ preventScroll: true });
-    }
+  }
+  if (focused) {
+    [...list.querySelectorAll('.category-trait-previews button, .category-trait-details button')]
+      .find(button => button.dataset.id === focused.dataset.id && button.dataset.action === focused.dataset.action)?.focus({ preventScroll: true });
   }
 }
 function organizerFolders(categoryId) {
@@ -1649,6 +1696,7 @@ async function loadProject(file) {
     }
     if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
     layerBrowseHistory.length = 0;
+    inspectedTrait = null;
     change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
     const recentId = recent?.record(file, undefined, fallback);
     if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
@@ -2240,6 +2288,9 @@ async function handleAction(action, id, element) {
       if (located) toggleTraitInPreview(located.cat, id);
       break;
     }
+    case 'inspect-category-trait':
+      if (located && element?.closest('.category-trait-previews')) inspectCategoryTrait(element, located.cat, located.trait);
+      break;
     case 'toggle-hidden-trait': {
       if (!located) break;
       const { trait } = located;
@@ -2278,6 +2329,7 @@ async function handleAction(action, id, element) {
         if (M.hasContent(state) && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
         recoveryDismissed = true;
         layerBrowseHistory.length = 0;
+        inspectedTrait = null;
         selectWorkspaceTab(false);
         change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
         showProjectSource('Vytvořen nový projekt');

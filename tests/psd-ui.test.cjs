@@ -60,10 +60,13 @@ async function test(worker) {
   await choose(psd);$('psdConfirm').click();$('psdCancel').click();await new Promise(r=>setTimeout(r,30));assert.equal($('cats').querySelectorAll('.category-card').length,1);assert.equal(w.testActiveCategory().traits.length,2);
   const previews = () => [...$('cats').querySelectorAll('.category-trait-previews button')];
   assert.equal(previews().length, 2);
-  previews().find(button => button.dataset.id !== 'existing-trait').click();
-  assert.notEqual(w.testSelection(),'existing-trait');
-  assert.equal(previews().find(button => button.getAttribute('aria-pressed') === 'true').dataset.id, w.testSelection());
+  const imported = previews().find(button => button.dataset.id !== 'existing-trait');
+  imported.click();
+  assert.equal(w.testSelection(),'existing-trait');
+  $('cats').querySelector('.category-trait-details:not([hidden]) [data-action="toggle-trait-visibility"]').click();
+  assert(previews().find(button => button.dataset.id === imported.dataset.id).querySelector('.category-trait-check'));
   $('undo').click();assert.equal(w.testSelection(),'existing-trait');
+  assert(!previews().find(button => button.dataset.id === imported.dataset.id).querySelector('.category-trait-check'));
   assert($('categoryNext').disabled);
   await choose(psd);
   assert($('psdConfirm').disabled);assert.equal($('psdTree').querySelectorAll('input:checked').length,0);

@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.121 | checkpoint/v0.7.121-sprava-traitu-v-kartach | Správa traitů z miniatur a fajfky u vrstev zobrazených v kompozici. |
 | 0.7.120 | checkpoint/v0.7.120-karty-bez-sipek | Rozšířené karty s posuvnou řadou miniatur bez panelu se šipkami. |
 | 0.7.119 | checkpoint/v0.7.119-presun-vrstev | Přesun podržením, náhledy traitů a smazání celé kategorie v rozšířených kartách. |
 | 0.7.118 | checkpoint/v0.7.118-rarity | Rarity ve Finálu, automatické rozdělení šancí a simulace počtu traitů. |
