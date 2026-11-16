@@ -839,6 +839,19 @@ function layerMenuMove(label, select, path) {
   return layerMenuDisclosure(`<span>${label}</span>`, layerMenuIcon('folder-move'), 'arrange',
     `<div class="layer-menu-move">${path ? `<p class="layer-menu-path"><span>Aktuální cesta</span> ${esc(path)}</p>` : ''}<label><span>Cílové umístění</span>${select}</label></div>`);
 }
+function categoryMoveSelect(sourceId) {
+  const destinations = state.cats.filter(category => category.id !== sourceId);
+  if (!destinations.length) return '';
+  const groups = destinations.map(category => {
+    const id = esc(category.id), name = esc(category.name);
+    const { folders } = organizerFolders(category.id);
+    return `<optgroup label="${name}">
+      <option value="${id}" data-target="${id}">${name} · hlavní úroveň</option>
+      ${folders.map(folder => `<option value="${esc(folder.id)}" data-target="${id}" data-folder="${esc(folder.id)}">${name} / ${esc(organizerPath(folders, folder.id))}</option>`).join('')}
+    </optgroup>`;
+  }).join('');
+  return `<select data-action="move-category-into-folder" data-category="${esc(sourceId)}"><option value="">Vyber kategorii nebo složku…</option>${groups}</select>`;
+}
 function openLayerContext(trigger, id) {
   if (layerContextTrigger === trigger) { closeLayerContext(true); return; }
   closeLayerContext();
@@ -859,6 +872,8 @@ function openLayerContext(trigger, id) {
     edits += `<div class="layer-menu-pair" role="group" aria-label="Pořadí kategorie">${
       layerMenuButton('move-up', 'Výš', id, 'up', 'arrange', `aria-label="Posunout kategorii výš" ${index === 0 ? 'disabled' : ''}`)}${
       layerMenuButton('move-down', 'Níž', id, 'down', 'arrange', `aria-label="Posunout kategorii níž" ${index === state.cats.length - 1 ? 'disabled' : ''}`)}</div>`;
+    const destination = categoryMoveSelect(c.id);
+    if (destination) edits += layerMenuMove('Přesunout kategorii', destination, c.name);
     other = layerMenuButton('delete-category', 'Smazat celou kategorii', id, 'trash', 'delete', '', true);
   } else if (kind === 'folder') {
     const excluded = organizerDescendants(folders, id);
@@ -2672,6 +2687,37 @@ async function handleAction(action, id, element) {
     case 'refresh-app': case 'update-app': await refreshApp(); break;
   }
 }
+async function moveCategoryIntoFolder(sourceId, targetId, folderId) {
+  if (!ready || busy || !targetId || $('editDialog').open) return;
+  const source = M.category(state, sourceId), target = M.category(state, targetId);
+  if (!source || !target) return;
+  const path = [target.name, organizerPath(organizerFolders(targetId).folders, folderId)].filter(Boolean).join(' / ');
+  const { changedSnapshots, updatedRules, removedRules } = M.moveCategoryIntoFolder(M.clone(state), sourceId, targetId, folderId);
+  const details = [
+    `Kategorie se stane podsložkou v „${path}“. Přenese se celý její obsah. Pořadí skládání a viditelnost určuje cílová kategorie.`,
+    changedSnapshots ? `Změní se přiřazení v uložených sestavách (${changedSnapshots}).` : '',
+    updatedRules ? `Upraví se pravidla (${updatedRules}).` : '',
+    removedRules ? `Odeberou se pravidla, která po sloučení nelze zachovat (${removedRules}).` : '',
+    'Přesun můžeš vrátit tlačítkem Zpět.',
+  ].filter(Boolean).join(' ');
+  if (!await ask({ title: `Přesunout „${source.name}“?`, description: details, confirm: true, submit: 'Přesunout' }) || busy) return;
+  change(() => {
+    M.moveCategoryIntoFolder(state, sourceId, targetId, folderId);
+    active = targetId;
+    const expanded = organizerExpanded[targetId] ||= new Set();
+    const folders = organizerFolders(targetId).folders;
+    for (let id = sourceId; id; id = folders.find(folder => folder.id === id)?.parentId) expanded.add(id);
+    filteredLayerIds.clear();
+    if (!categoryPassesFilter(target) || matchingLayerIds(target)?.has(sourceId) === false) resetCategoryFilters();
+    const index = mixedLayerRows(target).findIndex(row => row.item.id === sourceId);
+    openLayerCategories.set(targetId, Math.max(openLayerCategories.get(targetId) || 0, LAYER_BATCH, Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH));
+  }, `Kategorie přesunuta do ${path} · Zpět vrátí přesun`);
+  showPanel('layers');
+  const row = $(`layer-branch-${targetId}`)?.querySelector(`[data-action="toggle-tree-folder"][data-id="${sourceId}"]`);
+  row?.focus({ preventScroll: true });
+  row?.scrollIntoView({ block: 'nearest' });
+  resetWorkspaceScroll();
+}
 async function moveTraitToCategory(traitId, targetId) {
   if (!targetId || !ready || busy) return;
   const found = M.locate(state, traitId), target = M.category(state, targetId);
@@ -2730,6 +2776,13 @@ document.addEventListener('keydown', event => {
 });
 document.addEventListener('change', event => {
   if ($('layerContext').contains(event.target)) closeLayerContext(true);
+  const moveCategory = event.target.closest('[data-action="move-category-into-folder"]');
+  if (moveCategory) {
+    const destination = moveCategory.selectedOptions[0]?.dataset;
+    moveCategory.value = '';
+    moveCategoryIntoFolder(moveCategory.dataset.category, destination?.target, destination?.folder || null).catch(error => toast(error.message, true));
+    return;
+  }
   const moveTraitControl = event.target.closest('[data-action="move-trait-category"]');
   if (moveTraitControl) {
     const targetId = moveTraitControl.value;

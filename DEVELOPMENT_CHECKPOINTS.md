@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.134 | checkpoint/v0.7.134-presun-kategorie | Přesun kategorie se všemi traity a podsložkami do jiného umístění. |
 | 0.7.133 | checkpoint/v0.7.133-kombinovane-filtry | Kombinovat zobrazení a skrytí označených kategorií, složek a traitů. |
 | 0.7.132 | checkpoint/v0.7.132-filtry-kategorii | Kompaktní export, stavové odznaky a režimy zobrazení kategorií. |
 | 0.7.131 | checkpoint/v0.7.131-nahledy-v-textovem-soupisu | Kompaktní miniatury v textovém seznamu vrstev. |

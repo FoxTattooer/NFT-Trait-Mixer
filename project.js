@@ -213,7 +213,7 @@
       if (!Array.isArray(source.folders) || !source.assignments || typeof source.assignments !== 'object' || Array.isArray(source.assignments)) fail('Projekt obsahuje neplatné organizační složky.');
       const folders = source.folders.map(f => {
         if (!f || typeof f.name !== 'string' || !f.name.trim()) fail('Projekt obsahuje neplatný název složky.');
-        return { id: unique(f.id), name: f.name.trim().slice(0, 100), ...psdOrigin(f), ...layerMarks(f),
+        return { id: unique(f.id), name: f.name.trim().slice(0, 200), ...psdOrigin(f), ...layerMarks(f),
           parentId: f.parentId == null ? null : f.parentId };
       });
       const folderIds = new Set(folders.map(f => f.id));
@@ -306,6 +306,55 @@
       return locate(p, rule.source)?.cat.id !== rule.targetCat;
     });
     return { removedRules: before - p.rules.length, changedSnapshots };
+  }
+  function moveCategoryIntoFolder(p, sourceId, targetId, parentId = null) {
+    const source = category(p, sourceId), target = category(p, targetId);
+    if (!source || !target || source === target) throw new Error('Vyber jinou cílovou kategorii.');
+    const targetOrg = p.organizer?.[targetId];
+    if (parentId && !targetOrg?.folders.some(folder => folder.id === parentId)) throw new Error('Cílová složka už není dostupná.');
+
+    const sourceOrg = p.organizer?.[sourceId];
+    const nextOrg = (p.organizer ||= {})[targetId] ||= { folders: [], assignments: {} };
+    nextOrg.folders.push({ id: sourceId, name: source.name, ...psdOrigin(source), ...layerMarks(source), parentId });
+    for (const folder of sourceOrg?.folders || []) nextOrg.folders.push({ ...folder, parentId: folder.parentId || sourceId });
+    const moved = new Set();
+    for (const trait of source.traits) {
+      moved.add(trait.id);
+      nextOrg.assignments[trait.id] = sourceOrg?.assignments[trait.id] || sourceId;
+      target.traits.push(trait);
+    }
+    delete p.organizer[sourceId];
+    p.cats = p.cats.filter(cat => cat.id !== sourceId);
+
+    function transferSelection(view, visibility) {
+      const original = selectedIds(view, sourceId);
+      if (original.length && (visibility[sourceId] !== false || visibility[targetId] === false)) {
+        setSelectedIds(view, targetId, [...selectedIds(view, targetId), ...original]);
+      }
+      delete view.selected[sourceId];
+      if (view.selectedExtras) delete view.selectedExtras[sourceId];
+      return original.length > 0;
+    }
+    transferSelection(p, { [sourceId]: source.visible, [targetId]: target.visible });
+    let changedSnapshots = 0;
+    for (const snapshot of p.snapshots) {
+      if (transferSelection(snapshot, snapshot.visibility)) changedSnapshots++;
+      delete snapshot.visibility[sourceId];
+    }
+
+    let updatedRules = 0;
+    const before = p.rules.length;
+    p.rules = p.rules.filter(rule => {
+      const rewrite = rule.action === 'block' && rule.targetCat === sourceId;
+      if (rule.targetCat === sourceId && !rewrite) return false;
+      if (!rewrite && !moved.has(rule.source)) return true;
+      const nextTarget = rewrite ? targetId : rule.targetCat;
+      const sourceCategory = moved.has(rule.source) ? targetId : locate(p, rule.source)?.cat.id;
+      if (sourceCategory === nextTarget) return false;
+      if (rewrite) { rule.targetCat = nextTarget; updatedRules++; }
+      return true;
+    });
+    return { changedSnapshots, updatedRules, removedRules: before - p.rules.length };
   }
   function removeCategory(p, categoryId) {
     const removed = category(p, categoryId); if (!removed) return;
@@ -404,7 +453,7 @@
   }
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText,
     DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
-    moveCategory, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
+    moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);

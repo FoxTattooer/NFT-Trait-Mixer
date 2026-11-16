@@ -16,6 +16,35 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('moving a whole category preserves the subtree and updates selections and rules', () => {
+  const p = project();
+  Object.assign(p.cats[0], { draw:true, flag:'blue', name:'A'.repeat(140) });
+  p.cats[0].traits.push({ id:'extra',name:'Přídavek',data:png,note:'Poznámka' });
+  p.cats.push({ id:'c',name:'Pozadí',visible:true,traits:[{ id:'back',name:'Podklad',data:png }] });
+  p.selectedExtras.a = ['extra'];
+  p.organizer.a = { folders:[{ id:'sub',name:'Varianta',parentId:null }], assignments:{ extra:'sub' } };
+  p.organizer.b = { folders:[{ id:'target',name:'Cíl',parentId:null }], assignments:{} };
+  p.snapshots[0].visibility.a = false;
+  p.rules.push(
+    { id:'hide',source:'back',action:'hide',targetCat:'a',targetTrait:null },
+    { id:'rewrite',source:'back',action:'block',targetCat:'a',targetTrait:'red' },
+  );
+  const baseline = M.clone(p);
+  assert.throws(()=>M.moveCategoryIntoFolder(p,'a','b','missing'),/nedostupná|dostupná/);
+  assert.deepEqual(p,baseline);
+  assert.deepEqual(M.moveCategoryIntoFolder(p,'a','b','target'),{ changedSnapshots:1,updatedRules:1,removedRules:2 });
+  assert.deepEqual(p.cats.map(cat=>cat.id),['b','c']);
+  assert.deepEqual(p.organizer.b.folders.map(({ id,parentId })=>[id,parentId]),[['target',null],['a','target'],['sub','a']]);
+  assert.deepEqual(p.organizer.b.assignments,{ red:'a',extra:'sub' });
+  assert.deepEqual(M.selectedIds(p,'b'),['blue','red','extra']);
+  assert.deepEqual(M.selectedIds(p.snapshots[0],'b'),['blue'],'a hidden source does not appear in a visible target');
+  assert.equal(p.rules[0].targetCat,'b');
+  const saved = M.normalize(JSON.parse(JSON.stringify(p)));
+  assert.equal(saved.organizer.b.folders[1].name.length,140);
+  assert.equal(saved.organizer.b.folders[1].flag,'blue');
+  assert.equal(saved.organizer.b.folders[1].draw,true);
+  assert.equal(M.locate(saved,'extra').trait.note,'Poznámka');
+});
 test('hidden duplicates retain their identity and are skipped by rules and shuffle', () => {
   const p = project();
   p.cats[0].traits[0].hidden = true;
