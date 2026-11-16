@@ -1395,7 +1395,7 @@ bulkProject.organizer = {
   'bulk-c': { folders:[{ id:'bulk-target', name:'Final', parentId:null }], assignments:{} },
 };
 bulkProject.selected['bulk-b'] = 'bulk-b2';
-w.useTestProject(bulkProject);
+w.useTestProject(M.clone(bulkProject));
 click('#layersTab');
 const bulkAction = id => click(`#editorLayerBulk [data-id="${id}"]`);
 const bulkRow = id => click(`#cats [data-layer-bulk-row][data-id="${id}"]`);
@@ -1469,6 +1469,52 @@ click('#layerBulkDialogClose');
 click('#editorLayerBulkCancel');
 assert(get('editorLayerBulk').hidden);
 assert(!get('appLayout').hasAttribute('data-layer-bulk'));
+// The context menu reaches other categories and previews one trait without changing the project.
+w.useTestProject(M.clone(bulkProject));
+const openBulkCategory = id => {
+  if (get(`layer-branch-${id}`).hidden) click(`#cats [data-action="select-category"][data-id="${id}"]`);
+};
+const openBulkFolder = id => {
+  const row = find(`#cats [data-action="toggle-tree-folder"][data-id="${id}"]`);
+  if (row.getAttribute('aria-expanded') === 'false') row.click();
+};
+const openContext = id => click(`#cats [data-action="open-layer-menu"][data-id="${id}"]`);
+const chooseMoveTarget = (action, value) => {
+  const select = find(`#layerContext select[data-action="${action}"]`);
+  assert(select.querySelector(`option[value="${value}"]`));
+  select.value = value;
+  select.dispatchEvent(new w.Event('change',{bubbles:true}));
+};
+openBulkCategory('bulk-b');
+openBulkFolder('bulk-folder');
+openBulkFolder('bulk-subfolder');
+openContext('bulk-b1');
+const beforeTraitPreview = JSON.stringify(w.inspectState());
+click('#layerContext [data-action="open-trait-preview"]');
+assert(get('traitPreviewDialog').open);
+assert.equal(get('traitPreviewTitle').textContent,'Glasses');
+assert.match(get('traitPreviewPath').textContent,/Source B \/ Accessories \/ Eyes/);
+await waitFor(() => !get('traitPreviewImage').hidden);
+assert(get('traitPreviewImage').getContext('2d').getImageData(0,0,get('traitPreviewImage').width,get('traitPreviewImage').height).data.some((v,i) => i % 4 === 3 && v > 0));
+assert.equal(JSON.stringify(w.inspectState()),beforeTraitPreview);
+click('[data-action="close-trait-preview"]');
+assert(!get('traitPreviewDialog').open);
+openContext('bulk-b1');
+chooseMoveTarget('move-trait-into-folder','bulk-target');
+assert.equal(M.locate(w.inspectState(),'bulk-b1').cat.id,'bulk-c');
+assert.equal(w.inspectState().organizer['bulk-c'].assignments['bulk-b1'],'bulk-target');
+click('#undo');
+assert.equal(M.locate(w.inspectState(),'bulk-b1').cat.id,'bulk-b');
+openBulkCategory('bulk-b');
+openContext('bulk-folder');
+assert(!find('#layerContext select option[value="bulk-subfolder"]'),'an enclosing folder cannot move into its own subtree');
+chooseMoveTarget('move-organizer-folder','bulk-target');
+assert.equal(w.inspectState().organizer['bulk-c'].folders.find(folder => folder.id === 'bulk-folder').parentId,'bulk-target');
+assert.equal(w.inspectState().organizer['bulk-c'].folders.find(folder => folder.id === 'bulk-subfolder').parentId,'bulk-folder');
+assert.equal(w.inspectState().organizer['bulk-c'].assignments['bulk-b1'],'bulk-subfolder');
+assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-c');
+click('#undo');
+assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-b');
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

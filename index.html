@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07120">
   <link rel="stylesheet" href="design.css?build=07128">
-  <link rel="stylesheet" href="compact.css?build=07135">
+  <link rel="stylesheet" href="compact.css?build=07136">
   <link rel="stylesheet" href="schemes.css?build=07122">
   <link rel="stylesheet" href="showroom.css?build=0799">
   <link rel="stylesheet" href="pdf-info.css?build=07101">
@@ -24,14 +24,14 @@
   <script src="project.js?build=07134" defer></script>
   <script src="storage.js?build=07109" defer></script>
   <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07135" defer></script>
+  <script src="diagnostics.js?build=07136" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom.js?build=07102" defer></script>
   <script src="recent.js?build=0789" defer></script>
   <link rel="stylesheet" href="layer-inventory.css?build=07135">
   <script src="layer-inventory.js?build=07129" defer></script>
   <script src="inventory-base.js?build=07131" defer></script>
-  <script src="app.js?build=07135" defer></script>
+  <script src="app.js?build=07136" defer></script>
   <script src="trait-comparison.js?build=07112" defer></script>
   <script src="lookbook-cards.js?build=07109" defer></script>
   <script src="lookbook.js?build=07128" defer></script>
@@ -132,8 +132,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.135" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.135</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.136" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.136</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -312,6 +312,16 @@
     <div id="snapshotActions" class="snapshot-actions"></div>
   </dialog>
   <div id="layerContext" class="layer-context" hidden role="group" aria-label="Akce vrstvy nebo složky"></div>
+  <dialog id="traitPreviewDialog" aria-labelledby="traitPreviewTitle">
+    <header class="trait-preview-heading">
+      <div><h2 id="traitPreviewTitle"></h2><p id="traitPreviewPath"></p></div>
+      <button type="button" class="subtle icon-button" data-action="close-trait-preview" aria-label="Zavřít náhled" autofocus><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <div class="trait-preview-stage">
+      <canvas id="traitPreviewImage" role="img" width="1" height="1" hidden></canvas>
+      <p id="traitPreviewStatus" role="status"></p>
+    </div>
+  </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="compareActionDialog" aria-labelledby="compareActionTitle">
     <header class="compare-action-header">
@@ -498,6 +508,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.136-presun-a-nahled-traitu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.136 – Přesun a náhled traitu</strong><small>Přesun složek a traitů mezi kategoriemi. Zvětšený náhled PNG v menu traitu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.135-hromadny-vyber" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.135 – Hromadný výběr</strong><small>Přímý výběr kategorií, složek a traitů ve stromu. Přehled výběru, hromadné označení, přejmenování, přesun a smazání.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.134-presun-kategorie" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.134 – Přesun celé kategorie</strong><small>Přesun kategorie včetně traitů a podsložek s přehledem dopadu na sestavy a pravidla.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.133-kombinovane-filtry" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.133 – Kombinované odznaky</strong><small>Každý odznak umí zobrazit nebo skrýt označené kategorie, složky a traity.</small></span><span class="version-tag">Uloženo</span></a>

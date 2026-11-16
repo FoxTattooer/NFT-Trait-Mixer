@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.136 | checkpoint/v0.7.136-presun-a-nahled-traitu | Přesun mezi kategoriemi a zvětšený náhled traitu z nabídky. |
 | 0.7.135 | checkpoint/v0.7.135-hromadny-vyber | Výběr ve stromu a společné označení, přejmenování, přesun a mazání. |
 | 0.7.134 | checkpoint/v0.7.134-presun-kategorie | Přesun kategorie se všemi traity a podsložkami do jiného umístění. |
 | 0.7.133 | checkpoint/v0.7.133-kombinovane-filtry | Kombinovat zobrazení a skrytí označených kategorií, složek a traitů. |

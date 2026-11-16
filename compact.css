@@ -891,3 +891,22 @@ button.trait-search-result {
 .category-trait-preview > .layer-bulk-pick {position:absolute;z-index:2;inset:0 0 auto auto;width:32px;height:32px}
 .category-trait-preview .bulk-pick-mark {background:#14161c}
 #appLayout[data-layer-bulk] .category-trait-preview:has(input:checked) > button {border-color:#61a9f8}
+
+#traitPreviewDialog {
+  box-sizing:border-box;width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 24px);
+  padding:12px;background:var(--scheme-panel,#202329);color:var(--scheme-text,#f5f4f2);
+}
+.trait-preview-heading {display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.trait-preview-heading h2 {margin:2px 0;overflow-wrap:anywhere}
+.trait-preview-heading p {margin:2px 0 0;color:var(--scheme-muted,#b8bbc4);font-size:12px;overflow-wrap:anywhere}
+.trait-preview-heading .icon-button {width:44px;min-height:44px;flex:none}
+.trait-preview-stage {
+  display:grid;place-items:center;height:min(67dvh,640px);min-height:0;overflow:hidden;
+  border:1px solid var(--scheme-stroke,#555967);border-radius:10px;padding:10px;
+  background:repeating-conic-gradient(#252831 0% 25%,#1b1d24 0% 50%) 50% / 24px 24px;
+}
+.trait-preview-stage canvas {width:100%;height:100%;min-width:0;min-height:0;object-fit:contain}
+.trait-preview-stage p {padding:8px 12px;border-radius:8px;background:var(--scheme-panel,#202329);text-align:center}
+@media (orientation:landscape) and (max-height:460px) {
+  .trait-preview-stage {height:min(70dvh,calc(100dvh - 96px))}
+}
