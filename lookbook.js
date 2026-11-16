@@ -105,7 +105,10 @@
     }
     const filtered = tagFilters[view].size > 0;
     if (filtered) refreshTagResults();
-    else renderFilters();
+    else {
+      renderFilters();
+      if (view === 'traits') updateTraitTagPreviews(item);
+    }
     const selected = view === 'cards' ? customCards.tagItem().item : selectedTrait();
     const editor = content.querySelector('.lookbook-tag-editor');
     if (editor && item === selected) {
@@ -167,6 +170,30 @@
     </section>`;
   }
 
+  function traitTagPreview(trait) {
+    const tags = trait.lookbookTags || [];
+    if (!tags.length) return '';
+    const labels = tags.slice(0, 2).map(tag =>
+      `<span class="lookbook-card-tag">${tagSample(tag)}<span>${esc(tag)}</span></span>`
+    ).join('');
+    return `<span class="lookbook-card-tags" role="group" aria-label="Štítky: ${esc(tags.join(', '))}">${labels}${tags.length > 2 ? `<span class="lookbook-card-tag-more" aria-hidden="true">+${tags.length - 2}</span>` : ''}</span>`;
+  }
+
+  function updateTraitTagPreviews(trait) {
+    const cat = category();
+    const chapter = [...chapters.children].find(button => button.dataset.lookbookChapter === cat?.id);
+    if (chapter) {
+      const left = chapters.scrollLeft;
+      chapter.outerHTML = chapterButton(cat, cat);
+      chapters.scrollLeft = left;
+    }
+    const card = [...content.querySelectorAll('[data-lookbook-trait]')].find(button => button.dataset.lookbookTrait === trait.id);
+    if (!card) return;
+    const preview = card.querySelector('.lookbook-card-tags');
+    if (preview) preview.outerHTML = traitTagPreview(trait);
+    else card.querySelector('.lookbook-rate').insertAdjacentHTML('beforebegin', traitTagPreview(trait));
+  }
+
   function renderTraits(cat) {
     const matches = visibleTraits(cat);
     const pages = Math.ceil(matches.length / pageSize);
@@ -179,6 +206,7 @@
     const cards = traits.map(item => `<button type="button" class="lookbook-card" data-lookbook-trait="${esc(item.id)}" aria-pressed="${item.id === traitId}" ${item.hidden ? 'data-hidden-trait' : ''}>
       <span class="lookbook-art">${safeMode ? '' : layerThumbnail(cat, item, 'lookbook-thumbnail')}${item.flag ? flagIcon(item.flag, true) : ''}</span>
       <span class="lookbook-tag" data-lookbook-card-name="${esc(item.id)}">${esc(label(item))}</span>
+      ${traitTagPreview(item)}
       <span class="lookbook-rate" data-lookbook-chance="${esc(item.id)}"></span>
     </button>`).join('');
     const pager = pages > 1 ? `<div class="lookbook-pages">
@@ -223,6 +251,23 @@
     void paintSnapshot(snapshot, layers);
   }
 
+  function chapterButton(item, selected) {
+    const title = esc(label(item));
+    const count = view === 'traits' ? M.lookbookTagOptions(item.traits).size : 0;
+    const tags = count ? `<span class="lookbook-chapter-tags" role="img" aria-label="${counted(count, 'štítek', 'štítky', 'štítků')}">${icon('tag')}<span aria-hidden="true">${count}</span></span>` : '';
+    const marks = view === 'traits' ? layerMarkBadges(item) : '';
+    return `<button type="button" data-lookbook-chapter="${esc(item.id)}" aria-pressed="${item === selected}" title="${title}">
+      <span class="lookbook-chapter-name">${title}</span>${marks}${tags}</button>`;
+  }
+
+  function showChapterInStrip() {
+    const button = chapters.querySelector('[aria-pressed="true"]');
+    if (!button) return;
+    const strip = chapters.getBoundingClientRect(), item = button.getBoundingClientRect();
+    if (item.left < strip.left) chapters.scrollLeft += item.left - strip.left - 1;
+    else if (item.right > strip.right) chapters.scrollLeft += item.right - strip.right + 1;
+  }
+
   function render() {
     for (const control of dialog.querySelectorAll('button[data-lookbook-view]')) {
       control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view));
@@ -239,9 +284,7 @@
     const selected = items.find(item => item.id === id) || items[0];
     const left = chapters.scrollLeft;
     chapters.hidden = !items.length;
-    chapters.innerHTML = items.map(item =>
-      `<button type="button" data-lookbook-chapter="${esc(item.id)}" aria-pressed="${item === selected}">${esc(label(item))}</button>`
-    ).join('');
+    chapters.innerHTML = items.map(item => chapterButton(item, selected)).join('');
     chapters.scrollLeft = left;
     if (!selected) {
       const emptyTraits = tagFilters.traits.size ? 'Žádný trait nemá všechny vybrané štítky.' : 'Přidej do projektu traity a zobrazí se tady.';
@@ -313,6 +356,7 @@
     chapters.scrollLeft = 0;
     scroll.scrollTop = 0;
     render();
+    showChapterInStrip();
     $('lookbookTitle').focus({ preventScroll: true });
   });
 
@@ -412,6 +456,7 @@
     const key = Object.keys(control.dataset)[0];
     const attribute = key.replace(/[A-Z]/g, char => '-' + char.toLowerCase());
     const replacement = [...dialog.querySelectorAll(`button[data-${attribute}]`)].find(button => button.dataset[key] === control.dataset[key]);
+    if (lookbookChapter || lookbookJump || lookbookView) showChapterInStrip();
     if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
     else if (lookbookJump || lookbookPage) content.querySelector('[data-lookbook-trait][aria-pressed="true"]')?.focus({ preventScroll: true });
     if (lookbookJump || lookbookView) scroll.scrollTop = 0;

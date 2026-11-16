@@ -25,11 +25,14 @@
   background: transparent; box-shadow: none; white-space: nowrap; font-size: 12px;
 }
 .lookbook-segments button[aria-pressed="true"] { background: #383139; border-color: #6b5066; }
-.lookbook-chapters { display: flex; gap: 5px; overflow-x: auto; margin: 0 0 8px; padding: 1px; scrollbar-width: thin; }
+.lookbook-chapters { display: flex; gap: 5px; overflow-x: auto; margin: 0 0 8px; padding: 2px 2px 5px; scrollbar-width: thin; }
 .lookbook-chapters button {
-  flex: 0 0 auto; min-height: 36px; max-width: 215px; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 5px; flex: 0 0 auto; min-height: 36px; max-width: 100%;
   padding: 4px 10px; border: 1px solid #484249; border-radius: 18px; white-space: nowrap; font-size: 12px;
 }
+.lookbook-chapter-name { min-width: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.lookbook-chapter-tags { display: inline-flex; align-items: center; gap: 3px; flex: none; color: #cdbecb; font-size: 11px; }
+.lookbook-chapter-tags .icon { width: 12px; height: 12px; }
 .lookbook-chapters button[aria-pressed="true"] { border-color: var(--ui-feedback, #d071a4); background: #392934; color: #fff0f7; }
 .lookbook-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: start; }
 .lookbook-empty { margin: 6px 0; padding: 10px; color: #d1c6cd; font-size: 13px; }
@@ -70,6 +73,16 @@
   box-shadow: 1px 2px 3px #211b1a25;
 }
 .lookbook-rate { color: var(--muted-ink); font: 11px/1.1 "Courier Prime", "Courier New", monospace; }
+.lookbook-card-tags { display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; max-width: 100%; }
+.lookbook-card-tag {
+  display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%;
+  padding: 1px 4px 1px 2px; border: 1px solid #25232124; border-radius: 4px;
+  background: #f4efe44f; color: var(--ink); font-size: 11px; line-height: 1.2;
+}
+.lookbook-card-tag > span:last-child { overflow-wrap: anywhere; }
+.lookbook-card-tag :is(.tag-swatch, .material-swatch) { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
+.lookbook-card-tag .tag-swatch:not(.tag-swatch-art) { color: var(--ink); }
+.lookbook-card-tag-more { align-self: center; color: var(--muted-ink); font-size: 11px; }
 .lookbook-pages { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--rule); }
 .lookbook-pages button { min-height: 35px; padding: 5px; border-color: transparent; background: transparent; color: var(--ink); font-size: 11px; box-shadow: none; }
 .lookbook-pages span { color: var(--muted-ink); font: 11px "Courier Prime", "Courier New", monospace; }

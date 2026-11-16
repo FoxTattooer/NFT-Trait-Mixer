@@ -878,6 +878,8 @@ click('#openLookbook');
 assert(get('lookbookDialog').open);
 assert(!get('openLookbook').closest('details').open);
 assert.equal(get('lookbookContent').querySelectorAll('[data-lookbook-trait]').length, 4);
+assert.equal(find('#lookbookChapters [data-lookbook-chapter="compare"] .lookbook-chapter-tags').getAttribute('aria-label'), '2 štítky');
+assert(find('[data-lookbook-trait="compare-0"] .lookbook-card-tags .tag-swatch-art'));
 const lookbookImage = find('.lookbook-thumbnail');
 intersect(lookbookImage, true);
 await waitFor(() => lookbookImage.hasAttribute('src'));
@@ -927,6 +929,8 @@ assert.deepEqual([...get('lookbookTags').querySelectorAll('.tag-filter-group')].
 const bookTraitIds = () => [...get('lookbookContent').querySelectorAll('[data-lookbook-trait]')].map(button => button.dataset.lookbookTrait);
 addBookTag('Účesy');
 assert.deepEqual([...M.locate(w.inspectState(), 'other-1').trait.lookbookTags], ['Afro', 'Účesy']);
+assert.equal(find('#lookbookChapters [data-lookbook-chapter="other"] .lookbook-chapter-tags').getAttribute('aria-label'), '4 štítky');
+assert.match(find('[data-lookbook-trait="other-1"] .lookbook-card-tags').textContent, /AfroÚčesy/);
 filterBook('afro');
 assert.deepEqual(bookTraitIds(), ['other-1']);
 filterBook('fialové vlasy');
