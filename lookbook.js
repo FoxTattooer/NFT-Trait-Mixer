@@ -8,7 +8,7 @@
   const rarities = new Map([[M.DEFAULT_RARITY_WEIGHT, 'Běžný'], [50, 'Neobvyklý'], [20, 'Vzácný'], [5, 'Výjimečný']]);
   const percent = new Intl.NumberFormat('cs-CZ', { style: 'percent', maximumFractionDigits: 2 });
   const pageSize = 4;
-  let view = 'traits', theme = 'paper', categoryId, traitId, snapshotId, page = 0, origin;
+  let view = 'traits', categoryId, traitId, snapshotId, page = 0, origin;
 
   const label = item => item.lookbookName || item.name;
   const category = () => M.category(state, categoryId);
@@ -80,7 +80,7 @@
       <button type="button" data-lookbook-page="-1" ${page === 0 ? 'disabled' : ''}>‹ Předchozí</button>
       <span>${page + 1} / ${pages}</span><button type="button" data-lookbook-page="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
     </div>` : '';
-    content.innerHTML = `<section class="lookbook-sheet" data-paper="${theme}">
+    content.innerHTML = `<section class="lookbook-sheet">
       ${mast(counted(cat.traits.length, 'trait', 'traity', 'traitů'))}<h3>${esc(cat.name)}</h3>
       <div class="lookbook-grid">${cards}</div>${pager}</section>${detail(trait, path, true)}`;
     updateChances();
@@ -111,7 +111,7 @@
     const tags = project.cats.flatMap(cat => cat.traits.filter(trait => visibleIds.has(trait.id)).map(trait =>
       `<button type="button" class="lookbook-tag" data-lookbook-jump="${esc(trait.id)}">${esc(cat.name)} · ${esc(label(trait))}</button>`
     )).join('');
-    content.innerHTML = `<section class="lookbook-sheet" data-paper="${theme}">
+    content.innerHTML = `<section class="lookbook-sheet">
       ${mast('Sestava')}<h3 data-lookbook-poster-title>${esc(label(snapshot))}</h3>
       <div class="lookbook-poster"><canvas width="420" height="420" role="img" aria-label="${esc(snapshot.name)}"></canvas><p class="lookbook-image-status" role="status">Načítám náhled…</p></div>
     </section>${detail(snapshot, snapshot.name, false, tags ? `<div class="lookbook-tags">${tags}</div>` : '')}`;
@@ -119,13 +119,13 @@
   }
 
   function render() {
-    for (const control of dialog.querySelectorAll('button[data-lookbook-view],button[data-lookbook-theme]')) {
-      control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view || control.dataset.lookbookTheme === theme));
+    for (const control of dialog.querySelectorAll('button[data-lookbook-view]')) {
+      control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view));
     }
     if (view === 'cards') {
       chapters.hidden = true;
       chapters.replaceChildren();
-      customCards?.render(theme);
+      customCards?.render();
       return;
     }
     const items = view === 'traits' ? state.cats.filter(cat => cat.traits.length) : state.snapshots;
@@ -225,12 +225,11 @@
   });
 
   dialog.addEventListener('click', event => {
-    const control = event.target.closest('button[data-lookbook-view],button[data-lookbook-theme],button[data-lookbook-chapter],button[data-lookbook-trait],button[data-lookbook-page],button[data-lookbook-jump]');
+    const control = event.target.closest('button[data-lookbook-view],button[data-lookbook-chapter],button[data-lookbook-trait],button[data-lookbook-page],button[data-lookbook-jump]');
     if (!control || control.disabled) return;
     saveCard();
-    const { lookbookView, lookbookTheme, lookbookChapter, lookbookTrait, lookbookPage, lookbookJump } = control.dataset;
+    const { lookbookView, lookbookChapter, lookbookTrait, lookbookPage, lookbookJump } = control.dataset;
     if (lookbookView) view = lookbookView;
-    else if (lookbookTheme) theme = lookbookTheme;
     else if (lookbookChapter && view === 'looks') snapshotId = lookbookChapter;
     else if (lookbookChapter) selectTrait(M.category(state, lookbookChapter), null);
     else if (lookbookTrait) traitId = lookbookTrait;

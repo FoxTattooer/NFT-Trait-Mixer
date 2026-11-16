@@ -4,7 +4,7 @@
 
   function mount({ content, scroll, mast }) {
     const pageSize = 6;
-    let cardId, variantId, page = 0, theme = 'paper', layerLimit = 48;
+    let cardId, variantId, page = 0, layerLimit = 48;
     const card = () => state.lookbookCards.find(item => item.id === cardId);
     const variant = () => card()?.variants.find(item => item.id === variantId);
     const selected = () => variant() || card();
@@ -21,9 +21,8 @@
         [...category.traits].reverse().filter(trait => selectedIds.has(trait.id)));
     }
 
-    function render(newTheme = theme, { editing = editor()?.open, picking = layerPicker()?.open,
+    function render({ editing = editor()?.open, picking = layerPicker()?.open,
       query = layerSearch()?.value || '' } = {}) {
-      theme = newTheme;
       const cards = state.lookbookCards;
       const pages = Math.max(1, Math.ceil(cards.length / pageSize));
       page = Math.min(page, pages - 1);
@@ -55,7 +54,7 @@
           <span class="lookbook-art">${art(item)}</span>
           <span class="lookbook-tag" data-book-name="${esc(item.id)}">${title(item)}</span>
         </button>`;
-      content.innerHTML = `<section class="lookbook-sheet lookbook-custom-sheet" data-paper="${theme}">
+      content.innerHTML = `<section class="lookbook-sheet lookbook-custom-sheet">
         ${mast(counted(cards.length, 'karta', 'karty', 'karet'))}
         <div class="lookbook-custom-head"><h3>Vlastní karty</h3><button type="button" data-book-action="new-card">+ Nová karta</button></div>
         ${cards.length ? `<div class="lookbook-grid lookbook-custom-grid">${visibleCards.map(item => tile(item, 'card', cardId)).join('')}</div>` :
@@ -171,7 +170,7 @@
           cardId = next.id;
           variantId = undefined;
           page = Math.floor((state.lookbookCards.length - 1) / pageSize);
-          render(theme, { editing: true });
+          render({ editing: true });
           focusName();
           return;
         }
@@ -179,26 +178,26 @@
           const next = { ...newItem('Nová varianta'), withCover: false };
           change(() => current.variants.push(next), 'Varianta přidána do Lookbooku', true);
           variantId = next.id;
-          render(theme, { editing: true });
+          render({ editing: true });
           focusName();
           return;
         }
         case 'card':
           cardId = id;
           variantId = undefined;
-          render(theme, { editing: !imageLayers(card()).length });
+          render({ editing: !imageLayers(card()).length });
           content.querySelector('.lookbook-custom-detail').scrollIntoView({ block: 'nearest' });
           return;
         case 'variant':
         case 'cover':
           variantId = id;
-          render(theme, { editing: !imageLayers(selected()).length });
+          render({ editing: !imageLayers(selected()).length });
           const target = variant() ? '.lookbook-variants [aria-pressed=true]' : '.lookbook-custom-editor summary';
           content.querySelector(target)?.focus({ preventScroll: true });
           return;
         case 'page':
           page += Number(id);
-          render(theme, { editing: false });
+          render({ editing: false });
           scroll.scrollTop = 0;
           return;
         case 'upload':

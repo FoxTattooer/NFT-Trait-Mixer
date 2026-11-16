@@ -19,14 +19,12 @@
 .lookbook-head button { min-height: 44px; }
 .lookbook-head button .icon { width: 14px; height: 14px; }
 .lookbook-scroll { min-height: 0; overflow: auto; padding: 9px 10px 11px; overscroll-behavior: contain; }
-.lookbook-controls { display: flex; justify-content: space-between; align-items: center; gap: 7px; margin-bottom: 8px; }
-.lookbook-segments { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid #454047; border-radius: 11px; background: #202024; }
+.lookbook-segments { display: inline-flex; gap: 2px; margin-bottom: 8px; padding: 3px; border: 1px solid #454047; border-radius: 11px; background: #202024; }
 .lookbook-segments button {
   min-height: 36px; padding: 5px 10px; border: 1px solid transparent; border-radius: 8px;
   background: transparent; box-shadow: none; white-space: nowrap; font-size: 12px;
 }
 .lookbook-segments button[aria-pressed="true"] { background: #383139; border-color: #6b5066; }
-.lookbook-modes button[data-lookbook-theme="paper"][aria-pressed="true"] { background: #f1ead7; border-color: #f1ead7; color: #25211e; }
 .lookbook-chapters { display: flex; gap: 5px; overflow-x: auto; margin: 0 0 8px; padding: 1px; scrollbar-width: thin; }
 .lookbook-chapters button {
   flex: 0 0 auto; min-height: 36px; max-width: 215px; overflow: hidden; text-overflow: ellipsis;
@@ -41,11 +39,6 @@
   min-width: 0; padding: 11px 11px 10px; border: 1px solid #b1a798; border-radius: 13px;
   background: radial-gradient(ellipse at 18% 6%, #ede6d4, transparent 67%), var(--paper);
   color: var(--ink); color-scheme: light;
-}
-.lookbook-sheet[data-paper="dark"] {
-  --paper: #29242a; --ink: #f7eee1; --muted-ink: #ded0c7; --rule: #755e6c; --mark: #f8a0c0; --tape: #ddcf9a9c;
-  background: radial-gradient(ellipse at 18% 6%, #3c2c38, transparent 70%), var(--paper);
-  border-color: #634e60; color-scheme: dark;
 }
 .lookbook-mast { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
 .lookbook-mast strong { font-size: 19px; font-weight: 900; font-style: italic; letter-spacing: -.055em; overflow-wrap: anywhere; }

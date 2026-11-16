@@ -909,8 +909,7 @@ assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava')
 assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Redline/);
 click('[data-lookbook-jump="other-1"]');
 assert.equal(find('[data-lookbook-title]').textContent, 'Doplňky 1');
-click('[data-lookbook-theme="dark"]');
-assert.equal(find('.lookbook-sheet').dataset.paper, 'dark');
+assert(!find('#lookbookDialog [data-lookbook-theme]'), 'the paper look has no theme switcher');
 click('[data-lookbook-view="cards"]');
 click('[data-book-action="new-card"]');
 changeControl('[name="bookName"]', 'Cowboy Hat');
