@@ -1971,7 +1971,7 @@ function toggleWorkspaceTabs() {
   if (portraitWorkspace.matches) setWorkspaceTabsCollapsed(!workspaceTabsCollapsed, true);
 }
 workspaceScroll.addEventListener('scroll', () => {
-  if (!portraitWorkspace.matches || !workspaceTabSelected || workspaceTabsCollapsed) return;
+  if (!portraitWorkspace.matches || workspaceTabsCollapsed) return;
   const top = Math.max(0, workspaceScroll.scrollTop);
   const delta = top - workspaceScrollTop;
   workspaceScrollTop = top;

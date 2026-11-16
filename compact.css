@@ -547,6 +547,8 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
     display:grid;grid-template:minmax(0,1fr) / minmax(0,1fr);
     height:100vh;height:100dvh;padding:0;overflow:hidden;
   }
+  /* iOS Home Screen apps can report a short dynamic viewport on launch. */
+  :root[data-ios-standalone] body.compact-workspace {height:100vh}
   #workspaceScroll {
     display:block;grid-area:1 / 1;min-width:0;min-height:0;
     overflow:auto;overscroll-behavior-y:none;

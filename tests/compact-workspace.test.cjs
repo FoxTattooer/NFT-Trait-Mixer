@@ -462,6 +462,15 @@ assert.equal(get('catsPanel').scrollTop, 214, 'back also restores the independen
 assert.equal(w.document.activeElement.dataset.id, categorySource, 'back refocuses the original category row');
 assert.equal(navigationState(), 'full');
 assert.equal(selectedTab(), undefined);
+workspaceScroller.scrollTop += 16;
+workspaceScroller.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'full', 'a short scroll keeps the full bar open');
+workspaceScroller.scrollTop += 12;
+workspaceScroller.dispatchEvent(new w.Event('scroll'));
+assert.equal(navigationState(), 'drop', 'the full bar also collapses without a selected panel');
+click('#workspaceTabsHandle');
+assert.equal(navigationState(), 'full', 'the drop reopens the full bar');
+assert.equal(workspaceScroller.scrollTop, 511, 'reopening the full bar preserves the scroll position');
 assert(!get('layersTab').hasAttribute('data-back'),'categories keep the regular Layers label');
 assert.equal(find('#cats [data-action="toggle-category"]').getAttribute('aria-pressed'),'true');
 click('#cats [data-kind="category"][data-action="open-layer-menu"]');
