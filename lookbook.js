@@ -11,7 +11,7 @@
   const pageSize = 4;
   const tagFilters = { traits: new Set(), cards: new Set() };
   const filterRoot = $('lookbookTags');
-  const layerFilterBar = $('lookbookLayerFilters'), categoryEye = $('lookbookCategoryView');
+  const layerFilterBar = $('lookbookLayerFilters'), categoryEye = $('lookbookCategoryView'), folderTagButton = $('lookbookFolderTags');
   const markFilters = new Map();
   let categoryView = 'all';
   const assignGroup = $('lookbookAssignTagGroup'), renameGroup = $('lookbookRenameTagGroup');
@@ -240,7 +240,7 @@
     draftLayerTags = [];
     if (!target) return;
     const visible = target.returnTo?.isConnected ? target.returnTo : dialog.open
-      ? content.querySelector(`[data-lookbook-scope="${target.kind}"]`) || $('lookbookTitle')
+      ? dialog.querySelector(`[data-lookbook-scope="${target.kind}"]:not([hidden])`) || $('lookbookTitle')
       : [...document.querySelectorAll('[data-action="open-layer-menu"]')].find(button =>
         button.dataset.kind === target.kind && button.dataset.category === target.catId && button.dataset.id === target.id && button.getClientRects().length);
     visible?.focus({ preventScroll: true });
@@ -445,8 +445,9 @@
       <button type="button" data-lookbook-page="-1" ${page === 0 ? 'disabled' : ''}>‹ Předchozí</button>
       <span>${page + 1} / ${pages}</span><button type="button" data-lookbook-page="1" ${page + 1 === pages ? 'disabled' : ''}>Další ›</button>
     </div>` : '';
-    const folderTags = folderId ? `<button type="button" class="subtle lookbook-folder-tags" data-lookbook-scope="folder" data-id="${esc(folderId)}" aria-haspopup="dialog">${icon('tag')}Štítky složky</button>` : '';
-    detailArea.innerHTML = detail(trait, path, true, folderTags);
+    folderTagButton.hidden = !folderId;
+    folderTagButton.dataset.id = folderId || '';
+    detailArea.innerHTML = detail(trait, path, true);
     sheetArea.innerHTML = `<section class="lookbook-sheet">
       <div class="lookbook-chapter-heading"><h3>${esc(cat.name)}</h3>
         <div class="lookbook-chapter-meta">
@@ -512,6 +513,7 @@
       control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view));
     }
     renderFilters();
+    folderTagButton.hidden = true;
     if (view === 'cards') {
       chapters.hidden = true;
       chapters.replaceChildren();
@@ -638,9 +640,17 @@
     }
   });
 
+  function editScope(control) {
+    saveCard();
+    openLayerTags(control.dataset.lookbookScope, categoryId, control.dataset.id, refreshResults);
+  }
   layerFilterBar.addEventListener('click', event => {
     const control = event.target.closest('button');
     if (!control || view !== 'traits') return;
+    if (control === folderTagButton) {
+      editScope(control);
+      return;
+    }
     saveCard();
     if (control === categoryEye) {
       categoryView = nextCategoryView(categoryView, markFilters).id;
@@ -697,8 +707,7 @@
   content.addEventListener('click', event => {
     const scope = event.target.closest('[data-lookbook-scope]');
     if (scope) {
-      saveCard();
-      openLayerTags(scope.dataset.lookbookScope, categoryId, scope.dataset.id, refreshResults);
+      editScope(scope);
       return;
     }
     const control = event.target.closest('[data-lookbook-tag-add], [data-lookbook-tag-remove], [data-tag-option]');

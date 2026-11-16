@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.153 | checkpoint/v0.7.153-detailni-historie-kroku | Rozbalitelné změny s časem, cestami, hodnotami před a po a přesnými štítky. Štítky složky v Lookbooku jsou pod náhledem. |
 | 0.7.152 | checkpoint/v0.7.152-filtry-lookbooku | Oko a třípolohové filtry DRAW, FIN, WIP a TRASH pod náhledem. Přepínač obsahu Lookbooku je pod filtry štítků. |
 | 0.7.151 | checkpoint/v0.7.151-stitky-ve-vrstvach | Ikony štítků jsou vidět u vrstev, složek a kategorií vedle vlajek a označení. |
 | 0.7.150 | checkpoint/v0.7.150-stitky-vsech-traitu | Štítky lze uložit přímo všem traitům ve vybrané kategorii. Detail v Lookbooku dává cestu, procenta a raritu na jeden řádek. |

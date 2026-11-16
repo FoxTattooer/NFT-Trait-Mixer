@@ -276,6 +276,10 @@
           if (!await persistJobs(jobs.slice(middle), stagedImages)) return false;
           return true;
         }
+        if (!historyAdded) {
+          recordHistory(before, nativeImport ? 'Import Procreate' : 'Import PSD');
+          historyAdded = true;
+        }
         savedCount += jobs.length;
         trackStage('saving', counts());
         if (savedCount === total || Date.now() - lastLoggedSave >= 5000) {
@@ -308,12 +312,6 @@
           converted = offset + index + 1;
           progress(converted, savedCount, total, 'Převádím vrstvy');
           await pause(35);
-        }
-        if (!historyAdded) {
-          undoStack.push(M.clone(state));
-          if (undoStack.length > 30) undoStack.shift();
-          redoStack.length = 0;
-          historyAdded = true;
         }
         status('Ukládám dávku ' + (offset + 1) + '–' + Math.min(total, offset + jobs.length) + ' / ' + total + '…');
         if (!await persistJobs(jobs, stagedImages)) return;

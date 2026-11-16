@@ -19,9 +19,9 @@ let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRev
 let projectRecovery, recoveryDismissed = false;
 let installPrompt = null, workerRegistration = null;
 const undoStack = [], redoStack = [], imageCache = new Map();
-const undoLabels = [], redoLabels = [];
+const undoSteps = [], redoSteps = [];
 const HISTORY_LIMIT = 50;
-let currentStepLabel = 'Aktuální stav';
+let stepNumber = 1, currentStep = { number: stepNumber, label: 'Výchozí stav' };
 
 function toast(message, error = false) {
   clearTimeout(toastTimer);
@@ -224,51 +224,91 @@ function setupCategorySortDrag() {
   $('categorySortDialog').addEventListener('close', cleanup);
 }
 setupCategorySortDrag();
+const stepTime = new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const stepDate = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'medium' });
 function historyEntries() {
-  const past = undoLabels.map((label, i) => ({ label, position: i, kind: 'past' }));
-  const future = redoLabels.slice().reverse().map((label, i) => ({ label, position: undoStack.length + 1 + i, kind: 'future' }));
-  return [...past, { label: currentStepLabel, position: undoStack.length, kind: 'current' }, ...future];
+  const entries = undoStack.map((project, i) => ({ project, step: undoSteps[i] }));
+  entries.push({ project: state, step: currentStep });
+  for (let i = redoStack.length - 1; i >= 0; i--) entries.push({ project: redoStack[i], step: redoSteps[i] });
+  return entries;
+}
+function historyValue(value) {
+  return value === undefined || value === '' ? '—' : String(value);
+}
+function historyLine(change) {
+  if ('text' in change) return change.label + ' · ' + change.text;
+  if ('from' in change) return change.label + ' · ' + historyValue(change.from) + ' → ' + historyValue(change.to);
+  return change.label;
+}
+function historyDetail(groups, position, current, preview) {
+  const items = groups.map(({ kind, path, changes }) => `<li>
+    <div class="history-item-name"><small>${esc(kind)}</small><strong>${esc(path)}</strong></div>
+    <ul>${changes.map(change => {
+      if ('from' in change) return `<li><span>${esc(change.label)}</span><div class="history-values"><del>${esc(historyValue(change.from))}</del><span aria-hidden="true">→</span><ins>${esc(historyValue(change.to))}</ins></div></li>`;
+      return `<li><span>${esc(change.label)}</span>${'text' in change ? ` <strong>${esc(change.text)}</strong>` : ''}</li>`;
+    }).join('')}</ul>
+  </li>`).join('');
+  const details = items ? `<ul class="history-items">${items}</ul>` : `<p>${esc(preview)}</p>`;
+  const jump = current ? '' : button('jump-history', 'Přejít na krok', position, '', `type="button" class="subtle history-step-jump" ${busy ? 'disabled' : ''}`);
+  return details + jump;
 }
 function renderHistoryPanel() {
-  const list = $('historyList');
-  if (!list) return;
-  const entries = historyEntries();
-  list.replaceChildren();
+  if (!$('historyDialog').open) return;
+  const list = $('historyList'), entries = historyEntries();
+  const expanded = new Set([...list.querySelectorAll('.history-step[open]')].map(row => row.dataset.step));
   const fragment = document.createDocumentFragment();
-  entries.forEach((entry, index) => {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'history-step' + (entry.kind === 'current' ? ' is-current' : '');
-    row.dataset.action = 'jump-history';
-    row.dataset.id = String(entry.position);
-    row.disabled = busy || entry.kind === 'current';
-    row.setAttribute('aria-current', entry.kind === 'current' ? 'step' : 'false');
-    const number = document.createElement('span'); number.className = 'history-step-number'; number.textContent = String(index + 1).padStart(2, '0');
-    const name = document.createElement('span'); name.className = 'history-step-name'; name.textContent = entry.label;
-    const stateTag = document.createElement('span'); stateTag.className = 'history-step-status';
-    stateTag.textContent = entry.kind === 'current' ? 'Teď' : entry.kind === 'future' ? 'Vpřed' : 'Zpět';
-    row.append(number, name, stateTag); fragment.append(row);
+  entries.forEach(({ project, step }, position) => {
+    const current = position === undoStack.length;
+    const groups = position ? (step.groups ||= window.TraitStepHistory.compare(entries[position - 1].project, project)) : [];
+    const first = groups[0];
+    const title = step.label || first?.changes[0].label || 'Úprava projektu';
+    const preview = first ? [first.path, historyLine(first.changes[0])].filter(Boolean).join(' · ')
+      : position ? 'Stav projektu se shoduje s předchozím krokem.' : project.name;
+    const count = groups.length > 1 ? counted(groups.length, 'položka', 'položky', 'položek') : '';
+    const time = step.at ? new Date(step.at) : null;
+    const row = document.createElement('details');
+    row.className = 'history-step' + (current ? ' is-current' : '');
+    row.dataset.step = String(step.number);
+    row.innerHTML = `<summary ${current ? 'aria-current="step"' : ''}>
+      <span class="history-step-number">${String(step.number).padStart(2, '0')}</span>
+      <span class="history-step-copy"><strong class="history-step-name">${esc(title)}</strong><span class="history-step-preview">${esc(preview)}</span></span>
+      <span class="history-step-meta"><span class="history-step-status">${current ? 'Teď' : position > undoStack.length ? 'Vpřed' : 'Zpět'}</span>
+        ${time ? `<time datetime="${time.toISOString()}" title="${esc(stepDate.format(time))}">${stepTime.format(time)}</time>` : ''}
+        ${count ? `<small>${count}</small>` : ''}</span>
+    </summary><div class="history-step-detail"></div>`;
+    function showDetails() {
+      const detail = row.lastElementChild;
+      if (!detail.childElementCount) detail.innerHTML = historyDetail(groups, position, current, preview);
+    }
+    row.open = expanded.has(row.dataset.step);
+    if (row.open) showDetails();
+    row.addEventListener('toggle', () => { if (row.open) showDetails(); });
+    fragment.append(row);
   });
-  list.append(fragment);
+  list.replaceChildren(fragment);
   $('historyCount').textContent = String(entries.length);
+}
+function recordHistory(previous, label) {
+  undoStack.push(previous);
+  undoSteps.push(currentStep);
+  if (undoStack.length > HISTORY_LIMIT) { undoStack.shift(); undoSteps.shift(); }
+  redoStack.length = 0;
+  redoSteps.length = 0;
+  currentStep = { label, number: ++stepNumber, at: Date.now() };
 }
 function change(mutator, message = '', keepPreview = false) {
   const previous = M.clone(state);
   try { mutator(); } catch (error) { state = previous; throw error; }
-  undoStack.push(previous);
-  undoLabels.push(currentStepLabel);
-  if (undoStack.length > HISTORY_LIMIT) { undoStack.shift(); undoLabels.shift(); }
-  redoStack.length = 0; redoLabels.length = 0;
-  currentStepLabel = message || 'Úprava projektu';
+  recordHistory(previous, message);
   scheduleSave(); pruneCache(); render(keepPreview);
   if (message) toast(message);
 }
 function moveHistory(redo = false) {
   const from = redo ? redoStack : undoStack, to = redo ? undoStack : redoStack;
-  const fromLabels = redo ? redoLabels : undoLabels, toLabels = redo ? undoLabels : redoLabels;
+  const fromSteps = redo ? redoSteps : undoSteps, toSteps = redo ? undoSteps : redoSteps;
   if (!from.length) return false;
-  to.push(M.clone(state)); toLabels.push(currentStepLabel);
-  state = from.pop(); currentStepLabel = fromLabels.pop() || 'Úprava projektu';
+  to.push(M.clone(state)); toSteps.push(currentStep);
+  state = from.pop(); currentStep = fromSteps.pop();
   return true;
 }
 function restoreHistory(redo = false) {
@@ -284,6 +324,7 @@ function jumpHistory(position) {
   while (undoStack.length < target) changed = moveHistory(true) || changed;
   if (!changed) return;
   pruneCache(); render(); scheduleSave();
+  $('historyList').querySelector('.is-current summary')?.focus({ preventScroll: true });
   toast('Historie: obnoven vybraný krok');
 }
 function ask({ title, description = '', value = '', confirm = false, submit = 'Uložit', danger = false, maxLength = 120 }) {

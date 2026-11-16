@@ -294,8 +294,11 @@
   border: 0; background: transparent; box-shadow: none; color: var(--muted-ink);
 }
 .lookbook-category-tags .icon { width: 16px; height: 16px; }
-.lookbook-folder-tags .icon { width: 13px; height: 13px; }
-.lookbook-folder-tags { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 3px 6px; font-size: 12px; }
+.lookbook-folder-tags:not([hidden]) {
+  display: inline-flex; flex-direction: column; gap: 2px; min-width: 44px; min-height: 44px;
+  padding: 3px 5px; font-size: 10px; line-height: 1;
+}
+.lookbook-folder-tags .icon { width: 16px; height: 16px; }
 .layer-tag-marker {
   display: inline-flex; align-items: center; gap: 2px; flex: none; vertical-align: middle;
   color: var(--scheme-muted, #b7aebb); font-size: 11px;
