@@ -450,9 +450,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline-color:#ff6
 
 /* Restore refresh control in the same header row as logo and overflow. */
 .compact-header .compact-header-end{display:flex!important;flex:0 0 auto!important;width:auto!important;gap:5px!important;align-items:center!important}
-.compact-header .header-refresh{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 35px!important;width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;padding:7px!important;border:1px solid #514454!important;border-radius:11px!important;background:linear-gradient(155deg,#1a161e,#0e0d13)!important;color:#e5c9db!important}
+.compact-header .header-refresh{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 35px!important;width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;padding:7px!important}
 .compact-header .header-refresh .icon{width:18px;height:18px}
-.compact-header .header-refresh:active{border-color:var(--ui-feedback,#fa2d94)!important;color:var(--ui-feedback-text,#ff70b9)!important}
 @media(max-width:900px){.compact-header .compact-toolbar{gap:clamp(2px,1.1vw,6px)!important}.compact-header .compact-header-end{gap:4px!important}.compact-header .compact-tool{width:33px!important;min-width:33px!important;flex-basis:33px!important}}
 
 /* Slightly roomier header while keeping all controls in a single row. */

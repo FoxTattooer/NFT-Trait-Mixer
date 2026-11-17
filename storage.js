@@ -61,7 +61,7 @@
     }
   }
   const references = p => new Set(p?.storageFormat === 2 ? Array.from(imageRecords(p), item => item.assetKey) : []);
-  const hasContent = p => p?.cats?.length || p?.lookbookCards?.length;
+  const hasContent = p => p?.cats?.length || p?.lookbookCards?.length || p?.lookbookCustomTagGroups?.length;
   async function readProject(db,project,progress=()=>{},options={}) {
     if(!project)return project;
     // Accept the experimental v2 branch as well as the original inline records.

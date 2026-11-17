@@ -1380,6 +1380,11 @@ const LOOKBOOK_TAG_GROUP_PREVIEW = 4;
 function tagDefaultGroupTitles() {
   return { ...M.LOOKBOOK_TAG_GROUP_TITLES, ...state.lookbookTagGroupTitles };
 }
+function namedLookbookTagGroups() {
+  return M.lookbookTagGroupOptions([
+    ...Object.values(tagDefaultGroupTitles()), ...(state.lookbookCustomTagGroups || []), ...Object.values(state.lookbookTagGroups || {}),
+  ]);
+}
 function tagGroupTitle(key, name) {
   const groups = state.lookbookTagGroups || {};
   if (Object.hasOwn(groups, key)) return groups[key];
@@ -1392,10 +1397,16 @@ function renderTagFilter(root, options, selected, label) {
   const list = root.querySelector('.tag-filter-options');
   const focused = list.contains(document.activeElement) ? document.activeElement : null;
   const scrollTop = list.scrollTop;
-  root.hidden = !options.size;
-  root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
   const compactGroups = root.id === 'lookbookTags';
+  root.hidden = !compactGroups && !options.size;
+  root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
   const groups = new Map();
+  if (compactGroups) {
+    for (const title of state.lookbookCustomTagGroups || []) {
+      const key = M.lookbookTagKey(title);
+      groups.set(key, { key, title, items: [] });
+    }
+  }
   for (const [key, name] of options) {
     const title = tagGroupTitle(key, name);
     const groupKey = M.lookbookTagKey(title);
@@ -1414,6 +1425,7 @@ function renderTagFilter(root, options, selected, label) {
       ${compactGroups || sorted.length > 1 ? `<div class="tag-group-head"><p>${esc(title)}</p>
         ${compactGroups ? `<button type="button" class="subtle tag-group-rename" data-tag-group-rename value="${esc(key)}" aria-haspopup="dialog" aria-label="Přejmenovat skupinu ${esc(title)}" title="Přejmenovat skupinu">${icon('edit')}</button>` : ''}
         ${expandable ? `<button type="button" class="tag-group-more" data-tag-group-toggle value="${esc(key)}" aria-controls="${groupId}" aria-expanded="${expanded}">${expanded ? 'Méně' : `Všechny (${items.length})`}</button>` : ''}</div>` : ''}
+      ${!items.length ? '<p class="tag-group-empty">Zatím bez štítků</p>' : ''}
       <div class="tag-grid" id="${groupId}">${items.map(([tagKey, name], index) =>
         `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}" ${compactGroups ? 'aria-keyshortcuts="Shift+F10"' : ''} ${expandable && !expanded && index >= LOOKBOOK_TAG_GROUP_PREVIEW && !selected.has(tagKey) ? 'hidden' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
       ).join('')}</div></div>`;

@@ -209,14 +209,6 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(dialog,.header-menu-co
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-context button:where(:not(.danger)),.app-header .header-menu-content :is(button,a:where(.header-menu-link)) .icon,.library-category>summary) {
   background:var(--scheme-control)!important;border-color:var(--scheme-stroke)!important;color:var(--scheme-text)!important;
 }
-body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp {
-  background:linear-gradient(145deg,var(--scheme-control),var(--scheme-panel))!important;border-color:var(--scheme-stroke)!important;
-  box-shadow:0 2px 9px var(--scheme-glow)!important;
-}
-body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) .app-header #refreshApp[data-update-state=available] {
-  background:var(--scheme-active-surface)!important;border-color:var(--scheme-accent)!important;
-}
-body.compact-workspace[data-color-scheme]:not([data-color-scheme=pink]) #refreshApp :where(.icon,#refreshLabel,.app-version) {color:var(--scheme-text)!important}
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(button,summary,input,select,a):focus-visible {outline-color:var(--scheme-accent)!important}
 
 /* Apply the chosen palette to the workspace surfaces. */
@@ -233,9 +225,6 @@ body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) 
 body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink]))
 :is(button.primary,.workspace-tabs button.is-active,.inspector-tabs button.is-active) {
   box-shadow:inset 0 1px var(--scheme-sheen),0 0 10px var(--scheme-glow)!important;
-}
-body.compact-workspace[data-color-scheme]:where(:not([data-color-scheme=pink])) .app-header #refreshApp {
-  box-shadow:inset 0 1px var(--scheme-sheen),0 2px 9px var(--scheme-glow)!important;
 }
 
 /* Tie the older controls and drag indicators to the same palette. */
@@ -290,9 +279,6 @@ body[data-color-scheme=mono] :is(.file-menu-project,.category-card,.layer-folder
 }
 body[data-color-scheme=mono] :is(.toast,.notice,.empty-art,#diagnosticsReport,.trait-info,.layer-folder-tree) {
   background:var(--scheme-panel);border-color:var(--scheme-stroke);color:var(--scheme-text);
-}
-body[data-color-scheme=mono] .app-header #refreshApp[data-update-state=available]::after {
-  background:var(--scheme-accent);
 }
 body[data-color-scheme=mono] .history-step.is-current:not(:active) {
   border-color:var(--scheme-accent)!important;background:var(--scheme-wash)!important;
@@ -519,7 +505,7 @@ body.compact-workspace[data-color-scheme] :is(
   background:var(--workspace-accent-wash)!important;
   box-shadow:inset 0 1px var(--scheme-sheen),var(--workspace-accent-shadow)!important;
 }
-body.compact-workspace[data-color-scheme] .app-header.compact-header :is(.header-menu[open]>summary,#refreshApp[data-update-state=available]) {
+body.compact-workspace[data-color-scheme] .app-header.compact-header .header-menu[open]>summary {
   border-color:var(--workspace-accent-border)!important;background:var(--workspace-accent-wash)!important;
   box-shadow:inset 0 1px var(--scheme-sheen),var(--workspace-accent-shadow)!important;
 }

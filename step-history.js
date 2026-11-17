@@ -184,6 +184,10 @@
           'Název skupiny', titlesBefore[key] || defaultTitle, titlesAfter[key] || defaultTitle);
       }
     }
+    const customBefore = before.lookbookCustomTagGroups || [], customAfter = after.lookbookCustomTagGroups || [];
+    if (!equal(customBefore, customAfter)) {
+      field(group(':custom-tag-groups', 'Skupiny štítků', ''), 'Vlastní skupiny', joined(customBefore), joined(customAfter));
+    }
     return [...groups.values()].filter(entry => entry.changes.length);
   }
   window.TraitStepHistory = { compare };

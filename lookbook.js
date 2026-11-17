@@ -751,9 +751,7 @@
     saveCard();
     const title = button.lastElementChild.textContent;
     const current = M.lookbookTagKey(button.closest('.tag-filter-group').getAttribute('aria-label'));
-    const groups = new Map(M.lookbookTagGroupOptions([
-      ...Object.values(tagDefaultGroupTitles()), ...Object.values(state.lookbookTagGroups || {}),
-    ]));
+    const groups = new Map(namedLookbookTagGroups());
     tagMove = { key:button.value, groups };
     $('lookbookTagMoveName').innerHTML = `${tagSample(title)}<span>${esc(title)}</span>`;
     tagMoveGroups.innerHTML = [...groups].map(([groupKey, name]) =>
@@ -822,6 +820,28 @@
     (target || filterRoot.querySelector('summary')).focus({ preventScroll:true });
   });
 
+  async function addTagGroup() {
+    if (busy) return;
+    const status = $('lookbookGroupStatus');
+    status.textContent = '';
+    saveCard();
+    const value = await ask({ title:'Nová skupina štítků', submit:'Přidat skupinu', maxLength:M.LOOKBOOK_TAG_LIMIT });
+    const [name] = M.normalizeLookbookTags([value]);
+    if (!name || !dialog.open) return;
+    const key = M.lookbookTagKey(name);
+    filterRoot.open = true;
+    if (namedLookbookTagGroups().some(([existing]) => existing === key)) {
+      status.textContent = 'Skupina s tímto názvem už existuje.';
+      return;
+    }
+    change(() => {
+      state.lookbookCustomTagGroups = [...(state.lookbookCustomTagGroups || []), name];
+    }, 'Skupina štítků přidána', true);
+    renderFilters();
+    [...filterRoot.querySelectorAll('[data-tag-group-rename]')].find(button => button.value === key)?.focus({ preventScroll:true });
+  }
+  $('lookbookTagGroupAdd').addEventListener('click', () => { void addTagGroup(); });
+
   async function renameTagGroup(control) {
     if (busy) return;
     const title = control.closest('.tag-filter-group').getAttribute('aria-label');
@@ -835,13 +855,17 @@
     const newKey = M.lookbookTagKey(name);
     const defaults = Object.entries(tagDefaultGroupTitles());
     const assignments = Object.entries(state.lookbookTagGroups || {});
-    if (newKey !== key && [...defaults, ...assignments].some(([, old]) => M.lookbookTagKey(old) === newKey)) {
+    if (newKey !== key && namedLookbookTagGroups().some(([existing]) => existing === newKey)) {
       status.textContent = 'Skupina s tímto názvem už existuje.';
       return;
     }
     change(() => {
       const renamedDefaults = defaults.filter(([, old]) => M.lookbookTagKey(old) === key).map(([id]) => [id, name]);
       if (renamedDefaults.length) state.lookbookTagGroupTitles = { ...state.lookbookTagGroupTitles, ...Object.fromEntries(renamedDefaults) };
+      const custom = state.lookbookCustomTagGroups || [];
+      const replacing = custom.some(old => M.lookbookTagKey(old) === key);
+      if (replacing) state.lookbookCustomTagGroups = custom.map(old => M.lookbookTagKey(old) === key ? name : old);
+      else if (!renamedDefaults.length) state.lookbookCustomTagGroups = [...custom, name];
       for (const [tag, old] of assignments) {
         if (M.lookbookTagKey(old) === key) state.lookbookTagGroups[tag] = name;
       }

@@ -4,7 +4,7 @@
   const validId = v => typeof v === 'string' && /^[\w-]{1,100}$/.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
   const uid = () => globalThis.crypto?.randomUUID?.() || `trait-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const empty = () => ({ version: 2, name: 'Můj NFT projekt', cats: [], selected: {}, selectedExtras: {}, rules: [], snapshots: [], lookbookCards: [], organizer: {}, rulesEnabled: true });
-  const hasContent = p => !!(p?.cats?.length || p?.lookbookCards?.length);
+  const hasContent = p => !!(p?.cats?.length || p?.lookbookCards?.length || p?.lookbookCustomTagGroups?.length);
   const cloneTags = item => ({
     ...(item.lookbookTags ? { lookbookTags: [...item.lookbookTags] } : {}),
     ...(item.excludedLookbookTags ? { excludedLookbookTags: [...item.excludedLookbookTags] } : {}),
@@ -15,7 +15,8 @@
     // Copy mutable records, reusing immutable (potentially large) PNG strings.
     const groups = p.lookbookTagGroups ? { lookbookTagGroups: { ...p.lookbookTagGroups } } : {};
     const titles = p.lookbookTagGroupTitles ? { lookbookTagGroupTitles: { ...p.lookbookTagGroupTitles } } : {};
-    return { ...p, ...groups, ...titles, cats: p.cats.map(c => ({ ...c, ...cloneTags(c), traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f, ...cloneTags(f) })), assignments: { ...org.assignments } }])) };
+    const customGroups = p.lookbookCustomTagGroups ? { lookbookCustomTagGroups: [...p.lookbookCustomTagGroups] } : {};
+    return { ...p, ...groups, ...titles, ...customGroups, cats: p.cats.map(c => ({ ...c, ...cloneTags(c), traits: c.traits.map(t => ({ ...t, ...cloneTags(t) })) })), selected: { ...p.selected }, selectedExtras: cloneExtras(p.selectedExtras), rules: p.rules.map(r => ({ ...r })), snapshots: p.snapshots.map(s => ({ ...s, selected: { ...s.selected }, selectedExtras: cloneExtras(s.selectedExtras), visibility: { ...s.visibility } })), lookbookCards: cloneLookbookCards(p.lookbookCards), organizer: Object.fromEntries(Object.entries(p.organizer || {}).map(([catId, org]) => [catId, { folders: org.folders.map(f => ({ ...f, ...cloneTags(f) })), assignments: { ...org.assignments } }])) };
   }
   const category = (p, id) => p.cats.find(c => c.id === id);
   function locate(p, id) {
@@ -306,6 +307,8 @@
       return title ? [[key, title]] : [];
     }));
     if (Object.keys(groupTitles).length) p.lookbookTagGroupTitles = groupTitles;
+    const customGroups = normalizeLookbookTags(raw.lookbookCustomTagGroups);
+    if (customGroups.length) p.lookbookCustomTagGroups = customGroups;
     const ids = new Set();
     function unique(v) { if (!validId(v) || ids.has(v)) fail('Projekt obsahuje neplatné nebo duplicitní identifikátory.'); ids.add(v); return v; }
     const validImage = data => typeof data === 'string' &&
