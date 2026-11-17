@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  async function encode(groups, { canvas, load, write, progress = () => {} }) {
+  async function encode(groups, { canvas, load, write, size, progress = () => {} }) {
     let width = 0, height = 0, count = 0, done = 0;
     const dimensions = new Map();
     async function measure(items) {
@@ -23,6 +23,7 @@
     }
     await measure(groups);
     if (!count) throw new Error('Vyber alespoň jednu vrstvu.');
+    if (size) ({ width, height } = size);
     const composite = canvas(width,height), scratch = canvas(1,1);
     const target = composite.getContext('2d');
     try {
@@ -34,14 +35,14 @@
             children.push({ name:item.name, children:await convert(item.children), opened:true });
             continue;
           }
-          const [w,h] = dimensions.get(item.blob);
+          const [w,h] = size ? [width,height] : dimensions.get(item.blob);
           const image = await load(item.blob);
           let pixels;
           try {
-            if (item.visible) target.drawImage(image,0,0);
+            if (item.visible) target.drawImage(image,0,0,w,h);
             scratch.width = w; scratch.height = h;
             const context = scratch.getContext('2d',{ willReadFrequently:true });
-            context.drawImage(image,0,0);
+            context.drawImage(image,0,0,w,h);
             pixels = contentPixels(context,w,h);
           } finally { image.close?.(); }
           children.push({ name:item.name, hidden:!item.visible, ...pixels });
@@ -82,8 +83,8 @@
       root.importScripts('./vendor/ag-psd.js');
       const canvas = (w,h) => new OffscreenCanvas(w,h);
       root.agPsd.initializeCanvas(canvas);
-      const blob = await encode(data,{
-        canvas,load:asset => root.createImageBitmap(asset),write:root.agPsd.writePsd,
+      const blob = await encode(data.groups,{
+        canvas,load:asset => root.createImageBitmap(asset),write:root.agPsd.writePsd,size:data.size,
         progress:(done,total) => root.postMessage({ done,total }),
       });
       root.postMessage({ blob });

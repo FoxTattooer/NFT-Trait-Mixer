@@ -26,13 +26,22 @@ async function test(worker) {
   w.localStorage.setItem('nft-compact-categories', 'false');
   w.Option=function(text,value){const o=w.document.createElement('option');o.text=text;o.value=value;return o;};
   w.Image=Image;w.indexedDB=new IDBFactory();w.agPsd=ag;w.Worker=worker?BrowserWorker:undefined;w.OffscreenCanvas=worker?makeCanvas:undefined;
+  w.Blob=Blob;
+  w.FileReader=class {
+    readAsDataURL(blob) {
+      blob.arrayBuffer().then(bytes => {
+        this.result='data:image/png;base64,'+Buffer.from(bytes).toString('base64');
+        this.onload();
+      }, error => { this.error=error; this.onerror?.(); });
+    }
+  };
   w.URL.createObjectURL=()=> 'blob:test-preview';w.URL.revokeObjectURL=()=>{};
   w.HTMLCanvasElement.prototype.getContext=function(){if(!this.native)this.native=createCanvas(this.width,this.height);const ctx=this.native.getContext('2d');if(!ctx.wrapped){const draw=ctx.drawImage.bind(ctx);ctx.drawImage=(image,...args)=>draw(image.native||image,...args);ctx.wrapped=true;}return ctx;};
   w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob([this.native.toBuffer('image/png')],{type:'image/png'}));};
   w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
   w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
   const code=['project.js','storage.js','step-history.js','app.js','psd-core.js','psd-file.js','psd-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
-  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testActiveCategory = () => M.category(state,active); globalThis.testFolders = () => organizerFolders(active).folders; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave;');
+  w.eval(code + '\nglobalThis.testSetup = () => change(()=>{state.cats.push({id:"target",name:"Existing",visible:true,traits:[{id:"existing-trait",name:"Original",data:globalThis.__fixturePng}]});state.selected.target="existing-trait";active="target";}); globalThis.testSelection = () => state.selected.target; globalThis.testActiveCategory = () => M.category(state,active); globalThis.testFolders = () => organizerFolders(active).folders; globalThis.testRename = () => change(()=>{state.name="Retry storage";}); globalThis.testFlush = flushSave; globalThis.testProject = () => state; globalThis.testPreviousImage = () => TraitStorage.imageBlob(db,M.locate(state,"existing-trait").trait.data);');
   await waitFor(()=>w.document.querySelector('#appLayout').getAttribute('aria-busy')==='false');
   const $=id=>w.document.getElementById(id);
   async function choose(bytes,name='example.psd') {
@@ -114,6 +123,28 @@ async function test(worker) {
   assert($('psdDialog').hasAttribute('open'),'Cancellation must wait for the pending write');
   releaseSave();await waitFor(()=>!$('psdDialog').hasAttribute('open'));
   w.TraitStorage.save=saveOriginal;
+  const projectBytes = ag.writePsd({width:4,height:4,children:[{name:'Only this group',children:
+    Array.from({length:3},(_,i)=>({name:'Layer '+i,hidden:i===2,imageData:{width:1,height:1,data:new Uint8ClampedArray([i*80,0,0,255])}}))
+  }]});
+  const projectFile = new w.DataTransfer();
+  projectFile.items.add(new w.File([projectBytes],'Other project.psd'));
+  $('projectFile').files = projectFile.files;
+  $('projectFile').dispatchEvent(new w.Event('change'));
+  await waitFor(()=>$('psdStatus').textContent.includes('samostatný projekt'));
+  assert($('psdMode').querySelector('[value="category"]').disabled);
+  assert.equal(w.testProject().name,'Retry storage');
+  $('psdConfirm').click();
+  await waitFor(()=>!$('psdDialog').hasAttribute('open'));
+  assert.equal(w.testProject().name,'Other project');
+  assert.deepEqual([...w.testProject().cats.map(category=>category.name)],['Only this group']);
+  const restoredId = w.testProject().cats[0].id;
+  const visibleLayers = M => [M.selected[restoredId], ...M.selectedExtras[restoredId]];
+  assert.equal(visibleLayers(w.testProject()).length,2);
+  const hiddenId = w.testProject().cats[0].traits.find(trait=>trait.name==='Layer 2').id;
+  assert(!visibleLayers(w.testProject()).includes(hiddenId));
+  $('undo').click();
+  assert.equal(w.testProject().name,'Retry storage');
+  assert((await w.testPreviousImage()).size > 0);
   await w.happyDOM.abort();w.close();
   console.log('PASS full import UI ('+(worker?'worker + bundled parser':'main-thread fallback')+'): tree, preview, cancel during import, PNG/category/folder import, undo, invalid file, warning acknowledgement and append to existing category');
 }

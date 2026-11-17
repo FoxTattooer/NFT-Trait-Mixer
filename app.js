@@ -113,19 +113,19 @@ async function restoreLastProject() {
     render();
   }
 }
-function flushSave(stagedImages) {
+function flushSave(stagedImages, retained = []) {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
   const savingRevision = revision, project = M.clone(state), categoryId = active;
   queuedRevision = savingRevision;
   saveQueue = saveQueue.then(() => {
-    TraitStorage.retain(db, [state, project, ...undoStack, ...redoStack]);
+    TraitStorage.retain(db, [state, project, ...retained, ...undoStack, ...redoStack]);
     return TraitStorage.save(db, project, (done,total) => {
     if (revision === savingRevision && (done === 1 || done === total || done % 16 === 0)) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
     }, stagedImages, { categoryId });
   }).then(() => {
-    TraitStorage.compact(db, [state, project, ...undoStack, ...redoStack]);
+    TraitStorage.compact(db, [state, project, ...retained, ...undoStack, ...redoStack]);
     if (layerReviewOpen && !busy) { renderLayerReview(); mountThumbnails(); }
     persistedRevision = savingRevision;
     if (revision === savingRevision) {
@@ -2072,18 +2072,23 @@ const traitColorsDialog = $('traitColorsDialog');
 const traitColorsPreview = $('traitColorsPreview');
 const traitColorsStatus = $('traitColorsStatus');
 const traitToneCurve = $('traitToneCurve');
-const traitColorsRanges = [...$('traitColorsForm').querySelectorAll('input[type="range"]')];
+const traitToneGraph = $('traitToneGraph');
+const traitCurveChannel = $('traitCurveChannel');
+const traitCurveRanges = [...$('traitCurveRanges').querySelectorAll('input[type="range"]')];
+const traitColorsRanges = [...$('traitColorsForm').querySelectorAll('input[type="range"]')].filter(control => !traitCurveRanges.includes(control));
+const traitCurvePoints = [...traitToneGraph.querySelectorAll('[data-curve-point]')];
+const traitCurveKnots = [0, 64, 128, 192, 255];
+const traitCurveTravel = 31;
 let traitColorsDraft;
 
 function traitHueChannel(light, amplitude, hue, offset) {
   const k = (offset + hue) % 12;
   return light - amplitude * Math.max(-1, Math.min(k - 3, 9 - k, 1));
 }
-function buildTraitToneCurve({ contrast, shadows, midtones, highlights }) {
-  const strength = 2 ** (contrast / 100);
-  const knots = [0, 64, 128, 192, 255];
-  // Limit each point's travel to keep the curve monotonic at every slider setting.
-  const levels = [0, 64 + shadows * .31, 128 + midtones * .31, 192 + highlights * .31, 255];
+function buildTraitToneCurve(points = [], contrast = 0) {
+  const strength = 2 ** (contrast / 100), knots = traitCurveKnots;
+  // Each point has room to move without crossing its neighbors.
+  const levels = knots.map((knot, index) => knot + (points[index] || 0) / 100 * traitCurveTravel);
   const curve = new Float32Array(256);
   for (let i = 0; i < curve.length; i++) {
     const value = Math.max(0, Math.min(255, 127.5 + (i - 127.5) * strength));
@@ -2098,10 +2103,16 @@ function sampleTraitToneCurve(curve, value) {
   const index = Math.floor(upper);
   return curve[index] + (upper - index) * (curve[Math.min(255, index + 1)] - curve[index]);
 }
-function adjustTraitColors(input, output, { brightness, saturation, hue, temperature, tint }, curve) {
+function adjustTraitColors(input, output, { brightness, saturation, hue, temperature, tint, contrast }, channels) {
   const exposure = 1 + brightness / 100, saturationScale = 1 + saturation / 100;
   const hueShift = hue / 60;
   const warmth = temperature * .45, magenta = tint * .4;
+  const master = buildTraitToneCurve(channels.rgb, contrast);
+  const [red, green, blue] = ['red', 'green', 'blue'].map(channel => {
+    if (!channels[channel]?.some(Boolean)) return master;
+    const curve = buildTraitToneCurve(channels[channel]);
+    return master.map(value => sampleTraitToneCurve(curve, value));
+  });
   for (let i = 0; i < input.length; i += 4) {
     let r = input[i], g = input[i + 1], b = input[i + 2];
     const max = Math.max(r, g, b), min = Math.min(r, g, b), chroma = max - min;
@@ -2114,9 +2125,9 @@ function adjustTraitColors(input, output, { brightness, saturation, hue, tempera
       g = traitHueChannel(light, amplitude, h, 8);
       b = traitHueChannel(light, amplitude, h, 4);
     }
-    r = sampleTraitToneCurve(curve, r * exposure);
-    g = sampleTraitToneCurve(curve, g * exposure);
-    b = sampleTraitToneCurve(curve, b * exposure);
+    r = sampleTraitToneCurve(red, r * exposure);
+    g = sampleTraitToneCurve(green, g * exposure);
+    b = sampleTraitToneCurve(blue, b * exposure);
     if (warmth || magenta) {
       const luma = .2126 * r + .7152 * g + .0722 * b;
       const weight = Math.min(luma, 255 - luma) / 127.5;
@@ -2130,23 +2141,37 @@ function adjustTraitColors(input, output, { brightness, saturation, hue, tempera
     output[i + 3] = input[i + 3];
   }
 }
+function traitColorsChanged(settings, channels) {
+  return Object.values(settings).some(Boolean) || Object.values(channels).some(points => points.some(Boolean));
+}
+function showTraitCurveChannel() {
+  const points = traitColorsDraft.channels[traitCurveChannel.value];
+  for (const [index, control] of traitCurveRanges.entries()) control.value = points?.[index] || 0;
+  previewTraitColors();
+}
 function previewTraitColors() {
-  const settings = readAppearanceRanges(traitColorsRanges);
-  const curve = buildTraitToneCurve(settings);
-  const points = [];
-  for (let i = 0; i < 255; i += 4) points.push(`${i},${(96 * (1 - curve[i] / 255)).toFixed(2)}`);
-  points.push(`255,${(96 * (1 - curve[255] / 255)).toFixed(2)}`);
-  traitToneCurve.setAttribute('points', points.join(' '));
-  for (const control of traitColorsRanges) displayAppearanceRange(control);
   const draft = traitColorsDraft;
-  $('traitColorsApply').disabled = !draft?.preview || !Object.values(settings).some(Boolean);
-  if (!draft?.preview) return;
-  adjustTraitColors(draft.preview.data, draft.result.data, settings, curve);
+  if (!draft) return;
+  const settings = readAppearanceRanges(traitColorsRanges);
+  const channel = traitCurveChannel.value;
+  const curve = buildTraitToneCurve(draft.channels[channel]);
+  const points = traitCurveKnots.map((x, index) => {
+    const y = (96 * (1 - curve[x] / 255)).toFixed(2);
+    traitCurvePoints[index].setAttribute('cy', y);
+    return `${x},${y}`;
+  });
+  traitToneGraph.dataset.channel = channel;
+  traitToneCurve.setAttribute('points', points.join(' '));
+  for (const control of [...traitColorsRanges, ...traitCurveRanges]) displayAppearanceRange(control);
+  $('traitResetCurve').disabled = !draft.channels[channel]?.some(Boolean);
+  $('traitColorsApply').disabled = !draft.preview || !traitColorsChanged(settings, draft.channels);
+  if (!draft.preview) return;
+  adjustTraitColors(draft.preview.data, draft.result.data, settings, draft.channels);
   traitColorsPreview.getContext('2d').putImageData(draft.result, 0, 0);
 }
 async function openTraitColors({ cat, trait }) {
   if (traitColorsDialog.open) return;
-  const draft = traitColorsDraft = { cat, trait, focus: document.activeElement };
+  const draft = traitColorsDraft = { cat, trait, channels: {}, focus: document.activeElement };
   $('traitColorsName').textContent = trait.name;
   traitColorsPreview.hidden = true;
   traitColorsStatus.hidden = false;
@@ -2177,7 +2202,58 @@ async function openTraitColors({ cat, trait }) {
   }
 }
 for (const control of traitColorsRanges) control.addEventListener('input', previewTraitColors);
-$('traitColorsForm').addEventListener('reset', () => queueMicrotask(previewTraitColors));
+function updateTraitCurve() {
+  const draft = traitColorsDraft;
+  if (!draft || busy) return;
+  draft.channels[traitCurveChannel.value] = traitCurveRanges.map(control => Number(control.value));
+  previewTraitColors();
+}
+for (const control of traitCurveRanges) control.addEventListener('input', updateTraitCurve);
+traitCurveChannel.addEventListener('change', () => {
+  if (!traitColorsDraft) return;
+  delete traitColorsDraft.curveDrag;
+  showTraitCurveChannel();
+});
+$('traitResetCurve').addEventListener('click', () => {
+  if (!traitColorsDraft || busy) return;
+  delete traitColorsDraft.channels[traitCurveChannel.value];
+  showTraitCurveChannel();
+});
+$('traitColorsForm').addEventListener('reset', () => {
+  const draft = traitColorsDraft;
+  if (!draft) return;
+  draft.channels = {};
+  delete draft.curveDrag;
+  queueMicrotask(() => { if (traitColorsDraft === draft) showTraitCurveChannel(); });
+});
+traitToneGraph.addEventListener('pointerdown', event => {
+  const draft = traitColorsDraft;
+  const control = traitCurveRanges[event.target.dataset.curvePoint];
+  if (!draft?.preview || draft.curveDrag || busy || event.button !== 0 || !control) return;
+  const frame = traitToneGraph.getBoundingClientRect();
+  if (!frame.height) return;
+  event.preventDefault();
+  draft.curveDrag = { id: event.pointerId, control, y: event.clientY, height: frame.height, value: Number(control.value) };
+  traitToneGraph.setPointerCapture(event.pointerId);
+});
+traitToneGraph.addEventListener('pointermove', event => {
+  const drag = traitColorsDraft?.curveDrag;
+  if (!drag || drag.id !== event.pointerId) return;
+  const delta = (drag.y - event.clientY) * 114 / drag.height * 255 / 96 / traitCurveTravel * 100;
+  drag.control.value = Math.round(drag.value + delta);
+  updateTraitCurve();
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  traitToneGraph.addEventListener(type, event => {
+    const drag = traitColorsDraft?.curveDrag;
+    if (!drag || drag.id !== event.pointerId) return;
+    delete traitColorsDraft.curveDrag;
+    if (type !== 'pointerup') {
+      drag.control.value = drag.value;
+      updateTraitCurve();
+    }
+  });
+}
 traitColorsDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 traitColorsDialog.addEventListener('close', () => {
   if (traitColorsDialog.open) return;
@@ -2194,7 +2270,7 @@ traitColorsDialog.addEventListener('close', () => {
 $('traitColorsForm').addEventListener('submit', async event => {
   event.preventDefault();
   const draft = traitColorsDraft, settings = readAppearanceRanges(traitColorsRanges);
-  if (busy || !draft?.preview || !Object.values(settings).some(Boolean) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
+  if (busy || !draft?.preview || draft.curveDrag || !traitColorsChanged(settings, draft.channels) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
   busy = true;
   $('traitColorsControls').disabled = $('traitColorsReset').disabled = $('traitColorsApply').disabled = $('traitColorsClose').disabled = true;
   const canvas = document.createElement('canvas');
@@ -2204,7 +2280,7 @@ $('traitColorsForm').addEventListener('submit', async event => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(image, 0, 0);
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      adjustTraitColors(pixels.data, pixels.data, settings, buildTraitToneCurve(settings));
+      adjustTraitColors(pixels.data, pixels.data, settings, draft.channels);
       ctx.putImageData(pixels, 0, 0);
       return editedLayerPng(canvas);
     });
@@ -2224,20 +2300,30 @@ const traitTransformDialog = $('traitTransformDialog');
 const traitTransformStage = $('traitTransformStage');
 const traitTransformCanvas = $('traitTransformCanvas');
 const traitTransformOutline = $('traitTransformOutline');
+const traitTransformFrame = $('traitTransformFrame');
+const traitTransformCorners = [...traitTransformOutline.querySelectorAll('[data-corner]')];
 const traitTransformGuides = $('traitTransformGuides');
 const traitTransformStatus = $('traitTransformStatus');
 const traitTransformSnap = $('traitTransformSnap');
 const traitTransformAxis = $('traitTransformAxis');
+const traitSkewControls = [$('traitSkewX'), $('traitSkewY')];
 let traitTransformDraft;
 
 function drawTransformedTrait(canvas, image, bounds, pose) {
-  const scale = pose.width / bounds.width;
+  const { width, height } = canvas;
+  const scaleX = pose.width / bounds.width, scaleY = pose.height / bounds.height;
+  const centerX = (pose.x + pose.width / 2) * width, centerY = (pose.y + pose.height / 2) * height;
+  const skewX = Math.tan(pose.skewX * Math.PI / 180), skewY = Math.tan(pose.skewY * Math.PI / 180);
   const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.transform(1, skewY * height / width, skewX * width / height, 1, 0, 0);
   ctx.imageSmoothingQuality = 'medium';
   ctx.drawImage(image,
-    (pose.x - bounds.x * scale) * canvas.width,
-    (pose.y - bounds.y * scale) * canvas.height,
-    scale * canvas.width, scale * canvas.height);
+    -(bounds.x * scaleX + pose.width / 2) * width,
+    -(bounds.y * scaleY + pose.height / 2) * height,
+    scaleX * width, scaleY * height);
+  ctx.restore();
 }
 function clampTraitPosition(position, size) {
   // Leave enough of the layer on the artboard to grab it even when it's partly off the edge.
@@ -2253,47 +2339,93 @@ function nearestTraitGuide(points, threshold) {
   return snapped;
 }
 function traitTransformChanged({ bounds, pose }) {
-  return ['x', 'y', 'width'].some(key => Math.abs(bounds[key] - pose[key]) > 1e-7);
+  return Math.abs(pose.skewX) > 0 || Math.abs(pose.skewY) > 0 ||
+    ['x', 'y', 'width', 'height'].some(key => Math.abs(bounds[key] - pose[key]) > 1e-7);
+}
+function transformedTraitCorners({ x, y, width, height, skewX, skewY }) {
+  const sx = Math.tan(skewX * Math.PI / 180), sy = Math.tan(skewY * Math.PI / 180);
+  return [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => [
+    x + u * width + (v - .5) * height * sx,
+    y + v * height + (u - .5) * width * sy,
+  ]);
+}
+function clampTransformView(zoom, x, y) {
+  return { zoom, x: Math.min(0, Math.max(1 - zoom, x)), y: Math.min(0, Math.max(1 - zoom, y)) };
+}
+function setTraitTransformView(zoom, x = .5, y = .5) {
+  const draft = traitTransformDraft;
+  const ratio = zoom / draft.view.zoom;
+  draft.view = clampTransformView(zoom, x - (x - draft.view.x) * ratio, y - (y - draft.view.y) * ratio);
+  previewTraitTransform();
 }
 function previewTraitTransform({ x: guideX = null, y: guideY = null } = {}) {
-  const { bounds, pose, source, below, above } = traitTransformDraft;
+  const { bounds, pose, source, below, above, view } = traitTransformDraft;
   const ctx = traitTransformCanvas.getContext('2d');
-  ctx.clearRect(0, 0, traitTransformCanvas.width, traitTransformCanvas.height);
+  const size = traitTransformCanvas.width;
+  ctx.clearRect(0, 0, size, size);
+  ctx.save();
+  ctx.translate(view.x * size, view.y * size);
+  ctx.scale(view.zoom, view.zoom);
   ctx.drawImage(below, 0, 0);
   drawTransformedTrait(traitTransformCanvas, source, bounds, pose);
   ctx.drawImage(above, 0, 0);
-  const left = Math.max(0, pose.x), top = Math.max(0, pose.y);
-  const right = Math.min(1, pose.x + pose.width), bottom = Math.min(1, pose.y + pose.height);
+  ctx.restore();
+  const points = transformedTraitCorners(pose).map(([x, y]) => [x * view.zoom + view.x, y * view.zoom + view.y]);
+  const left = Math.min(...points.map(point => point[0])), top = Math.min(...points.map(point => point[1]));
+  const right = Math.max(...points.map(point => point[0])), bottom = Math.max(...points.map(point => point[1]));
   Object.assign(traitTransformOutline.style, {
     left: `${left * 100}%`, top: `${top * 100}%`,
     width: `${(right - left) * 100}%`, height: `${(bottom - top) * 100}%`,
   });
+  traitTransformFrame.firstElementChild.setAttribute('points', [0, 1, 3, 2].map(index => points[index].map(value => value * 100).join(',')).join(' '));
+  for (const [index, grip] of traitTransformCorners.entries()) {
+    const [x, y] = points[index];
+    // Keep off-canvas corners reachable at 100%. At higher zoom pan to reveal the actual corner.
+    grip.hidden = view.zoom > 1 && (x < 0 || y < 0 || x > 1 || y > 1);
+    grip.style.left = `${(Math.min(1, Math.max(0, x)) - left) / (right - left) * 100}%`;
+    grip.style.top = `${(Math.min(1, Math.max(0, y)) - top) / (bottom - top) * 100}%`;
+  }
   const guides = traitTransformGuides;
   guides.hidden = !traitTransformSnap.checked;
-  guides.style.setProperty('--guide-x', `${(guideX ?? .5) * 100}%`);
-  guides.style.setProperty('--guide-y', `${(guideY ?? .5) * 100}%`);
+  guides.style.setProperty('--guide-x', `${((guideX ?? .5) * view.zoom + view.x) * 100}%`);
+  guides.style.setProperty('--guide-y', `${((guideY ?? .5) * view.zoom + view.y) * 100}%`);
   guides.toggleAttribute('data-snap-x', guideX !== null);
   guides.toggleAttribute('data-snap-y', guideY !== null);
+  $('traitZoomReset').textContent = `${Math.round(view.zoom * 100)} %`;
+  $('traitZoomOut').disabled = view.zoom <= 1;
+  $('traitZoomIn').disabled = view.zoom >= 4;
   $('traitTransformApply').disabled = !traitTransformChanged(traitTransformDraft);
 }
 async function openTraitTransform({ cat, trait }) {
   if (traitTransformDialog.open) return;
-  const draft = traitTransformDraft = { trait, focus: document.activeElement };
+  const draft = traitTransformDraft = { trait, pointers: new Map(), view: clampTransformView(1, 0, 0), focus: document.activeElement };
   const current = () => traitTransformDraft === draft && traitTransformDialog.open;
   $('traitTransformName').textContent = trait.name;
   traitTransformStatus.textContent = 'Načítám plátno…';
   traitTransformStatus.hidden = false;
-  traitTransformOutline.hidden = traitTransformGuides.hidden = true;
+  traitTransformOutline.hidden = traitTransformGuides.hidden = traitTransformFrame.hidden = true;
   $('traitTransformControls').disabled = $('traitTransformApply').disabled = $('traitTransformReset').disabled = true;
   traitTransformSnap.checked = true;
   traitTransformAxis.value = 'both';
+  $('traitTransformPinch').value = 'view';
+  $('traitDeformation').open = $('traitTransformStretch').checked = false;
+  for (const control of traitSkewControls) {
+    control.value = 0;
+    $(control.id + 'Value').value = '0°';
+  }
   traitTransformDialog.showModal();
   try {
     const source = document.createElement('canvas');
     const bounds = await editLayerImage(trait.data, image => {
       if (!current()) return null;
-      const rect = visibleImageBounds(image, source);
+      const scan = document.createElement('canvas');
+      const rect = visibleImageBounds(image, scan);
+      scan.width = scan.height = 1;
       if (!rect) throw new Error('Trait je prázdný.');
+      const scale = Math.min(1, 1536 / Math.max(image.naturalWidth, image.naturalHeight));
+      source.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      source.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      source.getContext('2d').drawImage(image, 0, 0, source.width, source.height);
       return {
         x: rect.x / image.naturalWidth, y: rect.y / image.naturalHeight,
         width: rect.width / image.naturalWidth, height: rect.height / image.naturalHeight,
@@ -2311,8 +2443,8 @@ async function openTraitTransform({ cat, trait }) {
     if (!current()) return;
     await paintLayers(above, context.filter(layer => !lowerIds.has(layer.id)), current);
     if (!current()) return;
-    Object.assign(draft, { bounds, pose: { ...bounds }, source, below, above });
-    traitTransformOutline.hidden = false;
+    Object.assign(draft, { bounds, pose: { ...bounds, skewX: 0, skewY: 0 }, source, below, above });
+    traitTransformOutline.hidden = traitTransformFrame.hidden = false;
     traitTransformStatus.hidden = true;
     $('traitTransformControls').disabled = $('traitTransformReset').disabled = false;
     previewTraitTransform();
@@ -2329,71 +2461,147 @@ function moveTransformPose(start, dx, dy, threshold = 0) {
   x += snapX?.shift ?? 0;
   y += snapY?.shift ?? 0;
   const left = clampTraitPosition(x, width), top = clampTraitPosition(y, height);
-  traitTransformDraft.pose = { x: left, y: top, width, height };
+  traitTransformDraft.pose = { ...start, x: left, y: top };
   previewTraitTransform({ x: snapX && left === x ? snapX.guide : null, y: snapY && top === y ? snapY.guide : null });
 }
-function resizeTransformPose(start, corner, dx, dy, threshold = 0) {
-  const west = corner.endsWith('w'), north = corner.startsWith('n');
-  const anchorX = start.x + (west ? start.width : 0), anchorY = start.y + (north ? start.height : 0);
-  const vectorX = west ? -start.width : start.width, vectorY = north ? -start.height : start.height;
-  // Project the drag onto the diagonal to keep the original aspect ratio.
-  const lengthSquared = vectorX ** 2 + vectorY ** 2;
-  const relativeScale = 1 + (dx * vectorX + dy * vectorY) / lengthSquared;
-  const startScale = start.width / traitTransformDraft.bounds.width;
-  const min = .06 / startScale, max = 4 / startScale;
-  let scale = Math.min(max, Math.max(min, relativeScale)), guideX = null, guideY = null;
-  if (threshold) {
-    const snapX = nearestTraitGuide([anchorX + vectorX * scale], threshold);
-    const snapY = nearestTraitGuide([anchorY + vectorY * scale], threshold);
-    const xAdjustment = snapX ? snapX.shift / vectorX : Infinity;
-    const yAdjustment = snapY ? snapY.shift / vectorY : Infinity;
-    const useX = Math.abs(xAdjustment) <= Math.abs(yAdjustment);
-    const snapped = scale + (useX ? xAdjustment : yAdjustment);
-    if (snapped >= min && snapped <= max) {
-      scale = snapped;
-      if (useX) guideX = snapX.guide;
-      else guideY = snapY.guide;
+function resizeTransformPose(start, corner, dx, dy, threshold = 0, stretch = false) {
+  const index = ['nw', 'ne', 'sw', 'se'].indexOf(corner);
+  const corners = transformedTraitCorners(start);
+  const [x0, y0] = corners[index], [anchorX, anchorY] = corners[3 - index];
+  const vectorX = x0 - anchorX, vectorY = y0 - anchorY;
+  const { bounds } = traitTransformDraft;
+  const minX = .06 * bounds.width / start.width, maxX = 4 * bounds.width / start.width;
+  const minY = .06 * bounds.height / start.height, maxY = 4 * bounds.height / start.height;
+  let width, height, guideX = null, guideY = null;
+  if (stretch) {
+    const sx = Math.tan(start.skewX * Math.PI / 180), sy = Math.tan(start.skewY * Math.PI / 180);
+    const snapX = threshold && nearestTraitGuide([x0 + dx], threshold);
+    const snapY = threshold && nearestTraitGuide([y0 + dy], threshold);
+    const changeX = dx + (snapX?.shift ?? 0), changeY = dy + (snapY?.shift ?? 0);
+    const inverse = 1 / (1 - sx * sy);
+    const ratioX = 1 + (changeX - sx * changeY) * inverse / (index % 2 ? start.width : -start.width);
+    const ratioY = 1 + (changeY - sy * changeX) * inverse / (index >= 2 ? start.height : -start.height);
+    width = start.width * Math.min(maxX, Math.max(minX, ratioX));
+    height = start.height * Math.min(maxY, Math.max(minY, ratioY));
+    if (ratioX >= minX && ratioX <= maxX && ratioY >= minY && ratioY <= maxY) {
+      guideX = snapX?.guide ?? null;
+      guideY = snapY?.guide ?? null;
     }
+  } else {
+    // Project the drag onto the diagonal to keep the original aspect ratio.
+    const lengthSquared = vectorX ** 2 + vectorY ** 2;
+    const relativeScale = 1 + (dx * vectorX + dy * vectorY) / lengthSquared;
+    const min = Math.max(minX, minY), max = Math.min(maxX, maxY);
+    let scale = Math.min(max, Math.max(min, relativeScale));
+    if (threshold) {
+      const snapX = nearestTraitGuide([anchorX + vectorX * scale], threshold);
+      const snapY = nearestTraitGuide([anchorY + vectorY * scale], threshold);
+      const xAdjustment = snapX && Math.abs(vectorX) > 1e-7 ? snapX.shift / vectorX : Infinity;
+      const yAdjustment = snapY && Math.abs(vectorY) > 1e-7 ? snapY.shift / vectorY : Infinity;
+      const useX = Math.abs(xAdjustment) <= Math.abs(yAdjustment);
+      const snapped = scale + (useX ? xAdjustment : yAdjustment);
+      if (snapped >= min && snapped <= max) {
+        scale = snapped;
+        if (useX) guideX = snapX.guide;
+        else guideY = snapY.guide;
+      }
+    }
+    width = start.width * scale;
+    height = start.height * scale;
   }
-  const width = start.width * scale, height = start.height * scale;
-  const left = anchorX - (west ? width : 0), top = anchorY - (north ? height : 0);
+  const pose = { ...start, width, height };
+  const [offsetX, offsetY] = transformedTraitCorners({ ...pose, x: 0, y: 0 })[3 - index];
+  const left = anchorX - offsetX, top = anchorY - offsetY;
   const x = clampTraitPosition(left, width), y = clampTraitPosition(top, height);
-  traitTransformDraft.pose = { x, y, width, height };
+  traitTransformDraft.pose = { ...pose, x, y };
   previewTraitTransform({ x: left === x ? guideX : null, y: top === y ? guideY : null });
+}
+function traitPinchCoordinates(pointers) {
+  const [first, second] = pointers.values();
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2, distance: Math.hypot(first.x - second.x, first.y - second.y) };
+}
+function updateTraitPinch(draft) {
+  const pinch = draft.pinch, current = traitPinchCoordinates(draft.pointers);
+  const { bounds } = draft;
+  const factor = current.distance / Math.max(.015, pinch.distance);
+  if (pinch.mode === 'view') {
+    const zoom = Math.min(4, Math.max(1, pinch.view.zoom * factor));
+    const ratio = zoom / pinch.view.zoom;
+    draft.view = clampTransformView(zoom,
+      current.x - (pinch.x - pinch.view.x) * ratio, current.y - (pinch.y - pinch.view.y) * ratio);
+  } else {
+    const { pose, view } = pinch;
+    const min = Math.max(.06 * bounds.width / pose.width, .06 * bounds.height / pose.height);
+    const max = Math.min(4 * bounds.width / pose.width, 4 * bounds.height / pose.height);
+    const ratio = Math.min(max, Math.max(min, factor));
+    const pivotX = (pinch.x - view.x) / view.zoom, pivotY = (pinch.y - view.y) / view.zoom;
+    const width = pose.width * ratio, height = pose.height * ratio;
+    draft.pose = { ...pose, width, height,
+      x: clampTraitPosition((current.x - view.x) / view.zoom + (pose.x - pivotX) * ratio, width),
+      y: clampTraitPosition((current.y - view.y) / view.zoom + (pose.y - pivotY) * ratio, height),
+    };
+  }
+  previewTraitTransform();
 }
 traitTransformStage.addEventListener('pointerdown', event => {
   const draft = traitTransformDraft;
-  if (!draft?.pose || draft.drag || busy || event.button !== 0) return;
+  if (!draft?.pose || busy || event.button !== 0 || draft.pointers.size >= 2) return;
+  const touch = event.pointerType === 'touch';
+  if (draft.pointers.size && (!touch || [...draft.pointers.values()].some(pointer => !pointer.touch))) return;
   const frame = traitTransformStage.getBoundingClientRect();
   if (!frame.width || !frame.height) return;
   const corner = event.target.closest('[data-corner]')?.dataset.corner;
-  const { x, y, width, height } = draft.pose;
   const px = (event.clientX - frame.left) / frame.width, py = (event.clientY - frame.top) / frame.height;
-  if (!corner && (px < x || px > x + width || py < y || py > y + height)) return;
+  const { view } = draft;
+  const pointX = (px - view.x) / view.zoom, pointY = (py - view.y) / view.zoom;
+  const corners = transformedTraitCorners(draft.pose);
+  const inside = [0, 1, 3, 2].every((index, i, polygon) => {
+    const [x, y] = corners[index], [nextX, nextY] = corners[polygon[(i + 1) % 4]];
+    return (pointY - y) * (nextX - x) >= (pointX - x) * (nextY - y);
+  });
   event.preventDefault();
-  draft.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, width: frame.width, height: frame.height, start: draft.pose, corner };
+  draft.pointers.set(event.pointerId, { x: px, y: py, frame, touch });
   traitTransformStage.setPointerCapture(event.pointerId);
+  if (draft.pointers.size === 2) {
+    if (draft.drag) draft.pose = draft.drag.start;
+    delete draft.drag;
+    draft.pinch = { ...traitPinchCoordinates(draft.pointers), view, pose: draft.pose, mode: $('traitTransformPinch').value };
+    previewTraitTransform();
+  } else if (inside || corner) {
+    draft.drag = { id: event.pointerId, x: px, y: py, start: draft.pose, corner, stretch: $('traitTransformStretch').checked };
+  }
 });
 traitTransformStage.addEventListener('pointermove', event => {
-  const drag = traitTransformDraft?.drag;
-  if (drag?.id !== event.pointerId) return;
-  const dx = (event.clientX - drag.x) / drag.width, dy = (event.clientY - drag.y) / drag.height;
-  const threshold = traitTransformSnap.checked ? 7 / drag.width : 0;
-  if (drag.corner) resizeTransformPose(drag.start, drag.corner, dx, dy, threshold);
-  else moveTransformPose(drag.start, dx, dy, threshold);
+  const draft = traitTransformDraft, pointer = draft?.pointers.get(event.pointerId);
+  if (!pointer) return;
+  const { frame } = pointer;
+  pointer.x = (event.clientX - frame.left) / frame.width;
+  pointer.y = (event.clientY - frame.top) / frame.height;
+  if (draft.pinch) updateTraitPinch(draft);
+  else if (draft.drag?.id === event.pointerId) {
+    const { drag, view } = draft;
+    const dx = (pointer.x - drag.x) / view.zoom, dy = (pointer.y - drag.y) / view.zoom;
+    const threshold = traitTransformSnap.checked ? 7 / (frame.width * view.zoom) : 0;
+    if (drag.corner) resizeTransformPose(drag.start, drag.corner, dx, dy, threshold, drag.stretch);
+    else moveTransformPose(drag.start, dx, dy, threshold);
+  }
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   traitTransformStage.addEventListener(type, event => {
     const draft = traitTransformDraft;
-    if (draft?.drag?.id !== event.pointerId) return;
-    if (type !== 'pointerup') draft.pose = draft.drag.start;
+    if (!draft?.pointers.delete(event.pointerId)) return;
+    if (type !== 'pointerup') {
+      if (draft.pinch) ({ view: draft.view, pose: draft.pose } = draft.pinch);
+      else if (draft.drag) draft.pose = draft.drag.start;
+    }
+    delete draft.pinch;
     delete draft.drag;
     previewTraitTransform();
   });
 }
 traitTransformStage.addEventListener('keydown', event => {
   const draft = traitTransformDraft;
-  if (!draft?.pose || draft.drag || busy || event.altKey || event.metaKey || event.ctrlKey) return;
+  if (!draft?.pose || draft.pointers.size || busy || event.altKey || event.metaKey || event.ctrlKey) return;
   const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
   const step = (event.shiftKey ? 10 : 1) / $('canvas').width;
   if (Object.hasOwn(directions, event.key)) {
@@ -2407,11 +2615,30 @@ traitTransformStage.addEventListener('keydown', event => {
   }
 });
 traitTransformSnap.addEventListener('change', () => { if (traitTransformDraft?.pose) previewTraitTransform(); });
+for (const [index, control] of traitSkewControls.entries()) {
+  control.addEventListener('input', () => {
+    const draft = traitTransformDraft;
+    if (!draft?.pose || busy || draft.pointers.size) return;
+    draft.pose[index === 0 ? 'skewX' : 'skewY'] = Number(control.value);
+    $(control.id + 'Value').value = `${control.value}°`;
+    previewTraitTransform();
+  });
+}
+for (const [id, ratio] of [['traitZoomOut', .8], ['traitZoomReset', 0], ['traitZoomIn', 1.25]]) {
+  $(id).addEventListener('click', () => {
+    const draft = traitTransformDraft;
+    if (!draft?.pose || busy || draft.pointers.size) return;
+    setTraitTransformView(Math.min(4, Math.max(1, draft.view.zoom * ratio)));
+  });
+}
 $('traitTransformReset').addEventListener('click', () => {
   const draft = traitTransformDraft;
-  if (!draft?.pose || busy) return;
-  delete draft.drag;
-  draft.pose = { ...draft.bounds };
+  if (!draft?.pose || busy || draft.pointers.size) return;
+  draft.pose = { ...draft.bounds, skewX: 0, skewY: 0 };
+  for (const control of traitSkewControls) {
+    control.value = 0;
+    $(control.id + 'Value').value = '0°';
+  }
   previewTraitTransform();
 });
 traitTransformDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
@@ -2430,7 +2657,7 @@ traitTransformDialog.addEventListener('close', () => {
 $('traitTransformForm').addEventListener('submit', async event => {
   event.preventDefault();
   const draft = traitTransformDraft;
-  if (busy || !draft?.pose || draft.drag || !traitTransformChanged(draft) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
+  if (busy || !draft?.pose || draft.pointers.size || !traitTransformChanged(draft) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
   busy = true;
   $('traitTransformControls').disabled = $('traitTransformApply').disabled =
     $('traitTransformReset').disabled = $('traitTransformClose').disabled = true;
@@ -2573,6 +2800,7 @@ function render(keepPreview = false) {
   $('projectNameText').textContent = state.name;
   $('projectName').setAttribute('aria-label', `Přejmenovat projekt ${state.name}`);
   $('importPsd').disabled = busy;
+  $('saveProjectPsd').disabled = busy || exporting || !state.cats.some(category => category.traits.length);
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
   renderHistoryPanel();
@@ -2720,6 +2948,12 @@ async function uploadFiles(files, categoryId = active) {
 }
 async function loadProject(file) {
   if (!file || busy) return;
+  if (/\.ps[db]$/i.test(file.name) || file.type === 'image/vnd.adobe.photoshop') {
+    $('projectFile').value = '';
+    if (window.TraitPsdImport) await window.TraitPsdImport.openProject(file);
+    else toast('Podporu PSD se nepodařilo načíst.', true);
+    return;
+  }
   const finishLog = window.TraitDiagnostics?.start('json-open');
   busy = true; render();
   try {
@@ -3766,6 +4000,9 @@ async function handleAction(action, id, element) {
       $('emptyAction').focus();
       break;
     case 'open-project': $('projectFile').click(); break;
+    case 'save-project-psd': await openProjectPsdExport(); break;
+    case 'close-project-psd': $('projectPsdDialog').close(); break;
+    case 'download-project-psd': downloadProjectPsd(); break;
     case 'retry-save':
       if (!db) { toast('Nejdřív stáhni Zálohu JSON. Úložiště není otevřené.', true); break; }
       if (await flushSave()) toast('Projekt je uložený v zařízení');

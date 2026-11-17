@@ -341,10 +341,10 @@ function loadFinalPsdLibrary() {
     document.head.append(script);
   }).catch(error => { psdLibrary = null; throw error; });
 }
-function exportPsdInWorker(groups, progress) {
+function exportPsdInWorker(groups, progress, size) {
   if (typeof Worker !== 'function') return null;
   let worker;
-  try { worker = new Worker('./psd-export.js'); } catch { return null; }
+  try { worker = new Worker('./psd-export.js?build=07187'); } catch { return null; }
   return new Promise((resolve,reject) => {
     worker.onerror = () => { worker.terminate(); reject(new Error('Zpracování PSD se přerušilo. Zkus vybrat menší část projektu.')); };
     worker.onmessage = ({ data }) => {
@@ -354,11 +354,11 @@ function exportPsdInWorker(groups, progress) {
       else resolve(data.blob || null);
     };
     worker.onmessageerror = worker.onerror;
-    try { worker.postMessage(groups); } catch (error) { worker.terminate(); reject(error); }
+    try { worker.postMessage({ groups, size }); } catch (error) { worker.terminate(); reject(error); }
   });
 }
-async function encodeFinalPsd(groups, progress) {
-  const background = await exportPsdInWorker(groups,progress);
+async function encodeLayeredPsd(groups, progress, size) {
+  const background = await exportPsdInWorker(groups,progress,size);
   if (background) return background;
   const ag = await loadFinalPsdLibrary();
   const canvas = (width,height) => {
@@ -371,7 +371,7 @@ async function encodeFinalPsd(groups, progress) {
     const url = URL.createObjectURL(blob);
     try { return await decodeImage(url); } finally { URL.revokeObjectURL(url); }
   };
-  return TraitPsdExport.encode(groups,{ canvas,load,write:ag.writePsd,progress });
+  return TraitPsdExport.encode(groups,{ canvas,load,write:ag.writePsd,progress,size });
 }
 function finalDraftExportData() {
   const title = state.name + ' – Finál';
@@ -381,31 +381,71 @@ function finalDraftExportData() {
   if (!images.size) throw new Error('Vyber alespoň jednu vrstvu.');
   return { title, excluded, selected, project, images };
 }
-async function prepareFinalDraftPsd() {
-  const { title,excluded,selected,project,images } = finalDraftExportData();
+async function projectPsdGroups(project, readImage, isVisible) {
   const groups = [];
-  for (const [index,category] of project.cats.entries()) {
-    const chosen = finalDraftChoice(selected[index],excluded);
+  for (const category of project.cats) {
     const children = M.layerChildren(project,category);
     async function branch(parent) {
       const nodes = [];
       for (const { item,kind } of children(parent)) {
         if (kind === 'folders') nodes.push({ name:item.name,children:await branch(item.id) });
         else {
-          const row = images.get(item.id);
-          nodes.push({ name:item.name,visible:row === chosen,blob:await readFinalExportImage(row) });
+          nodes.push({ name:item.name,visible:isVisible(item,category),blob:await readImage(item) });
         }
       }
       return nodes;
     }
     groups.push({ name:category.name,children:await branch(null) });
   }
-  const blob = await encodeFinalPsd(groups,(done,total) => {
+  return groups;
+}
+async function prepareFinalDraftPsd() {
+  const { title,excluded,selected,project,images } = finalDraftExportData();
+  const chosen = new Set(selected.map(category => finalDraftChoice(category,excluded)));
+  const groups = await projectPsdGroups(project,
+    item => readFinalExportImage(images.get(item.id)), item => chosen.has(images.get(item.id)));
+  const blob = await encodeLayeredPsd(groups,(done,total) => {
     $('finalStatus').textContent = done === total ? 'Zapisuji PSD…' : `Připravuji vrstvy PSD ${done} / ${total}…`;
   });
   finalDraftURL = { url:URL.createObjectURL(blob), name:TraitFinal.fileName(title)+'.psd' };
   finalDraftStatus = `PSD připraven ke stažení · ${counted(images.size,'vrstva','vrstvy','vrstev')}.`;
 }
+const projectPsdDialog = $('projectPsdDialog');
+let projectPsdFile;
+async function openProjectPsdExport() {
+  if (busy || exporting || projectPsdDialog.open) return;
+  const project = M.clone(state);
+  const total = project.cats.reduce((sum, category) => sum + category.traits.length, 0);
+  if (!total) return;
+  const close = $('projectPsdClose'), save = $('projectPsdDownload'), status = $('projectPsdStatus');
+  const visible = new Set(visibleLayers(project));
+  projectPsdFile = null;
+  $('projectPsdName').textContent = project.name;
+  status.textContent = 'Načítám vrstvy projektu…';
+  busy = true;
+  close.disabled = save.disabled = true;
+  projectPsdDialog.showModal();
+  try {
+    const groups = await projectPsdGroups(project, item => TraitStorage.imageBlob(db,item.data), item => visible.has(item));
+    const { width, height } = $('canvas');
+    const blob = await encodeLayeredPsd(groups, (done, count) => {
+      status.textContent = done === count ? 'Zapisuji PSD…' : `Připravuji vrstvy ${done} / ${count}…`;
+    }, { width, height });
+    projectPsdFile = { blob, name: TraitFinal.fileName(project.name) + '.psd' };
+    status.textContent = `PSD je připravené ke stažení · ${counted(total,'vrstva','vrstvy','vrstev')}.`;
+    save.disabled = false;
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    busy = false;
+    close.disabled = false;
+  }
+}
+function downloadProjectPsd() {
+  if (projectPsdFile) download(projectPsdFile.blob, projectPsdFile.name);
+}
+projectPsdDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+projectPsdDialog.addEventListener('close', () => { if (!projectPsdDialog.open) projectPsdFile = null; });
 function openFinalDraftFolder() {
   try {
     const { title,project,images } = finalDraftExportData();

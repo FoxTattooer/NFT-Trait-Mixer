@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.187 | checkpoint/v0.7.187-gesta-krivky-psd | Dvouprsté přiblížení a změna velikosti, deformace, samostatné RGB křivky a otevření i uložení celého projektu jako PSD. |
 | 0.7.186 | checkpoint/v0.7.186-barvy-a-transformace | Kontrast, tónová křivka, vyvážení barev a transformace traitů s magnetickými vodítky. |
 | 0.7.185 | checkpoint/v0.7.185-upravy-traitu | Duplikování traitů, Merge Down a úprava jasu, sytosti a odstínu s náhledem. |
 | 0.7.184 | checkpoint/v0.7.184-zare-ikon | Nastavení intenzity, rozptylu a barvy záře ikon s náhledem. |

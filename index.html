@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07186">
+  <link rel="stylesheet" href="compact.css?build=07187">
   <link rel="stylesheet" href="schemes.css?build=07184">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
@@ -25,7 +25,7 @@
   <script src="project.js?build=07185" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07179" defer></script>
-  <script src="diagnostics.js?build=07186" defer></script>
+  <script src="diagnostics.js?build=07187" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,21 +34,21 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
-  <script src="app.js?build=07186" defer></script>
+  <script src="app.js?build=07187" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07182" defer></script>
   <script src="folder-export.js?build=07162" defer></script>
   <script src="final-ui.js?build=07179" defer></script>
-  <script src="psd-export.js?build=07161" defer></script>
-  <script src="final-builder.js?build=07164" defer></script>
+  <script src="psd-export.js?build=07187" defer></script>
+  <script src="final-builder.js?build=07187" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
   <script src="inventory-base-ui.js?build=07131" defer></script>
   <script src="drag.js?build=07135" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
-  <script src="psd-ui.js?build=07153" defer></script>
+  <script src="psd-ui.js?build=07187" defer></script>
 </head>
 <body class="compact-workspace" data-color-scheme="pink" data-control-accent="auto">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -111,16 +111,17 @@
           <span id="projectSource" class="project-source" hidden></span>
         </div>
         <button data-action="new-project"><svg class="icon"><use href="#i-plus"/></svg>Nový projekt</button>
-        <button id="load" data-action="open-project"><svg class="icon"><use href="#i-folder"/></svg>Otevřít projekt</button>
+        <button id="load" data-action="open-project"><svg class="icon"><use href="#i-folder"/></svg>Otevřít projekt…</button>
         <button id="restoreProjectMenu" type="button" data-action="restore-last-project" hidden><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg>Obnovit poslední projekt</button>
         <button id="save" data-action="save-project"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button>
+        <button id="saveProjectPsd" data-action="save-project-psd" aria-haspopup="dialog"><svg class="icon"><use href="#i-psd"/></svg>Uložit projekt jako PSD</button>
         <button id="importPsd" type="button"><svg class="icon"><use href="#i-psd"/></svg>Import PSD</button>
         <button id="importProcreate" type="button"><svg class="icon" aria-hidden="true"><use href="#i-procreate-import"/></svg>Import z Procreate</button>
       </div>
     </details>
     <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
     <input id="procreateFile" type="file" accept=".procreate" hidden>
-    <input id="projectFile" type="file" accept="application/json,.json" hidden>
+    <input id="projectFile" type="file" accept="application/json,.json,.psd,.psb,image/vnd.adobe.photoshop" hidden>
     <details class="header-menu preview-menu"><summary aria-label="Akce náhledu" title="Akce náhledu" aria-controls="landscapePreviewActions"><svg class="icon"><use href="#i-image"/></svg></summary>
       <div class="header-menu-content" id="landscapePreviewActions">
         <button type="button" id="landscapeShuffle" data-action="random" disabled><svg class="icon"><use href="#i-shuffle"/></svg>Náhodná kombinace</button>
@@ -139,8 +140,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.186" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.186</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.187" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.187</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -367,15 +368,32 @@
         </div>
         <details class="settings-section">
           <summary>Tónová křivka<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
-          <svg class="trait-tone-graph" viewBox="-3 -3 261 102" preserveAspectRatio="none" aria-hidden="true">
+          <div class="trait-curve-toolbar">
+            <label for="traitCurveChannel">Kanál křivky</label>
+            <select id="traitCurveChannel">
+              <option value="rgb">RGB · všechny</option>
+              <option value="red">Červená</option>
+              <option value="green">Zelená</option>
+              <option value="blue">Modrá</option>
+            </select>
+          </div>
+          <svg id="traitToneGraph" class="trait-tone-graph" data-channel="rgb" viewBox="-9 -9 273 114" preserveAspectRatio="none" aria-hidden="true">
             <path class="trait-tone-grid" d="M0 0H255V96H0ZM64 0V96M128 0V96M192 0V96M0 24H255M0 48H255M0 72H255M0 96L255 0"/>
             <polyline id="traitToneCurve" points="0,96 255,0"/>
+            <circle data-curve-point="0" cx="0" cy="96" r="4"/>
+            <circle data-curve-point="1" cx="64" cy="72" r="4"/>
+            <circle data-curve-point="2" cx="128" cy="48" r="4"/>
+            <circle data-curve-point="3" cx="192" cy="24" r="4"/>
+            <circle data-curve-point="4" cx="255" cy="0" r="4"/>
           </svg>
-          <div class="appearance-sliders">
+          <div id="traitCurveRanges" class="appearance-sliders">
+            <label for="traitBlackPoint">Černý bod</label><input id="traitBlackPoint" name="black" type="range" min="0" max="100" value="0"><output id="traitBlackPointValue" for="traitBlackPoint">0 %</output>
             <label for="traitShadows">Stíny</label><input id="traitShadows" name="shadows" type="range" min="-100" max="100" value="0"><output id="traitShadowsValue" for="traitShadows">0 %</output>
             <label for="traitMidtones">Střední tóny</label><input id="traitMidtones" name="midtones" type="range" min="-100" max="100" value="0"><output id="traitMidtonesValue" for="traitMidtones">0 %</output>
             <label for="traitHighlights">Světla</label><input id="traitHighlights" name="highlights" type="range" min="-100" max="100" value="0"><output id="traitHighlightsValue" for="traitHighlights">0 %</output>
+            <label for="traitWhitePoint">Bílý bod</label><input id="traitWhitePoint" name="white" type="range" min="-100" max="0" value="0"><output id="traitWhitePointValue" for="traitWhitePoint">0 %</output>
           </div>
+          <div class="trait-curve-toolbar"><button id="traitResetCurve" type="button" class="subtle">Obnovit tento kanál</button></div>
         </details>
         <details class="settings-section">
           <summary>Vyvážení barev<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
@@ -398,30 +416,61 @@
     </header>
     <form id="traitTransformForm">
       <div id="traitTransformStage" tabindex="0" role="group" aria-label="Náhled transformace" aria-describedby="traitTransformHelp">
-        <canvas id="traitTransformCanvas" width="512" height="512" aria-hidden="true"></canvas>
+        <canvas id="traitTransformCanvas" width="768" height="768" aria-hidden="true"></canvas>
         <div id="traitTransformGuides" aria-hidden="true" hidden><i></i><i></i></div>
+        <svg id="traitTransformFrame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden><polygon/></svg>
         <div id="traitTransformOutline" aria-hidden="true" hidden>
           <span data-corner="nw"></span><span data-corner="ne"></span><span data-corner="sw"></span><span data-corner="se"></span>
         </div>
       </div>
       <div class="trait-transform-tools">
-        <p id="traitTransformHelp">Tahem posuneš trait. Tahem za roh změníš velikost.<span class="sr-only"> Na klávesnici použij šipky nebo klávesy + a −.</span></p>
-        <p id="traitTransformStatus" role="status" hidden></p>
-        <fieldset id="traitTransformControls" aria-label="Volby transformace" disabled>
-          <label><input id="traitTransformSnap" type="checkbox" checked> Magnetické vodicí čáry</label>
-          <label for="traitTransformAxis">Osa posunu</label>
-          <select id="traitTransformAxis">
-            <option value="both">Volně (X a Y)</option>
-            <option value="x">Vodorovně (X)</option>
-            <option value="y">Svisle (Y)</option>
-          </select>
-        </fieldset>
+        <div class="trait-transform-settings">
+          <p id="traitTransformHelp">Tahem posuneš trait, rohy mění velikost. Roztažením prstů přiblížíš plátno nebo zvětšíš trait podle zvoleného gesta.<span class="sr-only"> Klávesy se šipkami posouvají trait, + a − mění jeho velikost.</span></p>
+          <p id="traitTransformStatus" role="status" hidden></p>
+          <fieldset id="traitTransformControls" aria-label="Volby transformace" disabled>
+            <label><input id="traitTransformSnap" type="checkbox" checked> Magnetické vodicí čáry</label>
+            <div class="trait-transform-options">
+              <label for="traitTransformPinch">Gesto dvěma prsty</label>
+              <select id="traitTransformPinch">
+                <option value="view">Přiblížit plátno</option>
+                <option value="trait">Zvětšit / zmenšit trait</option>
+              </select>
+              <label for="traitTransformAxis">Osa posunu</label>
+              <select id="traitTransformAxis">
+                <option value="both">Volně (X a Y)</option>
+                <option value="x">Vodorovně (X)</option>
+                <option value="y">Svisle (Y)</option>
+              </select>
+            </div>
+            <div class="trait-transform-zoom" role="group" aria-label="Přiblížení plátna">
+              <button type="button" class="subtle" id="traitZoomOut" aria-label="Oddálit plátno">−</button>
+              <button type="button" class="subtle" id="traitZoomReset" aria-label="Obnovit přiblížení plátna">100 %</button>
+              <button type="button" class="subtle" id="traitZoomIn" aria-label="Přiblížit plátno">+</button>
+            </div>
+            <details id="traitDeformation" class="settings-section">
+              <summary>Deformace<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+              <label><input id="traitTransformStretch" type="checkbox"> Volné protažení rohů</label>
+              <div class="appearance-sliders">
+                <label for="traitSkewX">Zkosení X</label><input id="traitSkewX" type="range" min="-15" max="15" value="0"><output id="traitSkewXValue" for="traitSkewX">0°</output>
+                <label for="traitSkewY">Zkosení Y</label><input id="traitSkewY" type="range" min="-15" max="15" value="0"><output id="traitSkewYValue" for="traitSkewY">0°</output>
+              </div>
+            </details>
+          </fieldset>
+        </div>
         <div class="trait-colors-actions">
           <button id="traitTransformReset" type="button" class="subtle" disabled>Výchozí</button>
           <button id="traitTransformApply" type="submit" class="primary" disabled>Použít</button>
         </div>
       </div>
     </form>
+  </dialog>
+  <dialog id="projectPsdDialog" class="settings-dialog" aria-labelledby="projectPsdTitle">
+    <header class="trait-preview-heading">
+      <div><h2 id="projectPsdTitle">Uložit projekt jako PSD</h2><p id="projectPsdName"></p></div>
+      <button id="projectPsdClose" data-action="close-project-psd" type="button" class="subtle icon-button" aria-label="Zavřít export PSD"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <p id="projectPsdStatus" role="status"></p>
+    <div class="trait-colors-actions"><button id="projectPsdDownload" data-action="download-project-psd" type="button" class="primary" disabled>Stáhnout PSD</button></div>
   </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="compareActionDialog" aria-labelledby="compareActionTitle">
@@ -435,8 +484,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.186" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.186</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.187" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.187</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -911,6 +960,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.187-gesta-krivky-psd" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.187 – Gesta, křivky a PSD projekty</strong><small>Dvouprstá gesta, volné rohy a zkosení, barevné křivky, otevření a uložení PSD projektu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.186-barvy-a-transformace" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.186 – Barvy a transformace</strong><small>Kontrast, tónová křivka, vyvážení barev a transformace traitů s vodítky.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.185-upravy-traitu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.185 – Úpravy traitů</strong><small>Duplikování, Merge Down a úpravy jasu, sytosti a odstínu s náhledem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.184-zare-ikon" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.184 – Záře ikon</strong><small>Intenzita, rozptyl a vlastní barva světla kolem ikon s živým náhledem.</small></span><span class="version-tag">Uloženo</span></a>

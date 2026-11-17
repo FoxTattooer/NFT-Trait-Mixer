@@ -972,18 +972,26 @@ button.trait-search-result {
 #traitColorsDialog .settings-section .appearance-sliders {padding:4px 8px}
 #traitColorsDialog .settings-section summary {grid-template-columns:1fr auto}
 .trait-colors-controls label small {display:block;color:var(--scheme-muted);font-size:10px}
+.trait-curve-toolbar {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px;font-size:13px}
+.trait-curve-toolbar :is(button,select) {min-height:44px}
 .trait-tone-graph {
-  display:block;width:calc(100% - 20px);height:78px;margin:8px 10px 2px;
-  fill:none;stroke:var(--scheme-text);stroke-width:2;
+  --curve-color:var(--scheme-text);
+  display:block;width:calc(100% - 16px);height:126px;margin:4px 8px 2px;
+  fill:none;stroke:var(--curve-color);stroke-width:2;touch-action:none;
 }
+.trait-tone-graph[data-channel=red] {--curve-color:#ff7987}
+.trait-tone-graph[data-channel=green] {--curve-color:#6de5a6}
+.trait-tone-graph[data-channel=blue] {--curve-color:#86b5ff}
 .trait-tone-graph .trait-tone-grid {stroke:var(--scheme-stroke);stroke-width:1}
-.trait-tone-graph path,.trait-tone-graph polyline {vector-effect:non-scaling-stroke}
+.trait-tone-graph :is(path,polyline,circle) {vector-effect:non-scaling-stroke}
+.trait-tone-graph circle {fill:var(--curve-color);stroke:transparent;stroke-width:18;pointer-events:all;cursor:ns-resize}
 .trait-colors-actions {display:flex;justify-content:flex-end;gap:6px}
 .trait-colors-actions button {min-height:44px}
 #traitTransformDialog {box-sizing:border-box;width:min(560px,calc(100% - 24px))}
-#traitTransformForm {display:grid;gap:10px;padding:4px 8px}
+#traitTransformDialog[open] {display:flex;flex-direction:column}
+#traitTransformForm {display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;gap:10px;padding:4px 8px}
 #traitTransformStage {
-  position:relative;width:min(100%,54dvh,500px);aspect-ratio:1;justify-self:center;
+  position:relative;width:min(100%,49dvh,500px);aspect-ratio:1;justify-self:center;overflow:hidden;
   touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
   outline:1px solid var(--scheme-stroke);border-radius:6px;
   background:repeating-conic-gradient(#21242c 0% 25%,#181a20 0% 50%) 50% / 24px 24px;
@@ -997,23 +1005,33 @@ button.trait-search-result {
 #traitTransformGuides[data-snap-x] i:first-child,#traitTransformGuides[data-snap-y] i:last-child {
   border-color:#64e3ff;border-style:solid;filter:drop-shadow(0 0 4px #0bbbd9);
 }
-#traitTransformOutline {position:absolute;border:1px solid white;box-shadow:0 0 0 1px #0009;cursor:grab}
-#traitTransformOutline:active {cursor:grabbing}
-#traitTransformOutline [data-corner] {position:absolute;display:grid;place-items:center;width:34px;height:34px}
+#traitTransformFrame {position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#traitTransformFrame polygon {fill:none;stroke:white;stroke-width:1;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 1px #000)}
+#traitTransformOutline {position:absolute;pointer-events:none}
+#traitTransformOutline [data-corner] {
+  position:absolute;display:grid;place-items:center;width:36px;height:36px;
+  pointer-events:auto;transform:translate(-50%,-50%);
+}
+#traitTransformOutline [data-corner][hidden] {display:none}
 #traitTransformOutline [data-corner]::after {
   content:"";pointer-events:none;width:10px;height:10px;border:1px solid #222;border-radius:2px;background:white;
 }
-#traitTransformOutline [data-corner=nw] {top:0;left:0;transform:translate(-50%,-50%);cursor:nwse-resize}
-#traitTransformOutline [data-corner=ne] {top:0;right:0;transform:translate(50%,-50%);cursor:nesw-resize}
-#traitTransformOutline [data-corner=sw] {bottom:0;left:0;transform:translate(-50%,50%);cursor:nesw-resize}
-#traitTransformOutline [data-corner=se] {bottom:0;right:0;transform:translate(50%,50%);cursor:nwse-resize}
-.trait-transform-tools {display:grid;align-content:center;gap:8px}
+#traitTransformOutline :is([data-corner=nw],[data-corner=se]) {cursor:nwse-resize}
+#traitTransformOutline :is([data-corner=ne],[data-corner=sw]) {cursor:nesw-resize}
+.trait-transform-tools {display:flex;flex-direction:column;justify-content:center;min-height:0;gap:8px}
+.trait-transform-settings {display:grid;min-height:0;overflow:auto;overscroll-behavior:contain;gap:8px}
 .trait-transform-tools p {margin:0;color:var(--scheme-text);font-size:13px;line-height:1.4}
 #traitTransformControls {display:grid;min-width:0;margin:0;padding:0;border:0;gap:4px}
 #traitTransformControls label {display:flex;align-items:center;gap:6px;margin:0;font-size:13px}
-#traitTransformControls label:first-child {min-height:44px}
-#traitTransformSnap {width:18px;height:18px;accent-color:var(--control-accent)}
-#traitTransformAxis {min-height:44px}
+#traitTransformControls > label,#traitDeformation > label {min-height:44px}
+#traitTransformControls input[type=checkbox] {width:18px;height:18px;accent-color:var(--control-accent)}
+.trait-transform-options {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:4px 6px}
+.trait-transform-options select {min-width:0;min-height:44px}
+.trait-transform-zoom {display:grid;grid-template-columns:44px 1fr 44px;gap:4px}
+.trait-transform-zoom button {min-height:44px;font-variant-numeric:tabular-nums}
+#traitDeformation > summary {grid-template-columns:1fr auto}
+#traitDeformation > label {margin-inline:8px}
+#traitDeformation .appearance-sliders {margin-bottom:4px}
 @media (orientation:landscape) and (max-height:460px) {
   .trait-preview-stage {height:min(70dvh,calc(100dvh - 96px))}
 }
@@ -1026,8 +1044,8 @@ button.trait-search-result {
   #traitColorsDialog .trait-preview-heading {grid-column:1 / -1}
   #traitColorsDialog .trait-colors-stage {height:auto}
   #traitTransformDialog {width:min(660px,calc(100% - 24px))}
-  #traitTransformForm {grid-template-columns:minmax(0,1fr) minmax(220px,.85fr);gap:16px}
-  #traitTransformStage {width:min(100%,68dvh,500px)}
+  #traitTransformForm {grid-template-columns:minmax(0,1fr) minmax(220px,.85fr);grid-template-rows:minmax(0,1fr);gap:16px}
+  #traitTransformStage {width:min(100%,max(120px,calc(100dvh - 130px)),500px)}
 }
 
 #folderExportDialog[open] {

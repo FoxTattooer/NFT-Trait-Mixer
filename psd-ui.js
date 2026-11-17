@@ -3,7 +3,7 @@
   'use strict';
   const dialog = $('psdDialog'), fileInput = $('psdFile'), procreateInput = $('procreateFile');
   let worker, localSession, metadata, epoch = 0, request = 0, previewURL, working = false;
-  let nativeImport = false, workerError = null;
+  let nativeImport = false, openingProject = false, workerError = null;
   let savingBatch = false, cancelRequested = false;
   let recordImport, importStage, recentId;
   const pending = new Map();
@@ -80,7 +80,8 @@
     let skipped = new Set();
     if (metadata && !working && ($('psdMode').value !== 'category' || $('psdTarget').value)) {
       const available = nodes.filter(n => n.supported).map(n => n.id);
-      skipped = new Set(TraitPSD.plan(metadata, available, $('psdMode').value, M.uid, $('psdTarget').value, state, $('psdLegacy').checked).skipped);
+      skipped = new Set(TraitPSD.plan(metadata, available, $('psdMode').value, M.uid, $('psdTarget').value,
+        openingProject ? null : state, $('psdLegacy').checked).skipped);
       for (const input of $('psdTree').querySelectorAll('input[data-node]')) {
         const wasSkipped = input.dataset.imported === 'true';
         input.dataset.imported = String(skipped.has(input.dataset.node));
@@ -113,21 +114,24 @@
       ? `<details open class="psd-group"><summary>${esc(n.name)}${n.hidden ? ' · skryté' : ''}</summary><div>${treeHTML(n.children)}</div></details>`
       : `<div class="psd-layer"><label><input type="checkbox" data-node="${esc(n.id)}" ${n.supported ? 'checked' : 'disabled data-unsupported="true"'}><span><strong>${esc(n.name)}</strong><small data-import-note></small>${n.hidden ? '<small>Skrytá vrstva · lze importovat</small>' : ''}${n.problem ? `<small class="psd-warning">${esc(n.problem)}</small>` : ''}${n.warnings.length ? `<small class="psd-warning">${esc(n.warnings.join('; '))}</small>` : ''}</span></label>${n.supported ? `<button type="button" data-preview="${esc(n.id)}" aria-label="Náhled ${esc(n.name)}">Náhled</button>` : ''}</div>`).join('');
   }
-  async function open(file, procreate = false) {
+  async function open(file, procreate = false, asProject = false) {
     if (!file || !ready || busy) return;
     const phase = procreate ? 'procreate-open' : 'psd-open';
     const format = procreate ? 'Procreate' : 'PSD';
     const finishLog = window.TraitDiagnostics?.start(phase);
     dispose(); const current = epoch;
     nativeImport = procreate;
+    openingProject = asProject;
     recordImport = window.TraitDiagnostics?.beginImport?.(procreate ? 'procreate' : 'psd', file.size);
     importStage = 'opening';
     $('psdCancel').textContent = 'Zrušit';
     busy = true; working = true; render();
     $('psdBody').hidden = true; $('psdConfirm').disabled = true; $('psdAck').checked = false; $('psdLegacy').checked = false;
-    $('importFormatLabel').textContent = procreate ? 'PROCREATE / IMPORT' : 'PHOTOSHOP / IMPORT';
-    $('psdTitle').textContent = 'Vrstvy z ' + format;
-    $('psdLegacyRow').hidden = procreate;
+    $('importFormatLabel').textContent = openingProject ? 'PSD / PROJEKT' : procreate ? 'PROCREATE / IMPORT' : 'PHOTOSHOP / IMPORT';
+    $('psdTitle').textContent = openingProject ? 'Otevřít PSD jako projekt' : 'Vrstvy z ' + format;
+    $('psdConfirm').textContent = openingProject ? 'Otevřít projekt' : 'Importovat vybrané vrstvy';
+    $('psdLegacyRow').hidden = procreate || openingProject;
+    $('psdMode').querySelector('[value="category"]').disabled = openingProject;
     $('layerImportProgressLabel').textContent = 'Import ' + format;
     $('psdTree').setAttribute('aria-label', 'Vrstvy a skupiny ' + format);
     $('psdFileName').textContent = file.name;
@@ -137,7 +141,7 @@
       if (!procreate) {
         const header = await file.slice(0, 26).arrayBuffer(); TraitPSD.validateHeader(header);
         if (current !== epoch) return;
-        indeterminateProgress('Kontroluji, které vrstvy už jsou v projektu');
+        indeterminateProgress(openingProject ? 'Čtu soubor' : 'Kontroluji, které vrstvy už jsou v projektu');
         source = await TraitPSD.fingerprint(file, () => current !== epoch);
       }
       if (current !== epoch) return;
@@ -170,7 +174,7 @@
       $('psdDimensions').textContent = `${metadata.width} × ${metadata.height} px → PNG 1024 × 1024. Poměr stran a pozice zůstanou zachované; obdélník se doplní průhlednými okraji.`;
       $('psdTarget').replaceChildren(new Option('Vyber kategorii…', ''), ...state.cats.map(c => new Option(c.name, c.id)));
       if (active) $('psdTarget').value = active;
-      const previous = state.psdImports?.[source];
+      const previous = openingProject ? null : state.psdImports?.[source];
       $('psdMode').value = previous && (previous.mode !== 'category' || state.cats.some(c => c.id === previous.targetId)) ? previous.mode : 'structure';
       if ($('psdMode').value === 'category') $('psdTarget').value = previous.targetId;
       $('psdBody').hidden = false; working = false; update();
@@ -180,7 +184,8 @@
         alreadySaved: $('psdTree').querySelectorAll('input[data-imported="true"]').length,
         selected: chosen().length
       });
-      status('Vyber vrstvy a způsob rozdělení. Projekt se změní až po potvrzení.');
+      status(openingProject ? 'Vyber vrstvy pro samostatný projekt. Po otevření můžeš předchozí projekt obnovit tlačítkem Zpět.' :
+        'Vyber vrstvy a způsob rozdělení. Projekt se změní až po potvrzení.');
       const recent = window.TraitRecent;
       recentId = recent?.record(file, source);
       if (procreate) recent?.capturePng(recentId, thumbnail);
@@ -240,7 +245,9 @@
       if (!initialSaved) throw importError('Dosavadní projekt není uložený. Zavři import a použij Zkusit uložit znovu nebo Zálohu JSON.',
         lastStorageError?.name === 'QuotaExceededError' ? 'QUOTA_EXCEEDED' : 'STORAGE_WRITE');
       if (current !== epoch) return;
-      const plan = TraitPSD.plan(metadata, allNodes(metadata.tree).filter(n => n.supported).map(n => n.id), mode, M.uid, targetId, state, $('psdLegacy').checked);
+      const nextProject = openingProject ? M.empty() : state;
+      if (openingProject) nextProject.name = $('psdFileName').textContent.replace(/\.ps[db]$/i, '').trim().slice(0, 120) || 'PSD projekt';
+      const plan = TraitPSD.plan(metadata, allNodes(metadata.tree).filter(n => n.supported).map(n => n.id), mode, M.uid, targetId, nextProject, $('psdLegacy').checked);
       plan.jobs = plan.jobs.filter(j => selected.has(j.nodeId));
       plan.cats = plan.cats.filter(c => plan.jobs.some(j => j.categoryId === c.id));
       total = plan.jobs.length;
@@ -250,7 +257,20 @@
         if (current !== epoch) return false;
         const before = M.clone(state);
         const previousActive = active;
+        const replacing = openingProject && !historyAdded;
+        if (replacing) {
+          state = M.clone(nextProject);
+          active = plan.cats[0].id;
+        }
+        const selectedBefore = openingProject ? new Map(jobs.map(job => [job.categoryId, M.selectedIds(state, job.categoryId)])) : null;
         TraitPSD.applyBatch(state, plan, jobs, mode, targetId, !!stagedImages);
+        if (selectedBefore) {
+          for (const job of jobs) if (!job.hidden) selectedBefore.get(job.categoryId).push(job.traitId);
+          for (const [categoryId, ids] of selectedBefore) {
+            state.selected[categoryId] = ids[0] || null;
+            if (ids.length > 1) state.selectedExtras[categoryId] = ids.slice(1);
+          }
+        }
         revision++;
         let stored = false;
         savingBatch = true;
@@ -258,7 +278,7 @@
         try {
           for (let attempt = 1; attempt <= 3 && !stored && !cancelRequested; attempt++) {
             progress(converted, savedCount, total, 'Ukládám ' + jobs.length + ' vrstev · pokus ' + attempt + '/3');
-            stored = await flushSave(stagedImages);
+            stored = await flushSave(stagedImages, replacing ? [before] : []);
             if (cancelRequested || (!stored && lastStorageError?.name === 'QuotaExceededError')) break;
             if (!stored && attempt < 3) await pause(attempt * 750);
           }
@@ -277,8 +297,18 @@
           return true;
         }
         if (!historyAdded) {
-          recordHistory(before, nativeImport ? 'Import Procreate' : 'Import PSD');
+          recordHistory(before, openingProject ? 'Otevření projektu PSD' : nativeImport ? 'Import Procreate' : 'Import PSD');
           historyAdded = true;
+          if (replacing) {
+            layerBrowseHistory.length = 0;
+            inspectedTrait = null;
+            openLayerCategories.clear();
+            organizerExpanded = {};
+            resetCategoryFilters();
+            resetLayerBulk();
+            imageCache.clear();
+            showProjectSource('Otevřeno z PSD');
+          }
         }
         savedCount += jobs.length;
         trackStage('saving', counts());
@@ -297,7 +327,7 @@
       for (let offset = 0; offset < total; offset += 8) {
         if (current !== epoch) return;
         const jobs = plan.jobs.slice(offset, offset + 8);
-        const stagedImages = nativeImport ? new Map() : null;
+        const stagedImages = nativeImport || openingProject ? new Map() : null;
         trackStage('converting', counts());
         status('Převádím vrstvy do PNG…');
         for (const [index, job] of jobs.entries()) {
@@ -327,7 +357,7 @@
       if (current !== epoch) return;
       if (active && !openLayerCategories.has(active)) openLayerCategories.set(active, LAYER_BATCH);
       close(); showPanel('layers');
-      toast(`Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
+      toast(openingProject ? `Projekt otevřen · ${savedCount} vrstev` : `Importováno a uloženo ${savedCount} vrstev · Zpět vrátí celý import`);
     } catch (error) {
       if (current === epoch) {
         reportFailure(phase, error, importStage === 'converting' ? 'LAYER_RENDER' : 'IMPORT_INCOMPLETE', counts());
@@ -338,6 +368,7 @@
       }
     } finally { finishLog?.(); }
   }
+  window.TraitPsdImport = { openProject: file => open(file, false, true) };
   $('importPsd').addEventListener('click', () => { if (ready && !busy) { fileInput.value = ''; fileInput.click(); } });
   fileInput.addEventListener('change', () => open(fileInput.files[0]));
   $('importProcreate').addEventListener('click', () => { if (ready && !busy) { procreateInput.value = ''; procreateInput.click(); } });
