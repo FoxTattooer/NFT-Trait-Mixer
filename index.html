@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07185">
+  <link rel="stylesheet" href="compact.css?build=07186">
   <link rel="stylesheet" href="schemes.css?build=07184">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
@@ -25,7 +25,7 @@
   <script src="project.js?build=07185" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07179" defer></script>
-  <script src="diagnostics.js?build=07185" defer></script>
+  <script src="diagnostics.js?build=07186" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,7 +34,7 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
-  <script src="app.js?build=07185" defer></script>
+  <script src="app.js?build=07186" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07182" defer></script>
@@ -98,6 +98,7 @@
     <symbol id="i-roadmap" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 2 2 3-3M14 10h4M7 16h11"/></symbol>
     <symbol id="i-procreate-import" viewBox="0 0 24 24"><path d="m10 14 7-10c1.4-2 4.5.1 3 2L13 16"/><path d="M13 15c1 3-2 6-9 6 2-1 2-4 3.5-5.5 1.3-1.3 3.5-1.7 5.5-.5Z" stroke="#c5abef"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6"/></symbol>
+    <symbol id="i-transform" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M3 8V3h5m8 0h5v5m0 8v5h-5m-8 0H3v-5"/></symbol>
   </svg>
 
   <div id="workspaceScroll">
@@ -138,8 +139,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.185" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.185</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.186" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.186</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -357,14 +358,68 @@
       <p id="traitColorsStatus" role="status"></p>
     </div>
     <form id="traitColorsForm">
-      <fieldset id="traitColorsControls" class="appearance-sliders trait-colors-controls" disabled>
-        <label for="traitBrightness">Brightness</label><input id="traitBrightness" name="brightness" type="range" min="-100" max="100" value="0"><output id="traitBrightnessValue" for="traitBrightness">0 %</output>
-        <label for="traitSaturation">Saturation</label><input id="traitSaturation" name="saturation" type="range" min="-100" max="100" value="0"><output id="traitSaturationValue" for="traitSaturation">0 %</output>
-        <label for="traitHue">Hue</label><input id="traitHue" name="hue" type="range" min="-180" max="180" value="0"><output id="traitHueValue" for="traitHue">0°</output>
+      <fieldset id="traitColorsControls" class="trait-colors-controls" aria-label="Úpravy barev traitu" disabled>
+        <div class="appearance-sliders">
+          <label for="traitBrightness">Brightness</label><input id="traitBrightness" name="brightness" type="range" min="-100" max="100" value="0"><output id="traitBrightnessValue" for="traitBrightness">0 %</output>
+          <label for="traitSaturation">Saturation</label><input id="traitSaturation" name="saturation" type="range" min="-100" max="100" value="0"><output id="traitSaturationValue" for="traitSaturation">0 %</output>
+          <label for="traitHue">Hue</label><input id="traitHue" name="hue" type="range" min="-180" max="180" value="0"><output id="traitHueValue" for="traitHue">0°</output>
+          <label for="traitContrast">Kontrast</label><input id="traitContrast" name="contrast" type="range" min="-100" max="100" value="0"><output id="traitContrastValue" for="traitContrast">0 %</output>
+        </div>
+        <details class="settings-section">
+          <summary>Tónová křivka<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <svg class="trait-tone-graph" viewBox="-3 -3 261 102" preserveAspectRatio="none" aria-hidden="true">
+            <path class="trait-tone-grid" d="M0 0H255V96H0ZM64 0V96M128 0V96M192 0V96M0 24H255M0 48H255M0 72H255M0 96L255 0"/>
+            <polyline id="traitToneCurve" points="0,96 255,0"/>
+          </svg>
+          <div class="appearance-sliders">
+            <label for="traitShadows">Stíny</label><input id="traitShadows" name="shadows" type="range" min="-100" max="100" value="0"><output id="traitShadowsValue" for="traitShadows">0 %</output>
+            <label for="traitMidtones">Střední tóny</label><input id="traitMidtones" name="midtones" type="range" min="-100" max="100" value="0"><output id="traitMidtonesValue" for="traitMidtones">0 %</output>
+            <label for="traitHighlights">Světla</label><input id="traitHighlights" name="highlights" type="range" min="-100" max="100" value="0"><output id="traitHighlightsValue" for="traitHighlights">0 %</output>
+          </div>
+        </details>
+        <details class="settings-section">
+          <summary>Vyvážení barev<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <div class="appearance-sliders">
+            <label for="traitTemperature">Teplota <small>Studená ↔ teplá</small></label><input id="traitTemperature" name="temperature" type="range" min="-100" max="100" value="0"><output id="traitTemperatureValue" for="traitTemperature">0 %</output>
+            <label for="traitTint">Nádech <small>Zelený ↔ purpurový</small></label><input id="traitTint" name="tint" type="range" min="-100" max="100" value="0"><output id="traitTintValue" for="traitTint">0 %</output>
+          </div>
+        </details>
       </fieldset>
       <div class="trait-colors-actions">
         <button id="traitColorsReset" type="reset" class="subtle" disabled>Výchozí</button>
         <button id="traitColorsApply" type="submit" class="primary" disabled>Použít</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="traitTransformDialog" class="settings-dialog" aria-labelledby="traitTransformTitle">
+    <header class="trait-preview-heading">
+      <div><h2 id="traitTransformTitle">Transformace</h2><p id="traitTransformName"></p></div>
+      <button id="traitTransformClose" type="button" class="subtle icon-button" data-action="close-trait-transform" aria-label="Zavřít transformaci"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <form id="traitTransformForm">
+      <div id="traitTransformStage" tabindex="0" role="group" aria-label="Náhled transformace" aria-describedby="traitTransformHelp">
+        <canvas id="traitTransformCanvas" width="512" height="512" aria-hidden="true"></canvas>
+        <div id="traitTransformGuides" aria-hidden="true" hidden><i></i><i></i></div>
+        <div id="traitTransformOutline" aria-hidden="true" hidden>
+          <span data-corner="nw"></span><span data-corner="ne"></span><span data-corner="sw"></span><span data-corner="se"></span>
+        </div>
+      </div>
+      <div class="trait-transform-tools">
+        <p id="traitTransformHelp">Tahem posuneš trait. Tahem za roh změníš velikost.<span class="sr-only"> Na klávesnici použij šipky nebo klávesy + a −.</span></p>
+        <p id="traitTransformStatus" role="status" hidden></p>
+        <fieldset id="traitTransformControls" aria-label="Volby transformace" disabled>
+          <label><input id="traitTransformSnap" type="checkbox" checked> Magnetické vodicí čáry</label>
+          <label for="traitTransformAxis">Osa posunu</label>
+          <select id="traitTransformAxis">
+            <option value="both">Volně (X a Y)</option>
+            <option value="x">Vodorovně (X)</option>
+            <option value="y">Svisle (Y)</option>
+          </select>
+        </fieldset>
+        <div class="trait-colors-actions">
+          <button id="traitTransformReset" type="button" class="subtle" disabled>Výchozí</button>
+          <button id="traitTransformApply" type="submit" class="primary" disabled>Použít</button>
+        </div>
       </div>
     </form>
   </dialog>
@@ -380,8 +435,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.185" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.185</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.186" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.186</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -856,6 +911,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.186-barvy-a-transformace" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.186 – Barvy a transformace</strong><small>Kontrast, tónová křivka, vyvážení barev a transformace traitů s vodítky.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.185-upravy-traitu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.185 – Úpravy traitů</strong><small>Duplikování, Merge Down a úpravy jasu, sytosti a odstínu s náhledem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.184-zare-ikon" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.184 – Záře ikon</strong><small>Intenzita, rozptyl a vlastní barva světla kolem ikon s živým náhledem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.183-podklad-a-znacky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.183 – Podklad názvů a značky</strong><small>Reliéf názvů, sjednocené značky, vlastní barva obsahu aktivních tlačítek a nápověda k nastavení.</small></span><span class="version-tag">Uloženo</span></a>
