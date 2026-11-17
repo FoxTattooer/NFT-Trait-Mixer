@@ -71,6 +71,50 @@
     const assignments = p.organizer?.[categoryId]?.assignments || {};
     return (category(p, categoryId)?.traits || []).filter(t => (assignments[t.id] || null) === (assignments[id] || null));
   }
+  function traitBelow(p, cat, id) {
+    const parent = p.organizer?.[cat.id]?.assignments[id] || null;
+    const rows = layerChildren(p, cat)(parent);
+    const index = rows.findIndex(row => row.item.id === id);
+    const next = index < 0 ? null : rows[index + 1];
+    return next?.kind === 'traits' ? next.item : null;
+  }
+  function duplicateTrait(p, cat, trait) {
+    const organizer = p.organizer?.[cat.id], parent = organizer?.assignments[trait.id] || null;
+    const { psdSource, layerOrderSource, ...fields } = trait;
+    const base = trait.name.slice(0, 185).trimEnd();
+    const names = new Set(traitSiblings(p, cat.id, trait.id).map(item => item.name));
+    let name = `${base} – kopie`;
+    for (let number = 2; names.has(name); number++) name = `${base} – kopie ${number}`;
+    const copy = { ...fields, ...cloneTags(trait), id: uid(), name };
+    const row = layerChildren(p, cat)(parent).find(entry => entry.item === trait);
+    const origin = /^(.*-)[0-9]+$/.exec(layerOrderSource || psdSource || '');
+    if (origin && Number.isFinite(row?.order)) copy.layerOrderSource = origin[1] + row.order;
+    cat.traits.splice(cat.traits.indexOf(trait), 0, copy);
+    if (parent) organizer.assignments[copy.id] = parent;
+    return copy;
+  }
+  function mergeTraitsDown(p, cat, upper, lower, data) {
+    if (traitBelow(p, cat, upper.id) !== lower) return false;
+    lower.data = data;
+    if (!upper.hidden) delete lower.hidden;
+    const replaceId = id => id === upper.id ? lower.id : id;
+    const replaceIds = ids => [...new Set(ids.map(replaceId))];
+    for (const view of [p, ...p.snapshots]) {
+      const ids = selectedIds(view, cat.id);
+      if (ids.includes(upper.id)) setSelectedIds(view, cat.id, replaceIds(ids));
+    }
+    for (const rule of p.rules) {
+      if (rule.source === upper.id) rule.source = lower.id;
+      if (rule.targetTrait === upper.id) rule.targetTrait = lower.id;
+    }
+    for (const card of p.lookbookCards) {
+      for (const entry of [card, ...card.variants]) {
+        if (entry.layers.includes(upper.id)) entry.layers = replaceIds(entry.layers);
+      }
+    }
+    removeTrait(p, cat.id, upper.id);
+    return true;
+  }
   function reorderTrait(p, categoryId, id, targetId, after = false) {
     const c = category(p, categoryId);
     if (!c || id === targetId) return false;
@@ -310,7 +354,8 @@
     ...(['keep', 'todo', 'skip'].includes(item.decision) ? { decision: item.decision } : {}),
     ...(isFlagColor(item.flag) ? { flag: item.flag } : {}),
   });
-  const psdOrigin = record => typeof record.psdSource === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(record.psdSource) ? { psdSource: record.psdSource } : {};
+  const validLayerOrigin = value => typeof value === 'string' && /^[a-f0-9]{64}:(?:(?:structure|layers):)?(?:psd|procreate)-[0-9]+$/.test(value);
+  const psdOrigin = record => validLayerOrigin(record.psdSource) ? { psdSource: record.psdSource } : {};
   function normalize(raw, { allowStoredAssets = false } = {}) {
     const fail = message => { throw new Error(message); };
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.cats) || !raw.selected || typeof raw.selected !== 'object' || Array.isArray(raw.selected) || !Array.isArray(raw.rules)) fail('Soubor není platný projekt Trait Workshop.');
@@ -337,7 +382,8 @@
         if (!t || !validImage(t.data)) fail('Projekt obsahuje neplatný PNG obrázek.');
         const note = normalizeTraitNote(t.note);
         const weight = rarityWeight(t);
-        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t), ...(note ? { note } : {}),
+        return { id: unique(t.id), name: name(t.name, 'Trait'), data: t.data, ...psdOrigin(t),
+          ...(validLayerOrigin(t.layerOrderSource) ? { layerOrderSource: t.layerOrderSource } : {}), ...(note ? { note } : {}),
           ...(t.hidden === true ? { hidden: true } : {}), ...layerMarks(t), ...lookbookFields(t), ...layerTagFields(t),
           ...(weight !== DEFAULT_RARITY_WEIGHT ? { rarityWeight: weight } : {}) };
       }) };
@@ -563,7 +609,7 @@
     const siblings = new Map();
     const add = (parent, kind, item) => {
       if (!siblings.has(parent)) siblings.set(parent, { folders: [], traits: [] });
-      const origin = /^([a-f0-9]{64}):(?:psd|procreate)-(\d+)$/.exec(item.psdSource || '');
+      const origin = /^([a-f0-9]{64}):(?:psd|procreate)-(\d+)$/.exec(item.layerOrderSource || item.psdSource || '');
       siblings.get(parent)[kind].push({ item, kind, source: origin?.[1], order: Number(origin?.[2]) });
     };
     folders.forEach(folder => add(folder.parentId || null, 'folders', folder));
@@ -588,7 +634,10 @@
         // PSD positions recover interleaving when both siblings come from one file.
         const traitFirst = trait && (!folder || (trait.source && (!folder.source ||
           (trait.source === folder.source && slots[t] < folder.order))));
-        rows.push(traitFirst ? group.traits[t++] : group.folders[f++]);
+        if (traitFirst) {
+          rows.push({ ...trait, order: slots[t] });
+          t++;
+        } else rows.push(group.folders[f++]);
       }
       return rows;
     }
@@ -597,7 +646,7 @@
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, LOOKBOOK_TAG_GROUP_TITLES, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
     layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     LAYER_STATUS_LABELS, LAYER_STATUS_ICONS, layerStatus, layerStatusSource,
-    moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
+    moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, traitBelow, duplicateTrait, mergeTraitsDown, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);

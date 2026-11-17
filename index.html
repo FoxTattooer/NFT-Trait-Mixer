@@ -15,17 +15,17 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07183">
+  <link rel="stylesheet" href="compact.css?build=07185">
   <link rel="stylesheet" href="schemes.css?build=07184">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
   <link rel="stylesheet" href="trait-comparison.css?build=07158">
   <link rel="stylesheet" href="lookbook.css?build=07182">
-  <script src="project.js?build=07179" defer></script>
+  <script src="project.js?build=07185" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07179" defer></script>
-  <script src="diagnostics.js?build=07184" defer></script>
+  <script src="diagnostics.js?build=07185" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,7 +34,7 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
-  <script src="app.js?build=07184" defer></script>
+  <script src="app.js?build=07185" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07182" defer></script>
@@ -138,8 +138,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.184" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.184</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.185" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.185</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -347,6 +347,27 @@
       <p id="traitPreviewStatus" role="status"></p>
     </div>
   </dialog>
+  <dialog id="traitColorsDialog" class="settings-dialog" aria-labelledby="traitColorsTitle">
+    <header class="trait-preview-heading">
+      <div><h2 id="traitColorsTitle">Brightness, Saturation &amp; Hue</h2><p id="traitColorsName"></p></div>
+      <button id="traitColorsClose" type="button" class="subtle icon-button" data-action="close-trait-colors" aria-label="Zavřít úpravu barev"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <div class="trait-preview-stage trait-colors-stage">
+      <canvas id="traitColorsPreview" role="img" aria-label="Náhled úpravy barev" width="1" height="1" hidden></canvas>
+      <p id="traitColorsStatus" role="status"></p>
+    </div>
+    <form id="traitColorsForm">
+      <fieldset id="traitColorsControls" class="appearance-sliders trait-colors-controls" disabled>
+        <label for="traitBrightness">Brightness</label><input id="traitBrightness" name="brightness" type="range" min="-100" max="100" value="0"><output id="traitBrightnessValue" for="traitBrightness">0 %</output>
+        <label for="traitSaturation">Saturation</label><input id="traitSaturation" name="saturation" type="range" min="-100" max="100" value="0"><output id="traitSaturationValue" for="traitSaturation">0 %</output>
+        <label for="traitHue">Hue</label><input id="traitHue" name="hue" type="range" min="-180" max="180" value="0"><output id="traitHueValue" for="traitHue">0°</output>
+      </fieldset>
+      <div class="trait-colors-actions">
+        <button id="traitColorsReset" type="reset" class="subtle" disabled>Výchozí</button>
+        <button id="traitColorsApply" type="submit" class="primary" disabled>Použít</button>
+      </div>
+    </form>
+  </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <dialog id="compareActionDialog" aria-labelledby="compareActionTitle">
     <header class="compare-action-header">
@@ -359,8 +380,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.184" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.184</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.185" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.185</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -835,6 +856,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.185-upravy-traitu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.185 – Úpravy traitů</strong><small>Duplikování, Merge Down a úpravy jasu, sytosti a odstínu s náhledem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.184-zare-ikon" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.184 – Záře ikon</strong><small>Intenzita, rozptyl a vlastní barva světla kolem ikon s živým náhledem.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.183-podklad-a-znacky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.183 – Podklad názvů a značky</strong><small>Reliéf názvů, sjednocené značky, vlastní barva obsahu aktivních tlačítek a nápověda k nastavení.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.182-tlacitka-a-lookbook" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.182 – Ovládání, hledání a Lookbook</strong><small>Vlastní vzhled tlačítek a polí, plynulejší přechody, hledání kategorií a otevřené štítky v Lookbooku.</small></span><span class="version-tag">Uloženo</span></a>

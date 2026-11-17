@@ -16,6 +16,37 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('duplicates stay above the source in imported display order and retain an independent identity', () => {
+  const p = project(), cat = p.cats[0], trait = cat.traits[0];
+  const source = 'a'.repeat(64);
+  trait.psdSource = source + ':psd-1';
+  trait.lookbookTags = ['Skin'];
+  p.organizer.a = { assignments: {}, folders: [{ id:'folder', name:'Složka', parentId:null, psdSource:source + ':psd-2' }] };
+  const copy = M.duplicateTrait(p, cat, trait);
+  assert.notEqual(copy.id, trait.id);
+  assert.equal(copy.psdSource, undefined);
+  assert.equal(copy.data, trait.data);
+  assert.notEqual(copy.lookbookTags, trait.lookbookTags);
+  const restored = M.normalize(p);
+  assert.deepEqual(M.layerChildren(restored, restored.cats[0])(null).map(row => row.item.id), [copy.id, trait.id, 'folder']);
+  assert.equal(M.traitBelow(restored, restored.cats[0], trait.id), null, 'Merge Down stops at a folder');
+});
+test('Merge Down retains the lower layer ID and redirects project references', () => {
+  const p = project(), cat = p.cats[0], upper = cat.traits[0];
+  const lower = { id:'bottom', name:'Podklad', data:png, hidden:true };
+  cat.traits.push(lower);
+  p.selectedExtras.a = [lower.id];
+  p.lookbookCards.push({ layers:[upper.id, lower.id], variants:[{ layers:[upper.id] }] });
+  assert.equal(M.traitBelow(p, cat, upper.id), lower);
+  assert(M.mergeTraitsDown(p, cat, upper, lower, png));
+  assert.deepEqual(cat.traits, [lower]);
+  assert.equal(lower.hidden, undefined);
+  assert.deepEqual(M.selectedIds(p, cat.id), [lower.id]);
+  assert.equal(p.snapshots[0].selected.a, lower.id);
+  assert.equal(p.rules[0].source, lower.id);
+  assert.deepEqual(p.lookbookCards[0].layers, [lower.id]);
+  assert.deepEqual(p.lookbookCards[0].variants[0].layers, [lower.id]);
+});
 test('OUT persists on categories, folders and traits in portable project backups', () => {
   const p = project();
   p.cats[0].out = true;

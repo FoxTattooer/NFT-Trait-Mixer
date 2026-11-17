@@ -1185,6 +1185,11 @@ function openLayerContext(trigger, id) {
   } else if (kind === 'trait') {
     const siblings = M.traitSiblings(state, c.id, id);
     const index = siblings.findIndex(trait => trait.id === id);
+    const lower = M.traitBelow(state, c, id);
+    edits += layerMenuButton('duplicate-trait', 'Duplikovat', id, 'compare', 'edit') +
+      layerMenuButton('edit-trait-colors', 'Brightness, Saturation &amp; Hue', id, 'sliders', 'edit', 'aria-haspopup="dialog"') +
+      layerMenuButton('merge-trait-down', 'Merge Down', id, 'down', 'edit',
+        lower ? 'aria-haspopup="dialog"' : 'disabled title="Pod traitem není další trait ve stejné složce"');
     edits += `<div class="layer-menu-pair" role="group" aria-label="Pořadí traitu">${
       layerMenuButton('reorder-trait-up', 'Výš', id, 'up', 'arrange', `aria-label="Posunout výš" ${index === 0 ? 'disabled' : ''}`)}${
       layerMenuButton('reorder-trait-down', 'Níž', id, 'down', 'arrange', `aria-label="Posunout níž" ${index === siblings.length - 1 ? 'disabled' : ''}`)}</div>` +
@@ -2018,6 +2023,162 @@ function decodeImage(data) {
     image.src = data;
   });
 }
+async function editLayerImage(data, renderImage) {
+  let url, image;
+  try {
+    if (TraitStorage.isAsset(data)) {
+      const blob = await TraitStorage.imageBlob(db, data);
+      url = URL.createObjectURL(blob);
+      try { image = await decodeImage(url); }
+      catch { image = await decodeImage(await readFile(blob)); }
+    } else image = await decodeImage(data);
+    return await renderImage(image);
+  } finally {
+    if (image) image.src = '';
+    if (url) URL.revokeObjectURL(url);
+  }
+}
+async function editedLayerPng(canvas) {
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Upravené PNG se nepodařilo vytvořit.');
+  return readFile(blob);
+}
+async function mergeTraitDown({ cat, trait }) {
+  const lower = M.traitBelow(state, cat, trait.id);
+  if (!lower || !await ask({
+    title: 'Merge Down',
+    description: `„${trait.name}“ se sloučí do traitu „${lower.name}“. Výsledný trait zachová název spodní vrstvy.`,
+    confirm: true, submit: 'Sloučit',
+  })) return;
+  if (busy || M.category(state, cat.id) !== cat || M.locate(state, trait.id)?.trait !== trait || M.traitBelow(state, cat, trait.id) !== lower) return;
+  busy = true;
+  const canvas = document.createElement('canvas');
+  try {
+    const data = await editLayerImage(lower.data, bottom => editLayerImage(trait.data, async top => {
+      canvas.width = Math.max(bottom.naturalWidth, top.naturalWidth);
+      canvas.height = Math.max(bottom.naturalHeight, top.naturalHeight);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bottom, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(top, 0, 0, canvas.width, canvas.height);
+      return editedLayerPng(canvas);
+    }));
+    busy = false;
+    change(() => M.mergeTraitsDown(state, cat, trait, lower, data), 'Traity sloučeny · změnu můžeš vrátit');
+  } finally { canvas.width = canvas.height = 1; busy = false; }
+}
+
+const traitColorsDialog = $('traitColorsDialog');
+const traitColorsPreview = $('traitColorsPreview');
+const traitColorsStatus = $('traitColorsStatus');
+const traitColorsRanges = [...$('traitColorsForm').querySelectorAll('input[type="range"]')];
+let traitColorsDraft;
+
+function traitHueChannel(light, amplitude, hue, offset) {
+  const k = (offset + hue) % 12;
+  return light - amplitude * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+}
+function adjustTraitColors(input, output, { brightness, saturation, hue }) {
+  const exposure = 1 + brightness / 100, saturationScale = 1 + saturation / 100;
+  const hueShift = hue / 60;
+  for (let i = 0; i < input.length; i += 4) {
+    let r = input[i], g = input[i + 1], b = input[i + 2];
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), chroma = max - min;
+    if (chroma && (saturation || hue)) {
+      const light = (max + min) / 2;
+      const angle = max === r ? (g - b) / chroma : max === g ? 2 + (b - r) / chroma : 4 + (r - g) / chroma;
+      const amplitude = Math.min(chroma * saturationScale / 2, light, 255 - light);
+      const h = ((angle + hueShift + 12) % 6) * 2;
+      r = traitHueChannel(light, amplitude, h, 0);
+      g = traitHueChannel(light, amplitude, h, 8);
+      b = traitHueChannel(light, amplitude, h, 4);
+    }
+    output[i] = r * exposure; output[i + 1] = g * exposure; output[i + 2] = b * exposure;
+    output[i + 3] = input[i + 3];
+  }
+}
+function previewTraitColors() {
+  const settings = readAppearanceRanges(traitColorsRanges);
+  for (const control of traitColorsRanges) displayAppearanceRange(control);
+  const draft = traitColorsDraft;
+  $('traitColorsApply').disabled = !draft?.preview || !Object.values(settings).some(Boolean);
+  if (!draft?.preview) return;
+  adjustTraitColors(draft.preview.data, draft.result.data, settings);
+  traitColorsPreview.getContext('2d').putImageData(draft.result, 0, 0);
+}
+async function openTraitColors({ cat, trait }) {
+  if (traitColorsDialog.open) return;
+  const draft = traitColorsDraft = { cat, trait, focus: document.activeElement };
+  $('traitColorsName').textContent = trait.name;
+  traitColorsPreview.hidden = true;
+  traitColorsStatus.hidden = false;
+  traitColorsStatus.textContent = 'Načítám trait…';
+  $('traitColorsControls').disabled = $('traitColorsReset').disabled = true;
+  $('traitColorsForm').reset();
+  previewTraitColors();
+  traitColorsDialog.showModal();
+  try {
+    await editLayerImage(trait.data, image => {
+      if (traitColorsDraft !== draft || !traitColorsDialog.open) return;
+      const scale = Math.min(1, 448 / Math.max(image.naturalWidth, image.naturalHeight));
+      traitColorsPreview.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      traitColorsPreview.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const ctx = traitColorsPreview.getContext('2d');
+      ctx.drawImage(image, 0, 0, traitColorsPreview.width, traitColorsPreview.height);
+      draft.preview = ctx.getImageData(0, 0, traitColorsPreview.width, traitColorsPreview.height);
+      draft.result = ctx.createImageData(traitColorsPreview.width, traitColorsPreview.height);
+      traitColorsPreview.hidden = false;
+      traitColorsStatus.hidden = true;
+      $('traitColorsControls').disabled = $('traitColorsReset').disabled = false;
+      previewTraitColors();
+    });
+  } catch (error) {
+    if (traitColorsDraft === draft) traitColorsStatus.textContent = error.message;
+  }
+}
+for (const control of traitColorsRanges) control.addEventListener('input', previewTraitColors);
+$('traitColorsForm').addEventListener('reset', () => queueMicrotask(previewTraitColors));
+traitColorsDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+traitColorsDialog.addEventListener('close', () => {
+  if (traitColorsDialog.open) return;
+  const origin = traitColorsDraft?.focus;
+  if (origin?.isConnected) origin.focus({ preventScroll: true });
+  else if (traitColorsDraft) {
+    const next = [...document.querySelectorAll(`[data-action="open-layer-menu"][data-id="${traitColorsDraft.trait.id}"]`)]
+      .find(button => !button.closest('[hidden]'));
+    next?.focus({ preventScroll: true });
+  }
+  traitColorsDraft = null;
+  traitColorsPreview.width = traitColorsPreview.height = 1;
+});
+$('traitColorsForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const draft = traitColorsDraft, settings = readAppearanceRanges(traitColorsRanges);
+  if (busy || !draft?.preview || !Object.values(settings).some(Boolean) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
+  busy = true;
+  $('traitColorsControls').disabled = $('traitColorsReset').disabled = $('traitColorsApply').disabled = $('traitColorsClose').disabled = true;
+  const canvas = document.createElement('canvas');
+  try {
+    const data = await editLayerImage(draft.trait.data, async image => {
+      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      adjustTraitColors(pixels.data, pixels.data, settings);
+      ctx.putImageData(pixels, 0, 0);
+      return editedLayerPng(canvas);
+    });
+    busy = false;
+    change(() => { draft.trait.data = data; }, 'Barvy traitu upraveny');
+    traitColorsDialog.close();
+  } catch (error) {
+    traitColorsStatus.textContent = error.message;
+    traitColorsStatus.hidden = false;
+  } finally {
+    canvas.width = canvas.height = 1;
+    busy = false;
+    $('traitColorsControls').disabled = $('traitColorsReset').disabled = $('traitColorsApply').disabled = $('traitColorsClose').disabled = false;
+  }
+});
 let traitPreviewTicket = 0, traitPreviewReturn;
 async function openTraitPreview({ cat, trait }, trigger) {
   const dialog = $('traitPreviewDialog'), canvas = $('traitPreviewImage');
@@ -3097,6 +3258,12 @@ async function handleAction(action, id, element) {
       break;
     case 'open-trait-preview': if (located) await openTraitPreview(located, element); break;
     case 'close-trait-preview': $('traitPreviewDialog').close(); break;
+    case 'duplicate-trait':
+      if (located) change(() => M.duplicateTrait(state, located.cat, located.trait), 'Trait duplikován', true);
+      break;
+    case 'merge-trait-down': if (located) await mergeTraitDown(located); break;
+    case 'edit-trait-colors': if (located) await openTraitColors(located); break;
+    case 'close-trait-colors': traitColorsDialog.close(); break;
     case 'open-final': await openFinalDialog(); break;
     case 'save-category-final': await saveToFinal(id); break;
     case 'reorder-trait-up': case 'reorder-trait-down': {

@@ -46,6 +46,7 @@ w.eval(appScripts+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
+globalThis.readTraitImage=id=>TraitStorage.imageBlob(db, M.locate(state,id).trait.data);
 globalThis.inspectStepNumber=()=>stepNumber;
 globalThis.useTestProject=project=>change(()=>{state=project;active=project.cats[0]?.id;});
 globalThis.runAction=(name,id)=>handleAction(name,id,document.body);
@@ -2458,6 +2459,65 @@ assert.match(exportLink().download,/\.psd$/);
 const exportPsd = agExport.readPsd(await urls.get(exportLink().getAttribute('href')).arrayBuffer(),{useImageData:true});
 assert.equal(exportPsd.children[0].children[0].children[0].children[0].name,'Spaghetti Lime');
 click('[data-final-action="close"]');
+// Raster edits use the normal context menu and preserve non-overlapping pixels and undo.
+const editTop = createCanvas(3, 2), editBottom = createCanvas(3, 2);
+const topPaint = editTop.getContext('2d'), bottomPaint = editBottom.getContext('2d');
+topPaint.fillStyle = '#ff0000'; topPaint.fillRect(0, 0, 1, 1);
+bottomPaint.fillStyle = '#0000ff'; bottomPaint.fillRect(0, 0, 2, 1);
+const paintProject = M.empty();
+paintProject.cats = [{ id:'paint-cat', name:'Úpravy PNG', visible:true, traits:[
+  { id:'paint-top', name:'Vrchní', data:editTop.toDataURL('image/png') },
+  { id:'paint-bottom', name:'Podklad', data:editBottom.toDataURL('image/png') },
+] }];
+paintProject.selected['paint-cat'] = 'paint-top';
+w.useTestProject(paintProject);
+w.eval("showPanel('layers')");
+click('#cats [data-action="select-category"][data-id="paint-cat"]');
+const paintMenu = id => click(`#layer-branch-paint-cat [data-action="open-layer-menu"][data-id="${id}"]`);
+paintMenu('paint-bottom');
+assert(find('#layerContext [data-action="merge-trait-down"]').disabled);
+paintMenu('paint-top');
+click('#layerContext [data-action="duplicate-trait"]');
+assert.deepEqual(w.inspectState().cats[0].traits.map(trait => trait.name), ['Vrchní – kopie','Vrchní','Podklad']);
+click('#undo');
+paintMenu('paint-top');
+click('#layerContext [data-action="edit-trait-colors"]');
+await waitFor(() => !get('traitColorsPreview').hidden);
+get('traitHue').value = '120';
+get('traitHue').dispatchEvent(new w.Event('input', { bubbles:true }));
+const previewPaint = get('traitColorsPreview').getContext('2d');
+assert.deepEqual([...previewPaint.getImageData(0, 0, 1, 1).data], [0,255,0,255]);
+assert.equal(previewPaint.getImageData(2, 1, 1, 1).data[3], 0);
+get('traitBrightness').value = '-50';
+get('traitSaturation').value = '-100';
+get('traitSaturation').dispatchEvent(new w.Event('input', { bubbles:true }));
+assert.deepEqual([...previewPaint.getImageData(0, 0, 1, 1).data], [64,64,64,255]);
+get('traitBrightness').value = get('traitSaturation').value = '0';
+get('traitBrightness').dispatchEvent(new w.Event('input', { bubbles:true }));
+get('traitColorsForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
+await waitFor(() => !get('traitColorsDialog').open);
+const paintedPixels = async (id, x, y) => {
+  const blob = await w.readTraitImage(id);
+  const image = await loadImage(Buffer.from(await blob.arrayBuffer()));
+  assert.equal(image.width, 3);
+  assert.equal(image.height, 2);
+  const ctx = createCanvas(3, 2).getContext('2d');
+  ctx.drawImage(image, 0, 0);
+  return [...ctx.getImageData(x, y, 1, 1).data];
+};
+assert.deepEqual(await paintedPixels('paint-top', 0, 0), [0,255,0,255]);
+click('#undo');
+paintMenu('paint-top');
+click('#layerContext [data-action="merge-trait-down"]');
+assert.match(get('dialogDescription').textContent, /Vrchní.+Podklad/);
+get('dialogForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
+await waitFor(() => !M.locate(w.inspectState(), 'paint-top'));
+assert.equal(w.inspectState().selected['paint-cat'], 'paint-bottom');
+assert.deepEqual(await paintedPixels('paint-bottom', 0, 0), [255,0,0,255]);
+assert.deepEqual(await paintedPixels('paint-bottom', 1, 0), [0,0,255,255]);
+assert.deepEqual(await paintedPixels('paint-bottom', 2, 1), [0,0,0,0]);
+click('#undo');
+assert(M.locate(w.inspectState(), 'paint-top'));
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');
