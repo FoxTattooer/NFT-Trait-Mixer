@@ -759,11 +759,12 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     const image = folder || safeMode ? '' : layerThumbnail(c, item, manage ? '' : 'layer-cropped-thumbnail');
     const tags = M.effectiveLayerTags(state, c, item, folder ? 'folder' : 'trait');
     const source = statusSource(item, folder ? 'folder' : 'trait');
+    const folderMark = folder && M.layerStatus(source);
     return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${source.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${layerBulkPick(item)}
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
-      <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
+      <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}"${folderMark ? ` data-mark="${folderMark}"` : ''} ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
         <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, false, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
@@ -2432,8 +2433,15 @@ const customSchemeKey = 'nft-custom-color-scheme';
 const customSchemeControls = [...$('customSchemeDialog').querySelectorAll('input[type="range"]')];
 let customScheme, schemeBeforePreview;
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
+const customAccentKey = scheme => `nft-custom-control-accent:${scheme}`;
+const customAccentControls = [...$('customAccentDialog').querySelectorAll('input[name]')];
+const customAccentGlow = $('customAccentGlow');
+let customAccent, accentBeforePreview;
+const textAppearanceKey = 'nft-text-appearance';
+const textAppearanceControls = [...$('textSettings').querySelectorAll('input[type="range"]')];
+const appearanceFont = $('appearanceFont');
 const controlAccents = new Set([
-  'auto', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
+  'auto', 'custom', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
   'mint', 'amber', 'bordeaux', 'olive', 'sand', 'neon-red', 'neon-lime', 'neon-uv',
 ]);
 const accentCoverageKey = 'nft-accent-coverage', accentGlowKey = 'nft-accent-glow';
@@ -2448,7 +2456,8 @@ function applyAccentCoverage(value) {
   }
 }
 function applyAccentGlow() {
-  const level = accentGlow ?? (document.body.dataset.controlAccent.startsWith('neon-') ? 50 : 0);
+  const accent = document.body.dataset.controlAccent;
+  const level = accentGlow ?? (accent === 'custom' ? Number(customAccentGlow.defaultValue) : accent.startsWith('neon-') ? 50 : 0);
   $('accentGlow').value = String(level);
   $('accentGlowValue').value = `${level} %`;
   document.body.style.setProperty('--accent-glow-scale', String(level / 50));
@@ -2458,7 +2467,9 @@ function applyControlAccent(value) {
   const accent = controlAccents.has(value) ? value : 'auto';
   document.body.dataset.controlAccent = accent;
   for (const choice of $('accentChoices').querySelectorAll('[data-control-accent]')) {
-    choice.setAttribute('aria-pressed', String(choice.dataset.controlAccent === accent));
+    const selected = choice.dataset.controlAccent === accent;
+    choice.setAttribute('aria-pressed', String(selected));
+    if (selected) $('currentAccentName').textContent = choice.textContent.trim();
   }
   applyAccentGlow();
 }
@@ -2466,6 +2477,25 @@ const colorSchemes = new Set([
   'pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey',
   'bordeaux', 'olive', 'sand', 'custom',
 ]);
+function savedAppearance(key) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? {}; }
+  catch { return {}; }
+}
+function savedAppearanceRanges(controls, saved) {
+  return Object.fromEntries(controls.map(control => {
+    const value = saved[control.name];
+    return [control.name, Number.isInteger(value) && value >= 0 && value <= Number(control.max) ? value : Number(control.defaultValue)];
+  }));
+}
+function readAppearanceRanges(controls) {
+  return Object.fromEntries(controls.map(control => [control.name, Number(control.value)]));
+}
+function fillAppearanceRanges(controls, values) {
+  for (const control of controls) control.value = String(values[control.name]);
+}
+function displayAppearanceRange(control) {
+  $(control.id + 'Value').value = `${control.value}${control.name === 'hue' ? '°' : ' %'}`;
+}
 function applyCustomSchemeTokens(palette) {
   document.body.toggleAttribute('data-custom-monochrome', palette.saturation === 0);
   for (const control of customSchemeControls) {
@@ -2474,36 +2504,64 @@ function applyCustomSchemeTokens(palette) {
   }
 }
 function restoreCustomScheme() {
-  let saved;
-  try { saved = JSON.parse(localStorage.getItem(customSchemeKey)); } catch { /* use the default */ }
-  customScheme = Object.fromEntries(customSchemeControls.map(control => {
-    const value = saved?.[control.name];
-    return [control.name, Number.isInteger(value) && value >= 0 && value <= Number(control.max) ? value : Number(control.defaultValue)];
-  }));
+  customScheme = savedAppearanceRanges(customSchemeControls, savedAppearance(customSchemeKey));
   applyCustomSchemeTokens(customScheme);
 }
-function readCustomSchemeSliders() {
-  return Object.fromEntries(customSchemeControls.map(control => [control.name, Number(control.value)]));
-}
 function previewCustomScheme() {
-  const palette = readCustomSchemeSliders();
-  applyCustomSchemeTokens(palette);
-  for (const control of customSchemeControls) {
-    $(control.id + 'Value').value = `${palette[control.name]}${control.name === 'hue' ? '°' : ' %'}`;
-  }
+  applyCustomSchemeTokens(readAppearanceRanges(customSchemeControls));
+  for (const control of customSchemeControls) displayAppearanceRange(control);
 }
 function openCustomScheme() {
   const dialog = $('customSchemeDialog');
   if (dialog.open) return;
   schemeBeforePreview = document.body.dataset.colorScheme;
-  for (const control of customSchemeControls) control.value = String(customScheme[control.name]);
+  fillAppearanceRanges(customSchemeControls, customScheme);
   applyColorScheme('custom');
   previewCustomScheme();
   dialog.showModal();
 }
+function applyCustomAccentTokens({ hue, saturation, brightness }) {
+  document.body.style.setProperty('--custom-control-accent', `hsl(${hue} ${saturation}% ${brightness}%)`);
+}
+function previewCustomAccent() {
+  applyCustomAccentTokens(readAppearanceRanges(customAccentControls));
+  for (const control of [...customAccentControls, customAccentGlow]) displayAppearanceRange(control);
+  accentGlow = Number(customAccentGlow.value);
+  applyAccentGlow();
+}
+function openCustomAccent() {
+  const dialog = $('customAccentDialog');
+  if (dialog.open) return;
+  accentBeforePreview = { accent: document.body.dataset.controlAccent, glow: accentGlow };
+  fillAppearanceRanges(customAccentControls, customAccent);
+  customAccentGlow.value = String(accentGlow ?? Number(customAccentGlow.defaultValue));
+  previewCustomAccent();
+  applyControlAccent('custom');
+  dialog.showModal();
+}
+function previewTextAppearance() {
+  document.body.dataset.appearanceFont = appearanceFont.value;
+  $('currentFontName').textContent = appearanceFont.selectedOptions[0]?.textContent.trim() || '';
+  for (const control of textAppearanceControls) {
+    document.body.style.setProperty(`--appearance-text-${control.name}`, `${control.value}%`);
+    displayAppearanceRange(control);
+  }
+}
+function restoreTextAppearance() {
+  const saved = savedAppearance(textAppearanceKey);
+  appearanceFont.value = [...appearanceFont.options].some(option => option.value === saved.font) ? saved.font : 'default';
+  fillAppearanceRanges(textAppearanceControls, savedAppearanceRanges(textAppearanceControls, saved));
+  previewTextAppearance();
+}
+function saveTextAppearance() {
+  const settings = { font: appearanceFont.value, ...readAppearanceRanges(textAppearanceControls) };
+  saveAppearancePreference(textAppearanceKey, JSON.stringify(settings), $('textAppearanceStatus'));
+}
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
+  customAccent = savedAppearanceRanges(customAccentControls, savedAppearance(customAccentKey(scheme)));
+  applyCustomAccentTokens(customAccent);
   let accent, coverage;
   accentGlow = null;
   try {
@@ -2546,7 +2604,7 @@ function chooseColorScheme(scheme) {
 function chooseControlAccent(accent) {
   if (!controlAccents.has(accent)) return;
   applyControlAccent(accent);
-  saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent);
+  saveAppearancePreference(controlAccentKey(document.body.dataset.colorScheme), accent, $('accentAppearanceStatus'));
 }
 const portraitWorkspace = window.matchMedia('(max-width:900px) and (orientation:portrait)');
 const landscapeWorkspace = window.matchMedia('(orientation:landscape) and (max-height:650px) and (max-width:1200px)');
@@ -2650,7 +2708,7 @@ $('settingsDialog').addEventListener('close', () => document.querySelector('.hea
 for (const control of customSchemeControls) control.addEventListener('input', previewCustomScheme);
 $('customSchemeForm').addEventListener('submit', event => {
   event.preventDefault();
-  customScheme = readCustomSchemeSliders();
+  customScheme = readAppearanceRanges(customSchemeControls);
   previewCustomScheme();
   schemeBeforePreview = undefined;
   if (saveAppearancePreference(customSchemeKey, JSON.stringify(customScheme))) saveAppearancePreference(colorSchemeKey, 'custom');
@@ -2664,6 +2722,32 @@ $('customSchemeDialog').addEventListener('close', () => {
   }
   $('settingsDialog').querySelector('[data-scheme="custom"]').focus({ preventScroll: true });
 });
+for (const control of [...customAccentControls, customAccentGlow]) control.addEventListener('input', previewCustomAccent);
+$('customAccentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  customAccent = readAppearanceRanges(customAccentControls);
+  previewCustomAccent();
+  accentBeforePreview = undefined;
+  const scheme = document.body.dataset.colorScheme, status = $('accentAppearanceStatus');
+  if (saveAppearancePreference(customAccentKey(scheme), JSON.stringify(customAccent), status) &&
+      saveAppearancePreference(schemeAccentPreference(accentGlowKey), String(accentGlow), status)) {
+    saveAppearancePreference(controlAccentKey(scheme), 'custom', status);
+  }
+  $('customAccentDialog').close();
+});
+$('customAccentDialog').addEventListener('close', () => {
+  if (accentBeforePreview) {
+    applyCustomAccentTokens(customAccent);
+    accentGlow = accentBeforePreview.glow;
+    applyControlAccent(accentBeforePreview.accent);
+    accentBeforePreview = undefined;
+  }
+  $('accentChoices').querySelector('[data-control-accent="custom"]').focus({ preventScroll: true });
+});
+for (const control of [appearanceFont, ...textAppearanceControls]) {
+  control.addEventListener('input', previewTextAppearance);
+  control.addEventListener('change', () => { previewTextAppearance(); saveTextAppearance(); });
+}
 
 let openShowroom, diagnosticsFromHistory = false;
 function closeDiagnostics() {
@@ -3136,13 +3220,14 @@ async function handleAction(action, id, element) {
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-settings':
-      $('colorSchemes').open = false;
-      $('extraColorSchemes').open = false;
+      for (const section of $('settingsDialog').querySelectorAll('details')) section.open = false;
       $('settingsDialog').showModal();
       break;
     case 'close-settings': $('settingsDialog').close(); break;
     case 'open-custom-scheme': openCustomScheme(); break;
     case 'close-custom-scheme': $('customSchemeDialog').close(); break;
+    case 'open-custom-accent': openCustomAccent(); break;
+    case 'close-custom-accent': $('customAccentDialog').close(); break;
     case 'custom-scheme-preset':
       if (!$('customSchemeDialog').open) break;
       $('customSchemeSaturation').value = '0';
@@ -3622,6 +3707,7 @@ window.addEventListener('offline', () => {
 async function init() {
   setWorkspaceTabsCollapsed(false);
   restoreColorScheme();
+  restoreTextAppearance();
   try { quickTraitsVisible = localStorage.getItem(quickTraitsPreference) !== 'true'; } catch { /* use the default */ }
   const finishLog = window.TraitDiagnostics?.start('startup');
   try {

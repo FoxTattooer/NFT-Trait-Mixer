@@ -121,19 +121,6 @@ body.compact-workspace[data-color-scheme=custom] {
   --scheme-checker-base:var(--scheme-panel);--scheme-checker-alt:var(--scheme-control);
   color:var(--scheme-text);
 }
-body.compact-workspace[data-color-scheme=custom][data-custom-monochrome] {
-  --control-accent:var(--scheme-accent);
-  --control-accent-glow:var(--scheme-glow);
-  --layer-out-color:var(--scheme-muted);
-}
-body[data-color-scheme=custom][data-custom-monochrome] #accentChoices {display:none}
-body[data-color-scheme=custom][data-custom-monochrome] .settings-choices {grid-template-columns:minmax(0,1fr)}
-body[data-color-scheme=custom][data-custom-monochrome] :is(.category-status-filters [data-id], .category-mark-icon[data-mark], .category-pick[data-mark]) {
-  --category-mark-color:var(--scheme-muted);
-}
-body[data-color-scheme=custom][data-custom-monochrome] :is(.layer-wip-mark,.layer-trash-mark,.layer-draw-mark,.layer-out-mark) {
-  color:var(--scheme-muted);
-}
 body[data-color-scheme=custom] #lookbookDialog {
   color:var(--scheme-text);
 }
@@ -175,17 +162,19 @@ body[data-color-scheme=custom][data-custom-monochrome] .lookbook-art {background
   flex:1 1 0;min-height:44px;min-width:0;padding:4px;
   background:var(--scheme-control);border-color:var(--scheme-stroke);color:var(--scheme-text);
 }
-.custom-scheme-sliders {
+.appearance-sliders {
   display:grid;grid-template-columns:auto minmax(0,1fr) 48px;align-items:center;gap:4px 10px;
   margin-bottom:12px;padding:0 4px;font-size:14px;
 }
-.custom-scheme-sliders label {margin:0}
-.custom-scheme-sliders input[type=range] {width:100%;min-width:0;min-height:44px;margin:0;accent-color:var(--scheme-accent)}
-.custom-scheme-sliders output {text-align:right;font-variant-numeric:tabular-nums}
+.appearance-sliders label {margin:0}
+.appearance-sliders input[type=range] {width:100%;min-width:0;min-height:44px;margin:0;accent-color:var(--control-accent)}
+.appearance-sliders output {text-align:right;font-variant-numeric:tabular-nums}
 .settings-section {
   border:1px solid var(--scheme-stroke);border-radius:12px;
   background:var(--scheme-bg);
 }
+.settings-section + .settings-section {margin-top:6px}
+.appearance-status {margin:0;padding:4px 8px 8px}
 .settings-section>summary {
   display:grid;grid-template-columns:auto minmax(0,1fr) 18px;align-items:center;gap:9px;
   min-height:46px;padding:8px 11px;cursor:pointer;list-style:none;border-radius:11px;
@@ -450,6 +439,9 @@ body[data-color-scheme=graphite-grey] { --palette-control-accent: #9dc9d9; }
 body.compact-workspace, .accent-picker button {
   --control-accent: var(--palette-control-accent, var(--scheme-accent));
 }
+:is(body.compact-workspace, .accent-picker button)[data-control-accent=custom] {
+  --control-accent:var(--custom-control-accent);
+}
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=me] { --control-accent: var(--accent-me); }
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=me-blue] { --control-accent: var(--accent-me-blue); }
 :is(body.compact-workspace, .accent-picker button)[data-control-accent=me-new] { --control-accent: var(--accent-me-new); }
@@ -480,9 +472,8 @@ body.compact-workspace, .accent-picker button {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 8px;
-  border-top: 1px solid var(--scheme-stroke);
 }
-.accent-picker h3 { grid-column: 1 / -1; margin: 0 0 2px; font-size: 12px; }
+.scheme-picker-extra .accent-picker {padding-top:0}
 .accent-picker button {
   min-width: 0;
   min-height: 44px;
@@ -501,6 +492,18 @@ body.compact-workspace, .accent-picker button {
   border-color: var(--control-accent);
   box-shadow: inset 0 0 0 1px var(--control-accent);
 }
+.accent-picker button.custom-accent-choice {
+  display:grid;grid-column:1 / -1;grid-template-columns:30px minmax(0,1fr) 16px;
+  gap:9px;min-height:48px;padding:6px 10px;text-align:start;font-size:14px;font-weight:650;
+}
+.custom-accent-choice .accent-chip {width:100%;height:12px;border-radius:4px}
+.custom-accent-choice .icon {width:16px;height:16px;color:var(--control-accent)}
+.custom-accent-preview {
+  display:grid;place-items:center;height:42px;margin:6px 0 8px;border:1px solid var(--control-accent);
+  border-radius:8px;background:var(--workspace-accent-wash);color:var(--control-accent);
+  box-shadow:var(--workspace-accent-shadow);
+}
+.custom-accent-preview .icon {width:22px;height:22px}
 .accent-chip { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--control-accent); }
 
 .accent-picker [data-control-accent^="neon-"] .accent-chip {
@@ -510,8 +513,10 @@ body.compact-workspace, .accent-picker button {
 .accent-adjustments {
   display: grid;
   gap: 6px;
-  padding: 10px 8px 0;
+  padding: 8px;
+  border-top:1px solid var(--scheme-stroke);
 }
+.accent-adjustments .helper {margin:0}
 .accent-adjustments h3 { margin: 0; font-size: 12px; }
 .accent-coverage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .accent-coverage button {
@@ -534,9 +539,31 @@ body.compact-workspace, .accent-picker button {
 }
 @media (orientation:landscape) and (min-width:620px) and (max-height:500px) {
   .settings-dialog { width:min(700px,calc(100% - 24px)); }
-  .settings-choices { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start; }
-  .settings-choices > #schemeStatus { grid-column:1 / -1; }
-  .accent-picker { border-top:0;border-inline-start:1px solid var(--scheme-stroke); }
+}
+
+.text-appearance {padding:8px}
+.text-appearance .appearance-sliders {margin:0;padding:0}
+.appearance-font-picker {
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 0;font-size:14px;
+}
+.appearance-font-picker select {width:auto;max-width:62%;min-height:44px}
+.appearance-text-preview {
+  padding:10px;border:1px solid var(--scheme-stroke);border-radius:8px;
+  background:var(--scheme-control);font-size:20px;font-weight:650;
+}
+body.compact-workspace[data-appearance-font=system] {font-family:system-ui,sans-serif}
+body.compact-workspace[data-appearance-font=serif] {font-family:Georgia,serif}
+body.compact-workspace[data-appearance-font=mono] {font-family:ui-monospace,monospace}
+body.compact-workspace {
+  --appearance-text-lift:max(0%,calc((var(--appearance-text-brightness,50%) - 50%) * 2));
+  --appearance-text-dim:max(0%,calc((50% - var(--appearance-text-brightness,50%)) * .7));
+  --appearance-text-color:color-mix(in srgb,color-mix(in srgb,var(--scheme-text),#000 var(--appearance-text-dim)),#fff var(--appearance-text-lift));
+  --appearance-muted-color:color-mix(in srgb,color-mix(in srgb,var(--scheme-muted,#b8b4bf),#000 var(--appearance-text-dim)),#fff calc(var(--appearance-text-lift) * .45));
+  --appearance-letter-shadow:0 1px 2px rgb(0 0 0 / var(--appearance-text-shadow,60%)),
+    0 0 10px color-mix(in srgb,var(--appearance-text-color) var(--appearance-text-glow,0%),transparent);
+}
+body.compact-workspace :is(.appearance-text-preview,.project-name,.settings-heading h2,.lookbook-head h2) {
+  color:var(--appearance-text-color);text-shadow:var(--appearance-letter-shadow);
 }
 
 /* Workspace actions draw their surfaces from the palette and their states from the chosen accent. */
@@ -545,7 +572,8 @@ body.compact-workspace[data-color-scheme] {
   --workspace-accent-icon:var(--control-accent);
   --workspace-accent-wash:color-mix(in srgb,var(--control-accent) 13%,var(--scheme-control));
   --workspace-accent-halo:color-mix(in srgb,var(--control-accent) var(--accent-glow-opacity,0%),transparent);
-  --workspace-accent-shadow:0 0 calc(10px * var(--accent-glow-scale,0)) var(--workspace-accent-halo);
+  --workspace-accent-shadow:0 0 calc(12px * var(--accent-glow-scale,0)) var(--workspace-accent-halo),
+    inset 0 0 calc(3px * var(--accent-glow-scale,0)) var(--workspace-accent-halo);
   --ui-feedback:var(--workspace-accent-border);
   --ui-feedback-text:var(--workspace-accent-icon);
   --ui-feedback-wash:var(--workspace-accent-wash);

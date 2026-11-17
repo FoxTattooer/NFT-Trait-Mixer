@@ -341,6 +341,63 @@ assert.equal(w.document.body.style.getPropertyValue('--custom-brightness'), '0%'
 assert.equal(w.document.body.style.getPropertyValue('--custom-saturation'), '0%');
 assert(w.document.body.hasAttribute('data-custom-monochrome'));
 const accent = name => find(`#accentChoices [data-control-accent="${name}"]`);
+click('#accentSettings > summary');
+assert(get('accentSettings').open);
+assert(!get('extraAccents').open);
+accent('neon-lime').click();
+assert.equal(w.document.body.dataset.controlAccent, 'neon-lime', 'OLED keeps a colored preset accent');
+assert.equal(w.document.body.style.getPropertyValue('--custom-saturation'), '0%');
+accent('custom').click();
+assert(get('customAccentDialog').open);
+assert.equal(w.document.body.dataset.controlAccent, 'custom');
+get('customAccentHue').value = '315';
+get('customAccentHue').dispatchEvent(new w.Event('input', { bubbles:true }));
+assert.equal(w.document.body.style.getPropertyValue('--custom-control-accent'), 'hsl(315 100% 65%)');
+click('[data-action="close-custom-accent"]');
+await waitFor(() => w.document.body.dataset.controlAccent === 'neon-lime');
+assert.equal(w.localStorage.getItem('nft-control-accent:custom'), 'neon-lime');
+assert.equal(get('accentGlow').value, '50');
+accent('custom').click();
+const setAppearanceSlider = (id, value) => {
+  const control = get(id);
+  control.value = String(value);
+  control.dispatchEvent(new w.Event('input', { bubbles:true }));
+  control.dispatchEvent(new w.Event('change', { bubbles:true }));
+};
+for (const [id, value] of [['customAccentHue',295],['customAccentSaturation',90],['customAccentBrightness',72],['customAccentGlow',100]]) {
+  setAppearanceSlider(id, value);
+}
+get('customAccentForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
+assert(!get('customAccentDialog').open);
+assert.equal(w.localStorage.getItem('nft-control-accent:custom'), 'custom');
+w.reloadColorScheme();
+assert.equal(get('currentAccentName').textContent, 'Custom Accent');
+assert.equal(w.document.body.style.getPropertyValue('--custom-control-accent'), 'hsl(295 90% 72%)');
+assert.equal(w.document.body.style.getPropertyValue('--accent-glow-opacity'), '100%');
+assert(w.document.body.hasAttribute('data-custom-monochrome'));
+const appearanceStyles = w.document.createElement('style');
+appearanceStyles.textContent = ['compact.css', 'schemes.css', 'layer-inventory.css']
+  .map(name => fs.readFileSync(__dirname + '/../' + name, 'utf8')).join('\n');
+w.document.head.append(appearanceStyles);
+assert.notEqual(w.getComputedStyle(get('accentChoices')).display, 'none');
+assert.equal(w.getComputedStyle(w.document.body).getPropertyValue('--control-accent'), 'hsl(295 90% 72%)');
+for (const [mark, color] of Object.entries({draw:'#dfb4ff', fin:'#a9f4d5', wip:'#ffcf91', trash:'#ffb6b3', out:'#b8cdf4'})) {
+  assert.equal(w.getComputedStyle(find(`#categoryStatusFilters [data-id="${mark}"] .icon`)).color, color);
+}
+appearanceStyles.remove();
+click('#textSettings > summary');
+get('appearanceFont').value = 'serif';
+get('appearanceFont').dispatchEvent(new w.Event('change', { bubbles:true }));
+for (const [id, value] of [['appearanceTextBrightness',72],['appearanceTextGlow',80],['appearanceTextShadow',0]]) {
+  setAppearanceSlider(id, value);
+}
+assert.deepEqual(JSON.parse(w.localStorage.getItem('nft-text-appearance')), {font:'serif', brightness:72, glow:80, shadow:0});
+w.document.body.style.removeProperty('--appearance-text-glow');
+w.eval('restoreTextAppearance()');
+assert.equal(w.document.body.dataset.appearanceFont, 'serif');
+assert.equal(w.document.body.style.getPropertyValue('--appearance-text-glow'), '80%');
+assert.equal(w.document.body.style.getPropertyValue('--appearance-text-shadow'), '0%');
+click('#extraAccents summary');
 click('[data-scheme="graphite-grey"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto');
 accent('red').click();
@@ -348,7 +405,7 @@ assert.equal(accent('red').getAttribute('aria-pressed'), 'true');
 assert.equal(w.localStorage.getItem('nft-control-accent:graphite-grey'), 'red');
 click('[data-scheme="mono"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto', 'accent is saved per colorway');
-assert.equal(get('accentChoices').querySelectorAll('button').length, 16);
+assert.equal(get('accentChoices').querySelectorAll('button').length, 17);
 for (const color of ['me', 'me-blue', 'me-new', 'amber', 'bordeaux', 'olive', 'sand', 'neon-red', 'neon-lime', 'neon-uv']) {
   accent(color).click();
   assert.equal(accent(color).getAttribute('aria-pressed'), 'true');
@@ -2123,6 +2180,8 @@ click('#layerContext [data-action="toggle-layer-status"][data-mark="fin"]');
 const inheritedFin = id => `#cats [data-drop-id="${id}"] .layer-fin-mark[data-inherited-mark]`;
 assert(find(inheritedFin('bulk-b1')));
 assert(find(inheritedFin('bulk-b2')));
+assert.equal(find('#cats [data-action="toggle-tree-folder"][data-id="bulk-folder"]').dataset.mark, 'fin');
+assert.equal(find('#cats [data-action="toggle-tree-folder"][data-id="bulk-subfolder"]').dataset.mark, 'fin');
 assert.equal(M.locate(w.inspectState(),'bulk-b1').trait.fin,undefined);
 openContext('bulk-b1');
 assert.match(find('#layerContext .layer-menu-current').textContent, /FIN ze složky/);
