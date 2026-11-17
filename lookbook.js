@@ -432,8 +432,8 @@
       <label>Váha losování<input name="weight" type="number" min="0" max="${M.MAX_RARITY_WEIGHT}" step="any" inputmode="decimal" value="${weight}"></label>
     </div><p class="lookbook-help">Základní šanci v kategorii ovlivňuje váha. Výsledný výběr může změnit pravidlo.</p>` : '';
     return `<details class="lookbook-edit"><summary>${trait ? 'Upravit vrstvu' : 'Upravit kartu'}</summary><form>
-      ${trait ? `<label>Název traitu v projektu<input name="traitName" maxlength="120" value="${esc(item.name)}"></label>` : ''}
-      <label>Název karty v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>
+      ${trait ? `<label>Název traitu<input name="traitName" maxlength="120" value="${esc(item.name)}"></label>` :
+        `<label>Název karty v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>`}
       ${rarity}
       <label>Příběh<textarea name="story" rows="3" maxlength="${M.LOOKBOOK_STORY_LIMIT}">${esc(item.story || '')}</textarea></label>
     </form></details>`;
@@ -612,14 +612,19 @@
     const nameField = form.elements.namedItem('traitName');
     const traitName = nameField ? M.normalizeLookbookText(nameField.value, 120) || item.name : item.name;
     const renamed = traitName !== item.name;
-    const name = M.normalizeLookbookText(form.elements.lookbookName.value, M.LOOKBOOK_NAME_LIMIT);
+    const aliasField = form.elements.namedItem('lookbookName');
+    const alias = aliasField ? M.normalizeLookbookText(aliasField.value, M.LOOKBOOK_NAME_LIMIT) : item.lookbookName || '';
     const story = M.normalizeLookbookText(form.elements.story.value, M.LOOKBOOK_STORY_LIMIT);
     const field = form.elements.weight;
     const weight = field && M.validRarityWeight(field.valueAsNumber) ? field.valueAsNumber : M.rarityWeight(item);
-    if (renamed || name !== (item.lookbookName || '') || story !== (item.story || '') || (field && weight !== M.rarityWeight(item))) {
+    if (renamed || alias !== (item.lookbookName || '') || story !== (item.story || '') || (field && weight !== M.rarityWeight(item))) {
       change(() => {
-        if (renamed) item.name = traitName;
-        if (name) item.lookbookName = name; else delete item.lookbookName;
+        if (renamed) {
+          item.name = traitName;
+          delete item.lookbookName;
+        } else if (aliasField) {
+          if (alias) item.lookbookName = alias; else delete item.lookbookName;
+        }
         if (story) item.story = story; else delete item.story;
         if (field) {
           if (weight === M.DEFAULT_RARITY_WEIGHT) delete item.rarityWeight;
@@ -629,7 +634,6 @@
     }
     if (nameField) {
       nameField.value = item.name;
-      form.elements.lookbookName.placeholder = item.name;
       const path = detailArea.querySelector('.lookbook-detail-copy p');
       path.title = `${path.textContent} / ${item.name}`;
     }

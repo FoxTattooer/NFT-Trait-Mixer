@@ -899,6 +899,7 @@ for (const [id, tags] of [
   ['other-1', ['Afro']],
   ['other-2', ['Klobouky', 'Fialové vlasy']],
 ]) M.locate(bookProject, id).trait.lookbookTags = tags;
+M.locate(bookProject,'compare-0').trait.lookbookName = 'Starší název karty';
 w.useTestProject(bookProject);
 assert.equal(get('openLookbook').textContent.trim(), 'Lookbook');
 assert(get('landscapePreviewActions').contains(get('openLookbook')));
@@ -955,11 +956,13 @@ assert(transitions > 65, 'thumbnail preserves detail from the original before th
 assert.equal(pixels[3], 0, 'paper margin remains transparent');
 assert.match(find('.lookbook-chance').textContent, /^25\s*%$/);
 find('.lookbook-edit').open = true;
-changeControl('#lookbookContent [name="lookbookName"]', 'Redline');
+assert(!find('#lookbookTraitEdit [name="lookbookName"]'));
+assert.equal(find('[data-lookbook-title]').textContent,'Starší název karty');
+changeControl('#lookbookTraitEdit [name="traitName"]', 'Redline');
 changeControl('#lookbookContent [name="story"]', 'Příběh brýlí');
 changeControl('#lookbookContent [name="rarity"]', '20');
 assert.match(find('.lookbook-chance').textContent, /^6,25\s*%$/);
-assert.equal(M.locate(w.inspectState(), 'compare-0').trait.name, 'Kopie 1');
+assert.equal(M.locate(w.inspectState(), 'compare-0').trait.name, 'Redline');
 assert.equal(find('[data-lookbook-title]').textContent, 'Redline');
 const lookbookSearch = get('lookbookTraitSearch');
 assert.equal(find('#lookbookTraitEdit summary').textContent, 'Upravit vrstvu');
@@ -981,15 +984,15 @@ assert(find('[data-lookbook-trait="compare-0"]'));
 searchBook('');
 changeControl('#lookbookTraitEdit [name="traitName"]','Brýle 1');
 assert.equal(M.locate(w.inspectState(),'compare-0').trait.name,'Brýle 1');
-assert.equal(M.locate(w.inspectState(),'compare-0').trait.lookbookName,'Redline');
+assert.equal(M.locate(w.inspectState(),'compare-0').trait.lookbookName,undefined);
+assert.equal(find('[data-lookbook-title]').textContent,'Brýle 1');
 searchBook('bryle 1');
 assert(find('[data-lookbook-trait="compare-0"]'));
 searchBook('');
-changeControl('#lookbookTraitEdit [name="traitName"]','Kopie 1');
 click('[data-lookbook-view="looks"]');
 assert(get('lookbookLayerFilters').hidden && get('lookbookFilterBar').hidden);
 assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava');
-assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Redline/);
+assert.match(find('[data-lookbook-jump="compare-0"]').textContent, /Brýle 1/);
 click('[data-lookbook-jump="other-1"]');
 assert.equal(find('[data-lookbook-title]').textContent, 'Doplňky 1');
 const addBookTag = label => {
@@ -1142,7 +1145,8 @@ assert.equal(get('appLayout').dataset.mobilePanel, editorPanel);
 assert.equal(JSON.stringify(w.inspectState().selected), editorSelection);
 await w.runAction('save-project');
 const savedBook = M.normalize(JSON.parse(await w.__downloads.at(-1).blob.text()));
-assert.equal(M.locate(savedBook, 'compare-0').trait.lookbookName, 'Redline');
+assert.equal(M.locate(savedBook, 'compare-0').trait.name, 'Brýle 1');
+assert.equal(M.locate(savedBook, 'compare-0').trait.lookbookName, undefined);
 assert.equal(M.locate(savedBook, 'compare-0').trait.rarityWeight, 20);
 assert.equal(savedBook.lookbookCards[0].name, 'Cowboy Hat');
 assert.equal(savedBook.lookbookCards[0].note, 'Doplnit variantu Afro');
