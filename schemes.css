@@ -856,3 +856,73 @@ button:not(:where(.category-pick,.layer-tree-main,.lookbook-card)) > .icon {
     --ui-interaction-halo:calc(var(--ui-control-hover,.38) * 13%);
   }
 }
+
+.control-active-color {
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  min-height:44px;margin:0 4px 6px;font-size:14px;
+}
+.control-appearance-help {
+  margin:5px 0;color:var(--scheme-text);font-size:12px;
+}
+.control-appearance-help summary {cursor:pointer;padding:8px 4px;color:var(--scheme-accent)}
+.control-appearance-help dl {margin:0;padding:4px 8px 8px;line-height:1.45}
+.control-appearance-help dt {margin-top:6px;font-weight:650}
+.control-appearance-help dd {margin:2px 0 7px;color:var(--scheme-muted,#b8b4bf)}
+.control-active-color label {display:flex;align-items:center;gap:7px;margin:0}
+.control-active-color input[type=checkbox] {accent-color:var(--control-accent)}
+.control-active-color input[type=color] {
+  flex:none;width:44px;height:44px;margin:0;padding:4px;
+  border:1px solid var(--scheme-stroke);border-radius:8px;background:var(--scheme-control);
+}
+
+body.compact-workspace[data-custom-active-ink] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog) button:is([aria-pressed=true],[aria-expanded=true],.is-active,:active):not(:disabled,.danger,.category-pick,.layer-tree-main,.lookbook-card,.trait-card,.quick-trait,[data-filter-mode][data-id]),
+body.compact-workspace[data-custom-active-ink] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog) button:is([aria-pressed=true],[aria-expanded=true],.is-active,:active):not(:disabled,.danger,.category-pick,.layer-tree-main,.lookbook-card,.trait-card,.quick-trait,[data-filter-mode][data-id]) > .icon {
+  color:var(--ui-control-active-ink)!important;
+}
+
+.layer-title-surface {
+  --layer-title-lift:var(--ui-control-title-surface,.45);
+  --layer-title-tint:var(--scheme-text);
+  --layer-badge-box:calc(18px + 10px * var(--ui-control-badge-size,.4));
+  --layer-badge-glyph:calc(var(--layer-badge-box) * .64);
+  --layer-badge-filter:contrast(calc(.85 + var(--ui-control-badge-contrast,.55) * .65))
+    saturate(calc(.75 + var(--ui-control-badge-saturation,.6) * 1.4));
+  display:flex;flex:1;align-self:stretch;align-items:center;gap:5px;
+  min-width:0;margin-block:1px;padding-inline:5px;
+  container:layer-title-space / inline-size;
+  border-radius:calc(4px + 9px * var(--ui-control-radius,.45));
+  background:linear-gradient(170deg,
+    color-mix(in srgb,var(--layer-title-tint) calc(var(--layer-title-lift) * 20%),transparent),
+    color-mix(in srgb,var(--layer-title-tint) calc(var(--layer-title-lift) * 6%),transparent) 55%,
+    rgb(0 0 0 / calc(var(--layer-title-lift) * .16)));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--layer-title-tint) calc(var(--layer-title-lift) * 30%),transparent),
+    inset 0 -1px 2px rgb(0 0 0 / calc(var(--layer-title-lift) * .5));
+}
+.category-pick > .layer-title-surface {margin-inline-start:10px}
+:is(.category-card.is-active,.layer-tree-row.is-visible) .layer-title-surface {
+  --layer-title-tint:var(--workspace-accent-icon,var(--scheme-text));
+}
+.layer-title-preview {min-height:38px;padding:4px 6px;margin-block:4px 8px}
+.layer-title-preview-name {flex:1;min-width:0;font-size:16px;font-weight:650;overflow-wrap:anywhere}
+.layer-title-surface .layer-tag-previews {display:inline-flex;gap:3px}
+.layer-title-surface :is(.tag-swatch,.material-swatch) {
+  --tag-icon-radius:5px;
+  width:var(--layer-badge-box);height:var(--layer-badge-box);flex:0 0 var(--layer-badge-box);
+  filter:var(--layer-badge-filter);
+}
+.layer-title-surface :is(.category-mark-icon,.layer-flag,.layer-tag-fallback,.layer-tag-previews > span:not(.tag-swatch,.material-swatch)) {
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  width:var(--layer-badge-box);height:var(--layer-badge-box);flex:0 0 var(--layer-badge-box);
+  gap:0;border:1px solid color-mix(in srgb,currentColor 47%,transparent);border-radius:5px;
+  background:color-mix(in srgb,currentColor 10%,var(--scheme-bg));font-size:9px;
+  filter:var(--layer-badge-filter);
+}
+.layer-title-surface :is(.category-mark-icon,.layer-flag,.tag-swatch,.layer-tag-fallback) > .icon {
+  width:var(--layer-badge-glyph);height:var(--layer-badge-glyph);
+}
+.layer-title-surface .layer-tag-fallback > .icon {width:9px;height:9px}
+.layer-title-surface .layer-tag-fallback + .layer-tag-previews {display:none}
+@container layer-title-space (min-width:185px) {
+  .layer-title-surface .layer-tag-fallback {display:none}
+  .layer-title-surface .layer-tag-fallback + .layer-tag-previews {display:inline-flex}
+}

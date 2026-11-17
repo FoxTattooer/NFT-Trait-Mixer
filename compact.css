@@ -297,7 +297,6 @@ body.compact-workspace #categoryOverview {padding:0 2px 2px}
 #layerTree .layer-category {min-width:0}
 #layerTree .category-pick > .icon:first-child {width:12px;height:12px;flex:none;color:var(--scheme-muted,var(--muted))}
 #layerTree .category-pick[aria-expanded=true] > .icon:first-child {transform:rotate(90deg)}
-#cats .category-copy {margin-inline-start:15px}
 body.compact-workspace #cats .category-name {font-size:18px!important;font-weight:650;line-height:1.2!important;color:var(--appearance-text-color,var(--scheme-text,#f4eff6))}
 body.compact-workspace #cats[data-view=expanded] .category-name {font-size:19px!important}
 body.compact-workspace #cats .category-card.is-hidden .category-name {color:var(--appearance-muted-color,var(--scheme-muted,#b8b4bf));opacity:.76;font-weight:550}
@@ -316,7 +315,6 @@ body.compact-workspace #cats .category-card.is-hidden .category-name {color:var(
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
   white-space:normal;overflow-wrap:anywhere;font-size:16px;line-height:1.18;
 }
-#layerTree .layer-tree-folder .layer-tree-label {margin-inline-start:5px}
 #layerTree .layer-tree-folder:not(.has-visible-traits) .layer-tree-label {color:var(--appearance-muted-color,var(--scheme-muted,#b8b4bf));opacity:.8}
 #layerTree .layer-tree-folder.has-visible-traits .layer-tree-label {color:var(--appearance-text-color,var(--scheme-text,#f4eff6));font-weight:650}
 #layerTree .category-branch .layer-thumb {flex:0 0 54px;height:44px}
@@ -756,12 +754,6 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
 }
 .category-mark-icon {display:inline-flex;flex:none;align-items:center;color:var(--category-mark-color);vertical-align:middle}
 .category-mark-icon > .icon {width:16px;height:16px}
-.layer-tree-main .category-mark-icon {
-  display:inline-grid;place-items:center;width:22px;height:22px;
-  border:1px solid color-mix(in srgb,var(--category-mark-color) 48%,transparent);border-radius:6px;
-  background:color-mix(in srgb,var(--category-mark-color) 10%,transparent);
-}
-.layer-tree-main .category-mark-icon > .icon {width:13px;height:13px}
 .layer-flag { display: inline-flex; color: var(--layer-flag-color); flex: none; vertical-align: middle; }
 [data-flag="red"] { --layer-flag-color: #ff858c; }
 [data-flag="yellow"] { --layer-flag-color: #f0ce88; }

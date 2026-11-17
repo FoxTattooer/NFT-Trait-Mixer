@@ -766,7 +766,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}"${folderMark ? ` data-mark="${folderMark}"` : ''} ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, true, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-title-surface"><span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, true, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}</span>
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -1369,7 +1369,7 @@ function renderCategories(hidden, categories) {
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
         <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView || mark ? 'folder' : 'folder-tree')}
-          <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}
+          <span class="layer-title-surface"><span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}</span>
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, hiddenLabel ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}${hiddenLabel}" aria-pressed="${c.visible !== false}"`)}
@@ -2467,6 +2467,7 @@ const textAppearanceControls = [...$('textSettings').querySelectorAll('input[typ
 const appearanceFont = $('appearanceFont');
 const controlAppearanceKey = 'nft-control-appearance';
 const controlAppearanceRanges = [...$('controlAppearanceSettings').querySelectorAll('input[type="range"]')];
+const controlActiveText = $('controlActiveText'), controlActiveColor = $('controlActiveColor');
 const quietControlMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const controlAccents = new Set([
   'auto', 'custom', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
@@ -2590,13 +2591,19 @@ function previewControlAppearance() {
     document.body.style.setProperty(`--ui-control-${range.name}`, String(Number(range.value) / 100));
     displayAppearanceRange(range);
   }
+  document.body.toggleAttribute('data-custom-active-ink', controlActiveText.checked);
+  document.body.style.setProperty('--ui-control-active-ink', controlActiveColor.value);
+  controlActiveColor.disabled = !controlActiveText.checked;
 }
 function restoreControlAppearance(saved = savedAppearance(controlAppearanceKey)) {
   fillAppearanceRanges(controlAppearanceRanges, savedAppearanceRanges(controlAppearanceRanges, saved));
+  controlActiveText.checked = saved.customActiveInk === true;
+  controlActiveColor.value = typeof saved.activeInk === 'string' && /^#[0-9a-f]{6}$/i.test(saved.activeInk) ? saved.activeInk : controlActiveColor.defaultValue;
   previewControlAppearance();
 }
 function saveControlAppearance() {
-  saveAppearancePreference(controlAppearanceKey, JSON.stringify(readAppearanceRanges(controlAppearanceRanges)), $('controlAppearanceStatus'));
+  const settings = { ...readAppearanceRanges(controlAppearanceRanges), customActiveInk: controlActiveText.checked, activeInk: controlActiveColor.value };
+  saveAppearancePreference(controlAppearanceKey, JSON.stringify(settings), $('controlAppearanceStatus'));
 }
 function pulseControl(event) {
   const intensity = Number($('controlSurfacePulse').value);
@@ -2799,9 +2806,9 @@ for (const control of [appearanceFont, ...textAppearanceControls]) {
   control.addEventListener('input', previewTextAppearance);
   control.addEventListener('change', () => { previewTextAppearance(); saveTextAppearance(); });
 }
-for (const range of controlAppearanceRanges) {
-  range.addEventListener('input', previewControlAppearance);
-  range.addEventListener('change', () => { previewControlAppearance(); saveControlAppearance(); });
+for (const control of [...controlAppearanceRanges, controlActiveText, controlActiveColor]) {
+  control.addEventListener('input', previewControlAppearance);
+  control.addEventListener('change', () => { previewControlAppearance(); saveControlAppearance(); });
 }
 document.addEventListener('click', pulseControl, true);
 const controlHint = document.createElement('div');
