@@ -250,6 +250,9 @@
 #lookbookGroupStatus { margin: 0; color: var(--danger, #ffb1ad); font-size: 12px; }
 #lookbookGroupStatus:not(:empty) { padding: 0 8px 7px; }
 #lookbookTags .tag-group-head { justify-content: flex-start; gap: 4px; }
+#lookbookTags .tag-group-head > p { font-size: 13px; }
+#lookbookTags .tag-group-head > :is(p, .tag-group-rename, .tag-group-more) { opacity: .65; }
+#lookbookTags .tag-group-head > button:focus-visible { opacity: 1; }
 #lookbookTags .tag-group-more { margin-inline-start: auto; }
 .tag-group-head .tag-group-rename {
   flex: 0 0 34px; width: 34px; min-height: 34px; padding: 0; border: 0;
@@ -291,13 +294,12 @@
 .tag-grid button span, .tag-picker-choice span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #44283c; color: #fff3f9; }
 #lookbookTags .tag-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 146px), 1fr));
   gap: 4px;
 }
 #lookbookTags .tag-grid button {
-  --tag-icon-size: clamp(40px, 12vw, 48px);
-  min-height: calc(var(--tag-icon-size) + 4px);
-  gap: 6px; padding: 1px 5px 1px 1px;
+  justify-self: stretch;
+  min-height: 44px;
+  gap: 7px; padding: 3px 6px;
 }
 #lookbookTags .tag-grid button > span:last-child { min-width: 0; }
 .lookbook-assigned-tags button { min-height: 44px; }
@@ -318,7 +320,6 @@
   background: #141317; color: #c9bccb;
 }
 .tag-swatch .icon { width: 11px; height: 11px; }
-#lookbookTags .tag-swatch .icon { width: 19px; height: 19px; }
 .tag-swatch-art {
   background: #030303 url('art/lookbook/tag-icons.webp') var(--tag-x) var(--tag-y) / 600% 500% no-repeat;
 }

@@ -348,6 +348,7 @@ function returnToLayerView() {
   activeFilterOpened = view.activeFilterOpened;
   visibleTraitIds = null;
   categoryStatusFilters = view.statusFilters;
+  saveEditorVisibility();
   filteredLayerIds.clear();
   openLayerCategories = view.categories;
   organizerExpanded = view.expanded;
@@ -381,6 +382,7 @@ const categoryViewModes = [
   { id: 'hidden', label: 'Skryté', icon: 'eye-off' },
   { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
+const editorVisibilityKey = 'nft-editor-layer-visibility';
 let categoryFilter = 'all', categoryStatusFilters = new Map();
 let onlyActiveTraits = false, visibleTraitIds = null, activeFilterOpened = null;
 const filteredLayerIds = new Map();
@@ -388,11 +390,57 @@ let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', la
 let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
 let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
+function readLayerVisibility(key) {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(key)); } catch { /* use default filters */ }
+  const view = categoryViewModes.find(mode => mode.id === saved?.view)?.id || 'all';
+  const marks = new Map();
+  for (const mark of Object.keys(layerStatusLabels)) {
+    const mode = saved?.marks?.[mark];
+    if (mode === 'include' || mode === 'exclude') marks.set(mark, mode);
+  }
+  return { view, marks, onlyActive: saved?.onlyActive === true };
+}
+function saveLayerVisibility(key, view, marks, onlyActive = false) {
+  try { localStorage.setItem(key, JSON.stringify({ view, marks: Object.fromEntries(marks), onlyActive })); }
+  catch { /* filters still work for this session */ }
+}
+function saveEditorVisibility() {
+  saveLayerVisibility(editorVisibilityKey, categoryFilter, categoryStatusFilters, onlyActiveTraits);
+}
+function restoreEditorVisibility() {
+  const { view, marks, onlyActive } = readLayerVisibility(editorVisibilityKey);
+  clearActiveTraitFilter();
+  categoryFilter = view;
+  categoryStatusFilters = marks;
+  filteredLayerIds.clear();
+  if (onlyActive) enableActiveTraitFilter();
+}
 function resetCategoryFilters() {
   categoryFilter = 'all';
   clearActiveTraitFilter();
   categoryStatusFilters.clear();
   filteredLayerIds.clear();
+  saveEditorVisibility();
+}
+function enableActiveTraitFilter() {
+  onlyActiveTraits = true;
+  activeFilterOpened = { categories: [], folders: [] };
+  if (categoryFilter === 'hidden') categoryFilter = 'all';
+  filteredLayerIds.clear();
+  for (const category of state.cats.filter(categoryPassesFilter)) {
+    const ids = matchingLayerIds(category);
+    if (!openLayerCategories.has(category.id)) {
+      openLayerCategories.set(category.id, Math.max(ids.size, LAYER_BATCH));
+      activeFilterOpened.categories.push(category.id);
+    }
+    const folders = organizerExpanded[category.id] ||= new Set();
+    for (const { id } of organizerFolders(category.id).folders) {
+      if (!ids.has(id) || folders.has(id)) continue;
+      folders.add(id);
+      activeFilterOpened.folders.push([category.id, id]);
+    }
+  }
 }
 function clearActiveTraitFilter() {
   onlyActiveTraits = false;
@@ -707,6 +755,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     const picked = selected.has(row.dataset.id);
     const enabled = picked && !hiddenTraits.has(row.dataset.id);
     const shown = enabled && visible;
+    row.parentElement.classList.toggle('is-visible', shown);
     row.setAttribute('aria-pressed', String(picked));
     row.querySelector('.layer-tree-check').hidden = !shown;
     const eye = row.nextElementSibling;
@@ -1274,7 +1323,7 @@ function renderCategories(hidden, categories) {
           <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
-        ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
+        ${button('toggle-category', '', c.id, hiddenLabel ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}${hiddenLabel}" aria-pressed="${c.visible !== false}"`)}
       </div>
       ${compactView ? '' : renderCategoryPreviews(c, traits, hidden.has(c.id))}`;
     if (treeMarkup.get(card) !== markup) {
@@ -2328,6 +2377,9 @@ function toggleTraitInPreview(category, id, keepQuickScroll = false) {
 }
 
 const colorSchemeKey = 'nft-color-scheme';
+const customSchemeKey = 'nft-custom-color-scheme';
+const customSchemeControls = [...$('customSchemeDialog').querySelectorAll('input[type="range"]')];
+let customScheme, schemeBeforePreview;
 const controlAccentKey = scheme => `nft-control-accent:${scheme}`;
 const controlAccents = new Set([
   'auto', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
@@ -2361,8 +2413,42 @@ function applyControlAccent(value) {
 }
 const colorSchemes = new Set([
   'pink', 'blue', 'eden-new', 'amber', 'violet', 'icy', 'deep-water', 'mono', 'graphite-grey',
-  'bordeaux', 'olive', 'sand',
+  'bordeaux', 'olive', 'sand', 'custom',
 ]);
+function applyCustomSchemeTokens(palette) {
+  for (const control of customSchemeControls) {
+    const value = palette[control.name];
+    document.body.style.setProperty(`--custom-${control.name}`, `${value}${control.name === 'hue' ? 'deg' : '%'}`);
+  }
+}
+function restoreCustomScheme() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(customSchemeKey)); } catch { /* use the default */ }
+  customScheme = Object.fromEntries(customSchemeControls.map(control => {
+    const value = saved?.[control.name];
+    return [control.name, Number.isInteger(value) && value >= 0 && value <= Number(control.max) ? value : Number(control.defaultValue)];
+  }));
+  applyCustomSchemeTokens(customScheme);
+}
+function readCustomSchemeSliders() {
+  return Object.fromEntries(customSchemeControls.map(control => [control.name, Number(control.value)]));
+}
+function previewCustomScheme() {
+  const palette = readCustomSchemeSliders();
+  applyCustomSchemeTokens(palette);
+  for (const control of customSchemeControls) {
+    $(control.id + 'Value').value = `${palette[control.name]}${control.name === 'hue' ? '°' : ' %'}`;
+  }
+}
+function openCustomScheme() {
+  const dialog = $('customSchemeDialog');
+  if (dialog.open) return;
+  schemeBeforePreview = document.body.dataset.colorScheme;
+  for (const control of customSchemeControls) control.value = String(customScheme[control.name]);
+  applyColorScheme('custom');
+  previewCustomScheme();
+  dialog.showModal();
+}
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
   document.body.dataset.colorScheme = scheme;
@@ -2383,6 +2469,7 @@ function applyColorScheme(value) {
   }
 }
 function restoreColorScheme() {
+  restoreCustomScheme();
   let saved;
   try { saved = localStorage.getItem(colorSchemeKey); } catch { /* use the default */ }
   applyColorScheme(saved === 'drip' ? 'graphite-grey' : saved);
@@ -2392,10 +2479,11 @@ function restoreColorScheme() {
 }
 function saveAppearancePreference(key, value, status = $('schemeStatus')) {
   status.hidden = true;
-  try { localStorage.setItem(key, value); }
+  try { localStorage.setItem(key, value); return true; }
   catch {
     status.textContent = 'Volba se použila, ale nepodařilo se ji uložit pro příští návštěvu.';
     status.hidden = false;
+    return false;
   }
 }
 function chooseColorScheme(scheme) {
@@ -2507,6 +2595,23 @@ $('accentGlow').addEventListener('input', event => {
 });
 $('accentGlow').addEventListener('change', () => saveAppearancePreference(schemeAccentPreference(accentGlowKey), String(accentGlow), $('accentAppearanceStatus')));
 $('settingsDialog').addEventListener('close', () => document.querySelector('.header-end .header-menu>summary')?.focus());
+for (const control of customSchemeControls) control.addEventListener('input', previewCustomScheme);
+$('customSchemeForm').addEventListener('submit', event => {
+  event.preventDefault();
+  customScheme = readCustomSchemeSliders();
+  previewCustomScheme();
+  schemeBeforePreview = undefined;
+  if (saveAppearancePreference(customSchemeKey, JSON.stringify(customScheme))) saveAppearancePreference(colorSchemeKey, 'custom');
+  $('customSchemeDialog').close();
+});
+$('customSchemeDialog').addEventListener('close', () => {
+  if (schemeBeforePreview) {
+    applyCustomSchemeTokens(customScheme);
+    applyColorScheme(schemeBeforePreview);
+    schemeBeforePreview = undefined;
+  }
+  $('settingsDialog').querySelector('[data-scheme="custom"]').focus({ preventScroll: true });
+});
 
 let openShowroom, diagnosticsFromHistory = false;
 function closeDiagnostics() {
@@ -2613,30 +2718,14 @@ async function handleAction(action, id, element) {
       categoryFilter = 'all';
       cycleLayerMarkFilter(categoryStatusFilters, id);
       layerLimit = LAYER_BATCH;
+      saveEditorVisibility();
       render(true);
       break;
     case 'filter-active-traits':
       if (onlyActiveTraits) clearActiveTraitFilter();
-      else {
-        onlyActiveTraits = true;
-        activeFilterOpened = { categories: [], folders: [] };
-        if (categoryFilter === 'hidden') categoryFilter = 'all';
-        filteredLayerIds.clear();
-        for (const category of state.cats.filter(categoryPassesFilter)) {
-          const ids = matchingLayerIds(category);
-          if (!openLayerCategories.has(category.id)) {
-            openLayerCategories.set(category.id, Math.max(ids.size, LAYER_BATCH));
-            activeFilterOpened.categories.push(category.id);
-          }
-          const folders = organizerExpanded[category.id] ||= new Set();
-          for (const { id } of organizerFolders(category.id).folders) {
-            if (!ids.has(id) || folders.has(id)) continue;
-            folders.add(id);
-            activeFilterOpened.folders.push([category.id, id]);
-          }
-        }
-      }
+      else enableActiveTraitFilter();
       layerLimit = LAYER_BATCH;
+      saveEditorVisibility();
       render(true);
       break;
     case 'cycle-category-view':
@@ -2644,6 +2733,7 @@ async function handleAction(action, id, element) {
       clearActiveTraitFilter();
       categoryStatusFilters.clear();
       layerLimit = LAYER_BATCH;
+      saveEditorVisibility();
       render(true);
       break;
     case 'layer-review-section':
@@ -2998,6 +3088,8 @@ async function handleAction(action, id, element) {
       $('settingsDialog').showModal();
       break;
     case 'close-settings': $('settingsDialog').close(); break;
+    case 'open-custom-scheme': openCustomScheme(); break;
+    case 'close-custom-scheme': $('customSchemeDialog').close(); break;
     case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
     case 'set-control-accent': chooseControlAccent(element?.dataset.controlAccent); break;
     case 'set-accent-coverage':
@@ -3503,6 +3595,7 @@ async function init() {
       }
     }
   } catch (error) { storageFailure(error); }
+  restoreEditorVisibility();
   $('recoveryNotice').hidden = !safeMode;
   ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('install').hidden = true;

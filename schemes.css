@@ -101,6 +101,19 @@ body.compact-workspace,
   --scheme-wash:#3d3126;--scheme-primary:#6b533c;--scheme-primary-end:#362b21;
   --scheme-glow:#ddba8b40;
 }
+:is(body[data-color-scheme=custom],.scheme-grid [data-scheme=custom]) {
+  --scheme-bg:hsl(var(--custom-hue) calc(var(--custom-saturation) * .3) calc(5% + var(--custom-brightness) * .12));
+  --scheme-panel:hsl(var(--custom-hue) calc(var(--custom-saturation) * .34) calc(9% + var(--custom-brightness) * .15));
+  --scheme-control:hsl(var(--custom-hue) calc(var(--custom-saturation) * .38) calc(13% + var(--custom-brightness) * .17));
+  --scheme-stroke:hsl(var(--custom-hue) calc(var(--custom-saturation) * .5) calc(30% + var(--custom-brightness) * .22));
+  --scheme-accent:hsl(var(--custom-hue) var(--custom-saturation) calc(66% + var(--custom-brightness) * .17));
+  --scheme-text:hsl(var(--custom-hue) calc(var(--custom-saturation) * .24) 95%);
+  --scheme-muted:hsl(var(--custom-hue) calc(var(--custom-saturation) * .2) 76%);
+  --scheme-wash:color-mix(in srgb,var(--scheme-accent) 14%,var(--scheme-control));
+  --scheme-primary:hsl(var(--custom-hue) calc(var(--custom-saturation) * .7) calc(21% + var(--custom-brightness) * .15));
+  --scheme-primary-end:var(--scheme-control);
+  --scheme-glow:color-mix(in srgb,var(--scheme-accent) 27%,transparent);
+}
 
 
 .settings-dialog {
@@ -114,6 +127,14 @@ body.compact-workspace,
 .settings-heading {display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 5px;padding-left:4px}
 .settings-heading h2 {margin:0;font-size:19px}
 .settings-heading button {min-width:44px;min-height:44px}
+.scheme-swatch.custom-scheme-preview {height:46px;margin:6px 0 12px}
+.custom-scheme-sliders {
+  display:grid;grid-template-columns:auto minmax(0,1fr) 48px;align-items:center;gap:4px 10px;
+  margin-bottom:12px;padding:0 4px;font-size:14px;
+}
+.custom-scheme-sliders label {margin:0}
+.custom-scheme-sliders input[type=range] {width:100%;min-width:0;min-height:44px;margin:0;accent-color:var(--scheme-accent)}
+.custom-scheme-sliders output {text-align:right;font-variant-numeric:tabular-nums}
 .settings-section {
   border:1px solid var(--scheme-stroke);border-radius:12px;
   background:var(--scheme-bg);
@@ -185,7 +206,7 @@ body[data-color-scheme]:not([data-color-scheme=pink]) .stage .canvas-wrap {
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-row,.category-card,.library-category,.snapshot-tile,.history-entry,.version-history-entry) {
   background:var(--scheme-control);border-color:var(--scheme-stroke);
 }
-body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-folder,.layer-tree-main[aria-pressed=true],.organizer-folder-row.is-selected,.organizer-all.is-selected) {
+body[data-color-scheme]:not([data-color-scheme=pink]) :is(.layer-tree-folder,.layer-tree-row.is-visible .layer-tree-main,.organizer-folder-row.is-selected,.organizer-all.is-selected) {
   background:var(--scheme-wash)!important;color:var(--scheme-text)!important;border-color:var(--scheme-stroke)!important;
 }
 body[data-color-scheme]:not([data-color-scheme=pink]) .layer-tree-row::before {background:var(--scheme-stroke)}
@@ -516,7 +537,7 @@ body.compact-workspace[data-color-scheme] :is(
 body.compact-workspace[data-color-scheme] :is(
   #layersTab[data-back] .layer-tab-arrow,
   :is(.category-pick,.layer-tree-main,.layer-bulk-expand)[aria-expanded=true] > .icon:first-child,
-  .layer-tree-check, :is(.layer-tree-eye,[data-action=toggle-category])[aria-pressed=true] .icon,
+  .layer-tree-check, .layer-tree-eye[aria-pressed=true] .icon, .category-card:not(.is-hidden) [data-action=toggle-category] .icon,
   .quick-traits :is([data-action=quick-prev],[data-action=quick-next]):enabled
 ) {
   color:var(--workspace-accent-icon)!important;
@@ -525,7 +546,7 @@ body.compact-workspace[data-color-scheme] :is(
 body.compact-workspace[data-accent-coverage=less] :is(
   #layersTab[data-back] .layer-tab-arrow,
   :is(.category-pick,.layer-tree-main,.layer-bulk-expand)[aria-expanded=true] > .icon:first-child,
-  .layer-tree-check, :is(.layer-tree-eye,[data-action=toggle-category])[aria-pressed=true] .icon,
+  .layer-tree-check, .layer-tree-eye[aria-pressed=true] .icon, .category-card:not(.is-hidden) [data-action=toggle-category] .icon,
   .quick-traits :is([data-action=quick-prev],[data-action=quick-next]):enabled
 ) {filter:none}
 body.compact-workspace[data-color-scheme] #workspaceTabs[data-compact] button.is-active {
@@ -556,7 +577,7 @@ body.compact-workspace[data-color-scheme] :is(
   .layer-review-counts button
 ):focus-visible {outline:2px solid var(--workspace-accent-border)!important;outline-offset:1px}
 body.compact-workspace[data-accent-coverage=strong] :is(
-  .layer-tree-main[aria-pressed=true], .layer-tree-more[aria-expanded=true]
+  .layer-tree-row.is-visible .layer-tree-main, .layer-tree-more[aria-expanded=true]
 ) {box-shadow:inset 0 0 0 1px var(--workspace-accent-border),var(--workspace-accent-shadow)!important}
 body.compact-workspace[data-accent-coverage=strong] :is(#appLayout,.app-header)
   :is(button,summary):active:not(:disabled,.danger,.danger-icon,[data-flag],[data-action^="delete-"]) {
