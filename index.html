@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07189">
+  <link rel="stylesheet" href="compact.css?build=07190">
   <link rel="stylesheet" href="schemes.css?build=07184">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
@@ -24,8 +24,8 @@
   <link rel="stylesheet" href="lookbook.css?build=07182">
   <script src="project.js?build=07185" defer></script>
   <script src="storage.js?build=07178" defer></script>
-  <script src="final.js?build=07188" defer></script>
-  <script src="diagnostics.js?build=07189" defer></script>
+  <script src="final.js?build=07190" defer></script>
+  <script src="diagnostics.js?build=07190" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -35,11 +35,11 @@
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
   <script src="trait-transform.js?build=07189" defer></script>
-  <script src="app.js?build=07189" defer></script>
+  <script src="app.js?build=07190" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07182" defer></script>
-  <script src="folder-export.js?build=07188" defer></script>
+  <script src="folder-export.js?build=07190" defer></script>
   <script src="final-ui.js?build=07179" defer></script>
   <script src="psd-export.js?build=07188" defer></script>
   <script src="final-builder.js?build=07188" defer></script>
@@ -141,8 +141,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.189" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.189</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.190" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.190</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -413,7 +413,11 @@
   <dialog id="traitTransformDialog" class="settings-dialog" aria-labelledby="traitTransformTitle">
     <header class="trait-preview-heading">
       <div><h2 id="traitTransformTitle">Transformace</h2><p id="traitTransformName"></p></div>
-      <button id="traitTransformClose" type="button" class="subtle icon-button" data-action="close-trait-transform" aria-label="Zavřít transformaci"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+      <div class="trait-transform-history" role="group" aria-label="Kroky transformace">
+        <button id="traitTransformUndo" type="button" class="subtle icon-button" aria-label="Krok zpět v transformaci" disabled><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
+        <button id="traitTransformRedo" type="button" class="subtle icon-button" aria-label="Krok vpřed v transformaci" disabled><svg class="icon" aria-hidden="true"><use href="#i-redo"/></svg></button>
+        <button id="traitTransformClose" type="button" class="subtle icon-button" data-action="close-trait-transform" aria-label="Zavřít transformaci"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
     </header>
     <form id="traitTransformForm">
       <div id="traitTransformStage" tabindex="0" role="group" aria-label="Náhled transformace" aria-describedby="traitTransformHelp">
@@ -435,6 +439,10 @@
               <button type="button" class="subtle" data-transform-mode="freeform" aria-pressed="false">Freeform</button>
               <button type="button" class="subtle" data-transform-mode="distort" aria-pressed="false">Distort</button>
               <button type="button" class="subtle" data-transform-mode="warp" aria-pressed="false">Warp</button>
+            </div>
+            <div id="traitWarpOptions" class="appearance-sliders" hidden>
+              <label for="traitWarpSensitivity">Citlivost</label><input id="traitWarpSensitivity" type="range" min="10" max="100" value="35"><output id="traitWarpSensitivityValue" for="traitWarpSensitivity">35 %</output>
+              <label for="traitWarpSpread">Šířka ohybu</label><input id="traitWarpSpread" type="range" min="0" max="100" value="65"><output id="traitWarpSpreadValue" for="traitWarpSpread">65 %</output>
             </div>
             <label><input id="traitTransformSnap" type="checkbox" checked> Magnetické vodicí čáry</label>
             <div class="trait-transform-options">
@@ -492,8 +500,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.189" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.189</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.190" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.190</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -968,6 +976,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.190-kroky-jemny-warp" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.190 – Kroky, Warp a PNG</strong><small>Šipky zpět a vpřed, dvouprsté klepnutí, jemnější Warp a přímý export výběru do PNG.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.189-distort-warp" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.189 – Distort a Warp</strong><small>Perspektiva tažením rohů, ohýbání sítí 4 × 4 bodů a uložení do PNG.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.188-oprava-exportu-psd" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.188 – FIN PNG a oprava PSD</strong><small>Export všech FIN PNG do jedné složky a oprava přípravy PSD.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.187-gesta-krivky-psd" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.187 – Gesta, křivky a PSD projekty</strong><small>Dvouprstá gesta, volné rohy a zkosení, barevné křivky, otevření a uložení PSD projektu.</small></span><span class="version-tag">Uloženo</span></a>
@@ -1179,6 +1188,7 @@
       <button id="editorLayerBulkCancel" type="button" class="subtle icon-button" data-action="clear-layer-bulk" aria-label="Ukončit výběr" title="Ukončit výběr"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
     <div class="editor-bulk-actions" role="group" aria-label="Hromadné úpravy">
+      <button id="exportLayerBulkPng" type="button" data-action="export-layer-bulk-png" aria-haspopup="dialog" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export PNG</button>
       <button type="button" data-action="open-layer-bulk" data-id="mark" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Označit</button>
       <button type="button" data-action="open-layer-bulk" data-id="tags" aria-haspopup="dialog" aria-label="Přidat štítky" title="Přidat štítky"><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg>Štítky</button>
       <button type="button" data-action="open-layer-bulk" data-id="rename" aria-haspopup="dialog"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Přejmenovat</button>

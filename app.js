@@ -908,6 +908,7 @@ function renderLayerBulk() {
   const caption = `Vybráno ${count}`;
   if (countLabel.textContent !== caption) countLabel.textContent = caption;
   for (const control of bar.querySelectorAll('[data-action="open-layer-bulk"]')) control.disabled = !count;
+  $('exportLayerBulkPng').disabled = busy || !count;
   for (const control of layout.querySelectorAll('[data-action="start-layer-bulk"]')) {
     control.setAttribute('aria-pressed', String(enabled));
     control.disabled = !state.cats.length;
@@ -931,6 +932,20 @@ function layerBulkItems() {
   }
   visit(inventoryTree());
   return { selected, roots, destinations };
+}
+function exportLayerBulkPng() {
+  if (busy || exporting) return;
+  const ids = new Set();
+  function include(node) {
+    if (node.kind === 'layer') ids.add(node.id);
+    for (const child of node.children || []) include(child);
+  }
+  layerBulkItems().roots.forEach(include);
+  const traits = state.cats.flatMap(category => category.traits.filter(trait => ids.has(trait.id)));
+  if (!traits.length) { toast('Ve výběru nejsou žádné PNG vrstvy.'); return; }
+  const title = Array.from(TraitFinal.fileName(state.name)).slice(0,50).join('')+' – Výběr PNG';
+  const plan = TraitFinal.pngFolderPlan(title,traits);
+  openFolderExport(plan,trait => TraitStorage.imageBlob(db,trait.data),{ flat:true, title:'Export vybraných PNG' });
 }
 function renderLayerBulkDialog() {
   const { selected, destinations } = layerBulkItems();
@@ -2309,9 +2324,49 @@ const traitTransformAxis = $('traitTransformAxis');
 const traitSkewControls = [$('traitSkewX'), $('traitSkewY')];
 const traitWarpHandles = $('traitWarpHandles');
 const traitWarpGrid = $('traitWarpGrid');
+const traitTransformUndo = $('traitTransformUndo'), traitTransformRedo = $('traitTransformRedo');
 traitWarpHandles.innerHTML = Array.from({ length:16 },(_,index) =>
   `<button type="button" data-warp-point="${index}" aria-label="Warp, řádek ${Math.floor(index/4)+1}, sloupec ${index%4+1}"></button>`).join('');
 let traitTransformDraft;
+
+function sameTraitPose(first, second) {
+  return ['x','y','width','height','skewX','skewY'].every(key => Math.abs(first[key]-second[key]) < 1e-7) &&
+    ['distort','warp'].every(key => first[key].every((point,index) => point.every((value,axis) => Math.abs(value-second[key][index][axis]) < 1e-7)));
+}
+function syncTraitTransformHistory() {
+  const draft = traitTransformDraft;
+  const blocked = busy || !draft?.pose || draft.pointers.size > 0;
+  const pending = draft?.pose && !sameTraitPose(draft.pose,draft.steps[draft.step]);
+  traitTransformUndo.disabled = blocked || (draft.step === 0 && !pending);
+  traitTransformRedo.disabled = blocked || pending || draft.step >= draft.steps.length-1;
+}
+function recordTraitTransformStep() {
+  const draft = traitTransformDraft;
+  if (!draft?.pose || sameTraitPose(draft.pose,draft.steps[draft.step])) return;
+  draft.steps.splice(draft.step+1);
+  draft.steps.push(draft.pose);
+  if (draft.steps.length > 100) draft.steps.shift();
+  draft.step = draft.steps.length-1;
+  syncTraitTransformHistory();
+}
+function restoreTraitTransformStep(direction) {
+  const draft = traitTransformDraft;
+  if (!draft?.pose || busy || draft.pointers.size) return;
+  recordTraitTransformStep();
+  const index = draft.step+direction;
+  if (index < 0 || index >= draft.steps.length) { previewTraitTransform(); return; }
+  cancelAnimationFrame(draft.previewFrame);
+  draft.previewFrame = null;
+  draft.step = index;
+  draft.pose = draft.steps[index];
+  for (const [axis,control] of traitSkewControls.entries()) {
+    control.value = draft.pose[axis === 0 ? 'skewX' : 'skewY'];
+    $(control.id+'Value').value = `${control.value}°`;
+  }
+  previewTraitTransform();
+}
+traitTransformUndo.addEventListener('click', () => restoreTraitTransformStep(-1));
+traitTransformRedo.addEventListener('click', () => restoreTraitTransformStep(1));
 
 function drawTransformedTrait(canvas, image, bounds, pose) {
   const { width, height } = canvas;
@@ -2342,14 +2397,15 @@ const traitTransformHelp = {
   uniform:'Tahem posuneš trait, rohy mění velikost se zachováním proporcí. Dvěma prsty přibliž plátno pro přesnější úpravy.',
   freeform:'Tahem za roh měníš šířku a výšku nezávisle. Dvěma prsty přibliž plátno pro přesnější úpravy.',
   distort:'Tažením každého rohu zvlášť měníš perspektivu. Tahem uvnitř posuneš celý trait.',
-  warp:'Tažením bodů sítě plynule ohýbáš trait. Dvěma prsty přibliž plátno a posuň náhled k detailu.',
+  warp:'Bodem sítě ohneš trait. Menší citlivost zjemní tah, větší šířka rozloží ohyb do okolí.',
 };
 function renderTraitTransformMode() {
   const { mode } = traitTransformDraft;
   for (const control of $('traitTransformModes').querySelectorAll('button')) {
     control.setAttribute('aria-pressed',String(control.dataset.transformMode === mode));
   }
-  $('traitTransformHelp').textContent = traitTransformHelp[mode];
+  $('traitTransformHelp').textContent = traitTransformHelp[mode]+' Klepnutím dvěma prsty vrátíš krok zpět.';
+  $('traitWarpOptions').hidden = mode !== 'warp';
   traitWarpHandles.hidden = mode !== 'warp';
   traitWarpGrid.toggleAttribute('hidden',mode !== 'warp');
   traitTransformFrame.firstElementChild.toggleAttribute('hidden',mode === 'warp');
@@ -2455,10 +2511,13 @@ function previewTraitTransform({ x: guideX = null, y: guideY = null } = {}) {
   $('traitZoomIn').disabled = view.zoom >= 4;
   $('traitTransformApply').disabled = !traitTransformChanged(traitTransformDraft);
   $('traitResetDeformation').disabled = !window.TraitTransform.hasDeformation(pose);
+  syncTraitTransformHistory();
 }
 async function openTraitTransform({ cat, trait }) {
   if (traitTransformDialog.open) return;
-  const draft = traitTransformDraft = { trait, mode:'uniform', pointers: new Map(), view: clampTransformView(1, 0, 0), focus: document.activeElement };
+  const draft = traitTransformDraft = { trait, mode:'uniform', pointers:new Map(), steps:[], step:0,
+    view:clampTransformView(1,0,0), focus:document.activeElement };
+  syncTraitTransformHistory();
   const current = () => traitTransformDraft === draft && traitTransformDialog.open;
   $('traitTransformName').textContent = trait.name;
   traitTransformStatus.textContent = 'Načítám plátno…';
@@ -2505,6 +2564,7 @@ async function openTraitTransform({ cat, trait }) {
     await paintLayers(above, context.filter(layer => !lowerIds.has(layer.id)), current);
     if (!current()) return;
     Object.assign(draft, { bounds, pose:initialTraitPose(bounds), source, below, above, deformed:document.createElement('canvas') });
+    draft.steps.push(draft.pose);
     traitTransformOutline.hidden = false;
     traitTransformFrame.toggleAttribute('hidden',false);
     traitTransformStatus.hidden = true;
@@ -2583,6 +2643,11 @@ function deformTraitPose(start, point, dx, dy, mode, threshold = 0) {
   const draft = traitTransformDraft;
   const key = mode === 'distort' ? 'distort' : 'warp';
   const points = start[key].map(pair => [...pair]);
+  if (mode === 'warp') {
+    const sensitivity = Number($('traitWarpSensitivity').value)/100;
+    dx *= sensitivity;
+    dy *= sensitivity;
+  }
   const handles = mode === 'distort' ? transformedTraitCorners(start) : window.TraitTransform.controlPoints(start);
   const [hx,hy] = handles[point];
   const horizontal = traitTransformAxis.value !== 'y', vertical = traitTransformAxis.value !== 'x';
@@ -2590,8 +2655,16 @@ function deformTraitPose(start, point, dx, dy, mode, threshold = 0) {
   const snapY = vertical && threshold && nearestTraitGuide([hy+dy],threshold);
   const adjusted = window.TraitTransform.unplaceDelta(start,
     (horizontal ? dx : 0)+(snapX?.shift || 0), (vertical ? dy : 0)+(snapY?.shift || 0));
-  const limit = mode === 'distort' ? 1 : .75;
-  points[point] = points[point].map((value,axis) => Math.min(limit,Math.max(-limit,value+adjusted[axis])));
+  if (mode === 'distort') {
+    points[point] = points[point].map((value,axis) => Math.min(1,Math.max(-1,value+adjusted[axis])));
+  } else {
+    const radius = .25+Number($('traitWarpSpread').value)/100*1.5;
+    for (let index=0; index<points.length; index++) {
+      const distance = (index%4-point%4)**2+(Math.floor(index/4)-Math.floor(point/4))**2;
+      const influence = Math.exp(-distance/(2*radius*radius));
+      points[index] = points[index].map((value,axis) => Math.min(.75,Math.max(-.75,value+adjusted[axis]*influence)));
+    }
+  }
   const candidate = { ...start, [key]:points };
   // Keep the surface facing forward so a dragged point cannot turn the layer inside out.
   if (!window.TraitTransform.valid(candidate)) return;
@@ -2632,7 +2705,13 @@ function updateTraitPinch(draft) {
 }
 traitTransformStage.addEventListener('pointerdown', event => {
   const draft = traitTransformDraft;
-  if (!draft?.pose || busy || event.button !== 0 || draft.pointers.size >= 2) return;
+  if (!draft?.pose || busy || event.button !== 0) return;
+  if (draft.pointers.size && draft.gesture.cancelled) return;
+  if (draft.pointers.size >= 2) {
+    draft.gesture.tapEligible = false;
+    draft.gesture.moved = true;
+    return;
+  }
   const touch = event.pointerType === 'touch';
   if (draft.pointers.size && (!touch || [...draft.pointers.values()].some(pointer => !pointer.touch))) return;
   const frame = traitTransformStage.getBoundingClientRect();
@@ -2644,21 +2723,30 @@ traitTransformStage.addEventListener('pointerdown', event => {
   const pointX = (px - view.x) / view.zoom, pointY = (py - view.y) / view.zoom;
   const inside = window.TraitTransform.contains(draft.pose,pointX,pointY);
   event.preventDefault();
-  draft.pointers.set(event.pointerId, { x: px, y: py, frame, touch });
+  if (!draft.pointers.size) {
+    recordTraitTransformStep();
+    draft.gesture = { pose:draft.pose, view:draft.view, started:event.timeStamp, contacts:0, tapEligible:false, moved:false, cancelled:false };
+  }
+  draft.gesture.contacts++;
+  draft.pointers.set(event.pointerId, { x:px, y:py, frame, touch, startX:event.clientX, startY:event.clientY });
   traitTransformStage.setPointerCapture(event.pointerId);
   if (draft.pointers.size === 2) {
+    draft.gesture.tapEligible = draft.gesture.contacts === 2 && !draft.gesture.cancelled && event.timeStamp-draft.gesture.started <= 180;
+    const changed = draft.drag && !sameTraitPose(draft.pose,draft.drag.start);
     if (draft.drag) draft.pose = draft.drag.start;
     delete draft.drag;
     draft.pinch = { ...traitPinchCoordinates(draft.pointers), view, pose: draft.pose, mode: $('traitTransformPinch').value };
-    previewTraitTransform();
+    if (changed) previewTraitTransform();
   } else if (inside || corner || warpPoint !== undefined) {
     draft.drag = { id:event.pointerId, x:px, y:py, start:draft.pose, corner, warpPoint, mode:draft.mode, stretch:draft.mode === 'freeform' };
   }
+  syncTraitTransformHistory();
 });
 traitTransformStage.addEventListener('pointermove', event => {
   const draft = traitTransformDraft, pointer = draft?.pointers.get(event.pointerId);
-  if (!pointer) return;
+  if (!pointer || draft.gesture.cancelled) return;
   const { frame } = pointer;
+  if (Math.hypot(event.clientX-pointer.startX,event.clientY-pointer.startY) > 8) draft.gesture.moved = true;
   pointer.x = (event.clientX - frame.left) / frame.width;
   pointer.y = (event.clientY - frame.top) / frame.height;
   if (draft.pinch) updateTraitPinch(draft);
@@ -2677,19 +2765,41 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     const draft = traitTransformDraft;
     if (!draft?.pointers.delete(event.pointerId)) return;
     if (type !== 'pointerup') {
-      if (draft.pinch) ({ view: draft.view, pose: draft.pose } = draft.pinch);
-      else if (draft.drag) draft.pose = draft.drag.start;
+      draft.gesture.cancelled = true;
+      draft.view = draft.gesture.view;
+      draft.pose = draft.gesture.pose;
     }
     delete draft.pinch;
     delete draft.drag;
     cancelAnimationFrame(draft.previewFrame);
     draft.previewFrame = null;
+    if (draft.pointers.size && draft.gesture.tapEligible && !draft.gesture.moved) {
+      syncTraitTransformHistory();
+      return;
+    }
+    if (!draft.pointers.size) {
+      const gesture = draft.gesture;
+      delete draft.gesture;
+      if (!gesture.cancelled && gesture.tapEligible && !gesture.moved && event.timeStamp-gesture.started <= 300) {
+        draft.pose = gesture.pose;
+        draft.view = gesture.view;
+        restoreTraitTransformStep(-1);
+        return;
+      }
+      if (!gesture.cancelled) recordTraitTransformStep();
+    }
     previewTraitTransform();
   });
 }
 traitTransformStage.addEventListener('keydown', event => {
   const draft = traitTransformDraft;
-  if (!draft?.pose || draft.pointers.size || busy || event.altKey || event.metaKey || event.ctrlKey) return;
+  if (!draft?.pose || draft.pointers.size || busy || event.altKey) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+    event.preventDefault();
+    restoreTraitTransformStep(event.shiftKey ? 1 : -1);
+    return;
+  }
+  if (event.ctrlKey || event.metaKey) return;
   const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
   const step = (event.shiftKey ? 10 : 1) / $('canvas').width;
   const handle = event.target.closest('[data-warp-point]');
@@ -2697,16 +2807,19 @@ traitTransformStage.addEventListener('keydown', event => {
     event.preventDefault();
     const [x,y] = directions[event.key];
     deformTraitPose(draft.pose,Number(handle.dataset.warpPoint),x*step,y*step,'warp');
+    recordTraitTransformStep();
     return;
   }
   if (Object.hasOwn(directions, event.key)) {
     event.preventDefault();
     const [x, y] = directions[event.key];
     moveTransformPose(draft.pose, x * step, y * step);
+    recordTraitTransformStep();
   } else if (['+', '=', '-', '−'].includes(event.key)) {
     event.preventDefault();
     const scale = ['+', '='].includes(event.key) ? .025 : -.025;
     resizeTransformPose(draft.pose, 'se', draft.pose.width * scale, draft.pose.height * scale);
+    recordTraitTransformStep();
   }
 });
 traitTransformSnap.addEventListener('change', () => { if (traitTransformDraft?.pose) previewTraitTransform(); });
@@ -2718,6 +2831,10 @@ for (const [index, control] of traitSkewControls.entries()) {
     $(control.id + 'Value').value = `${control.value}°`;
     previewTraitTransform();
   });
+  control.addEventListener('change',recordTraitTransformStep);
+}
+for (const id of ['traitWarpSensitivity','traitWarpSpread']) {
+  $(id).addEventListener('input', event => { $(id+'Value').value = `${event.target.value} %`; });
 }
 for (const [id, ratio] of [['traitZoomOut', .8], ['traitZoomReset', 0], ['traitZoomIn', 1.25]]) {
   $(id).addEventListener('click', () => {
@@ -2736,14 +2853,18 @@ $('traitTransformModes').addEventListener('click', event => {
 $('traitResetDeformation').addEventListener('click', () => {
   const draft = traitTransformDraft;
   if (!draft?.pose || busy || draft.pointers.size) return;
+  recordTraitTransformStep();
   const { distort,warp } = initialTraitPose(draft.bounds);
   draft.pose = { ...draft.pose,distort,warp };
+  recordTraitTransformStep();
   previewTraitTransform();
 });
 $('traitTransformReset').addEventListener('click', () => {
   const draft = traitTransformDraft;
   if (!draft?.pose || busy || draft.pointers.size) return;
+  recordTraitTransformStep();
   draft.pose = initialTraitPose(draft.bounds);
+  recordTraitTransformStep();
   for (const control of traitSkewControls) {
     control.value = 0;
     $(control.id + 'Value').value = '0°';
@@ -2769,6 +2890,7 @@ $('traitTransformForm').addEventListener('submit', async event => {
   const draft = traitTransformDraft;
   if (busy || !draft?.pose || draft.pointers.size || !traitTransformChanged(draft) || M.locate(state, draft.trait.id)?.trait !== draft.trait) return;
   busy = true;
+  syncTraitTransformHistory();
   $('traitTransformControls').disabled = $('traitTransformApply').disabled =
     $('traitTransformReset').disabled = $('traitTransformClose').disabled = true;
   traitTransformStatus.textContent = 'Ukládám transformaci…';
@@ -2797,6 +2919,7 @@ $('traitTransformForm').addEventListener('submit', async event => {
     busy = false;
     $('traitTransformControls').disabled = $('traitTransformApply').disabled =
       $('traitTransformReset').disabled = $('traitTransformClose').disabled = false;
+    syncTraitTransformHistory();
   }
 });
 let traitPreviewTicket = 0, traitPreviewReturn;
@@ -3838,6 +3961,7 @@ async function handleAction(action, id, element) {
     }
     case 'expand-layer-bulk': await handleAction(element.dataset.expandAction, id, element); break;
     case 'open-layer-bulk': showLayerBulkDialog(id, element); break;
+    case 'export-layer-bulk-png': exportLayerBulkPng(); break;
     case 'close-layer-bulk': $('layerBulkDialog').close(); break;
     case 'toggle-layer-status': {
       const mark = element.dataset.mark;

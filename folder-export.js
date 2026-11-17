@@ -18,7 +18,7 @@ function renderFolderExportOptions(index = 0) {
   select.value = String(index);
 }
 
-function openFolderExport(plan, readImage, { flat = false } = {}) {
+function openFolderExport(plan, readImage, { flat = false, title = '' } = {}) {
   if (folderExportDialog.open) return;
   const direct = typeof window.showDirectoryPicker === 'function';
   const groups = new Map(), files = [];
@@ -56,7 +56,7 @@ function openFolderExport(plan, readImage, { flat = false } = {}) {
     }
   }
   folderExport = { plan,readImage,options,flat,files:files.length };
-  $('folderExportTitle').textContent = flat ? 'FIN do jedné složky' : files.length ? 'Uložit PNG' : 'Struktura složek';
+  $('folderExportTitle').textContent = title || (flat ? 'FIN do jedné složky' : files.length ? 'Uložit PNG' : 'Struktura složek');
   $('folderExportName').textContent = plan.name + (files.length ? ` · ${files.length} PNG` : '');
   $('folderExportWrite').hidden = !direct;
   $('folderExportWrite').textContent = files.length ? 'Uložit celou složku PNG' : 'Vytvořit složky';
