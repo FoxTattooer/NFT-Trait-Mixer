@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.173 | checkpoint/v0.7.173-on-zelena-verze | Filtr ON a zelené číslo verze na tlačítkách aktualizace v editoru i Lookbooku. |
 | 0.7.172 | checkpoint/v0.7.172-aktivni-traity | Tlačítko AKTIV ve Vrstvách zobrazí traity z aktuálního náhledu. |
 | 0.7.171 | checkpoint/v0.7.171-editor-ke-krajum | Širší náhled, řádky a ovládání v editoru na výšku, stavové ikony kategorií a zvýrazněné šipky rozbalených složek. |
 | 0.7.170 | checkpoint/v0.7.170-hledani-v-editoru | Lupa místo výběru kategorie v editoru na výšku, hledání traitů v projektu a dvě vycentrované řady nástrojů. |

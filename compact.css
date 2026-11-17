@@ -568,7 +568,7 @@ body .app-update-button {
 .app-update-button .icon {width:18px!important;height:18px!important;flex:none;color:#d0d3db!important}
 .app-update-button .refresh-copy {display:grid;gap:2px;min-width:0;text-align:start;line-height:1.05}
 .app-update-button strong {font-size:10px;white-space:nowrap;color:inherit}
-.app-update-button .app-version {font-size:10px;color:#bcc0c9;font-variant-numeric:tabular-nums;white-space:nowrap}
+.app-update-button .app-version {font-size:10px;color:#92e0b4;font-variant-numeric:tabular-nums;white-space:nowrap}
 .app-update-button:disabled {opacity:.85}
 .app-update-button:is(:active,[data-update-state=checking],[data-update-state=applying]) .icon {color:#92e0b4!important}
 @media (prefers-reduced-motion:no-preference) {
