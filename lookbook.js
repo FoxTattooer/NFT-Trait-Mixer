@@ -810,7 +810,6 @@
     change(() => {
       state.lookbookTagGroups = { ...state.lookbookTagGroups, [key]:title };
     }, 'Štítek přesunut do skupiny', true);
-    expandedLookbookTagGroups.add(button.value);
     renderFilters();
     tagMoveDialog.close();
   });
@@ -819,7 +818,7 @@
     const key = tagMove?.key;
     tagMove = null;
     const target = [...filterRoot.querySelectorAll(tagFilterButton)].find(button => button.value === key && !button.hidden);
-    (target || filterRoot.querySelector('summary')).focus({ preventScroll:true });
+    (target || $('lookbookTagFilterTitle')).focus({ preventScroll:true });
   });
 
   async function addTagGroup() {
@@ -831,7 +830,6 @@
     const [name] = M.normalizeLookbookTags([value]);
     if (!name || !dialog.open) return;
     const key = M.lookbookTagKey(name);
-    filterRoot.open = true;
     if (namedLookbookTagGroups().some(([existing]) => existing === key)) {
       status.textContent = 'Skupina s tímto názvem už existuje.';
       return;
@@ -872,7 +870,6 @@
         if (M.lookbookTagKey(old) === key) state.lookbookTagGroups[tag] = name;
       }
     }, 'Skupina štítků přejmenována', true);
-    if (expandedLookbookTagGroups.delete(key)) expandedLookbookTagGroups.add(newKey);
     renderFilters();
     [...filterRoot.querySelectorAll('[data-tag-group-rename]')].find(button => button.value === newKey)?.focus({ preventScroll:true });
   }
@@ -880,12 +877,6 @@
     const rename = event.target.closest('[data-tag-group-rename]');
     if (rename) { void renameTagGroup(rename); return; }
     $('lookbookGroupStatus').textContent = '';
-    const toggle = event.target.closest('[data-tag-group-toggle]');
-    if (toggle) {
-      toggleTagFilter(expandedLookbookTagGroups, toggle.value);
-      renderFilters();
-      return;
-    }
     const control = event.target.closest('[data-tag-filter]');
     if (!control) return;
     saveCard();

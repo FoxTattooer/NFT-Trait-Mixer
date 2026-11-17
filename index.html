@@ -15,17 +15,17 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07181">
-  <link rel="stylesheet" href="schemes.css?build=07181">
+  <link rel="stylesheet" href="compact.css?build=07182">
+  <link rel="stylesheet" href="schemes.css?build=07182">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
   <link rel="stylesheet" href="trait-comparison.css?build=07158">
-  <link rel="stylesheet" href="lookbook.css?build=07178">
+  <link rel="stylesheet" href="lookbook.css?build=07182">
   <script src="project.js?build=07179" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07179" defer></script>
-  <script src="diagnostics.js?build=07181" defer></script>
+  <script src="diagnostics.js?build=07182" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,10 +34,10 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
-  <script src="app.js?build=07181" defer></script>
+  <script src="app.js?build=07182" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
-  <script src="lookbook.js?build=07179" defer></script>
+  <script src="lookbook.js?build=07182" defer></script>
   <script src="folder-export.js?build=07162" defer></script>
   <script src="final-ui.js?build=07179" defer></script>
   <script src="psd-export.js?build=07161" defer></script>
@@ -138,8 +138,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.181" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.181</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.182" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.182</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -174,7 +174,7 @@
       <div id="layerPanelHeading" class="layer-panel-heading" hidden>
         <label id="layerCategoryPicker"><select id="layerCategory" aria-label="Přepnout kategorii"></select></label>
         <div id="layerPanelActions" class="workspace-tools layer-panel-actions">
-          <button id="layerTraitSearchToggle" type="button" class="icon-button subtle" data-action="toggle-layer-trait-search" aria-label="Hledat traity" title="Hledat traity" aria-expanded="false" aria-controls="layerTraitSearchField layerTraitSearchResults"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+          <button id="layerTraitSearchToggle" type="button" class="icon-button subtle" data-action="toggle-layer-trait-search" aria-label="Hledat traity, kategorie a složky" aria-expanded="false" aria-controls="layerTraitSearchField layerTraitSearchResults"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
           <details id="layerPanelOverflow" class="workspace-tool-overflow">
             <summary aria-label="Další akce vrstev" aria-controls="layerPanelUtility"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></summary>
           </details>
@@ -224,7 +224,7 @@
       </div>
       <div id="layerTraitSearchField" class="trait-search-field" role="search" hidden>
         <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-        <input id="layerTraitSearch" type="search" placeholder="Hledat traity" aria-label="Hledat traity podle názvu" aria-controls="layerTraitSearchResults" autocomplete="off">
+        <input id="layerTraitSearch" type="search" placeholder="Hledat traity a složky" aria-label="Hledat traity, kategorie a složky podle názvu" aria-controls="layerTraitSearchResults" autocomplete="off">
       </div>
       <div id="layerTraitSearchResults" class="trait-search-results" hidden></div>
       <section id="layerTree" aria-label="Strom vrstev"><div id="cats" class="category-list"></div></section>
@@ -359,8 +359,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.181" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.181</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.182" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.182</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -393,7 +393,7 @@
       </div>
       <div id="lookbookFilterBar" class="lookbook-filter-bar" hidden>
         <div class="lookbook-tag-filter-shell">
-          <details id="lookbookTags" class="tag-filter"><summary>Filtrovat štítky</summary><p id="lookbookGroupStatus" role="status"></p><div class="tag-filter-options"></div></details>
+          <section id="lookbookTags" class="tag-filter" aria-labelledby="lookbookTagFilterTitle"><h3 id="lookbookTagFilterTitle" tabindex="-1">Filtrovat štítky</h3><p id="lookbookGroupStatus" role="status"></p><div class="tag-filter-options"></div></section>
           <button id="lookbookTagGroupAdd" type="button" class="icon-button subtle" aria-haspopup="dialog" aria-label="Přidat skupinu štítků" title="Přidat skupinu štítků"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
         <div id="lookbookTagIcons" class="lookbook-tag-icons" role="group" aria-label="Rychlý filtr štítků" hidden></div>
@@ -546,6 +546,50 @@
         </div>
 
         <p id="accentAppearanceStatus" class="helper" role="status" hidden></p>
+      </div>
+    </details>
+    <details id="controlAppearanceSettings" class="settings-section">
+      <summary><span>Tlačítka a pole</span><span></span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+      <div class="text-appearance">
+        <div class="control-appearance-preview" role="group" aria-label="Náhled ovládacích prvků">
+          <button type="button" aria-pressed="false" data-action="toggle-control-preview"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Náhled tlačítka</button>
+          <input type="text" aria-label="Náhled textového pole" placeholder="Textové pole">
+        </div>
+        <h3>Povrch</h3>
+        <div class="appearance-sliders">
+          <label for="controlSurfaceContrast">Kontrast</label>
+          <input id="controlSurfaceContrast" name="contrast" type="range" min="0" max="100" value="42">
+          <output id="controlSurfaceContrastValue" for="controlSurfaceContrast">42 %</output>
+          <label for="controlSurfaceDepth">Reliéf</label>
+          <input id="controlSurfaceDepth" name="depth" type="range" min="0" max="100" value="52">
+          <output id="controlSurfaceDepthValue" for="controlSurfaceDepth">52 %</output>
+          <label for="controlSurfaceSheen">Lesk</label>
+          <input id="controlSurfaceSheen" name="sheen" type="range" min="0" max="100" value="36">
+          <output id="controlSurfaceSheenValue" for="controlSurfaceSheen">36 %</output>
+          <label for="controlSurfaceGlow">Záře okrajů</label>
+          <input id="controlSurfaceGlow" name="glow" type="range" min="0" max="100" value="12">
+          <output id="controlSurfaceGlowValue" for="controlSurfaceGlow">12 %</output>
+          <label for="controlSurfaceRadius">Zaoblení</label>
+          <input id="controlSurfaceRadius" name="radius" type="range" min="0" max="100" value="45">
+          <output id="controlSurfaceRadiusValue" for="controlSurfaceRadius">45 %</output>
+          <label for="controlSurfaceIcons">Výraznost ikon</label>
+          <input id="controlSurfaceIcons" name="icons" type="range" min="0" max="100" value="100">
+          <output id="controlSurfaceIconsValue" for="controlSurfaceIcons">100 %</output>
+        </div>
+        <h3>Interakce</h3>
+        <div class="appearance-sliders">
+          <label for="controlSurfaceHover">Při najetí</label>
+          <input id="controlSurfaceHover" name="hover" type="range" min="0" max="100" value="38">
+          <output id="controlSurfaceHoverValue" for="controlSurfaceHover">38 %</output>
+          <label for="controlSurfaceActive">Při stisku a výběru</label>
+          <input id="controlSurfaceActive" name="active" type="range" min="0" max="100" value="50">
+          <output id="controlSurfaceActiveValue" for="controlSurfaceActive">50 %</output>
+          <label for="controlSurfacePulse">Pulz při aktivaci</label>
+          <input id="controlSurfacePulse" name="pulse" type="range" min="0" max="100" value="0">
+          <output id="controlSurfacePulseValue" for="controlSurfacePulse">0 %</output>
+        </div>
+        <button type="button" class="subtle control-appearance-reset" data-action="reset-control-appearance">Obnovit výchozí</button>
+        <p id="controlAppearanceStatus" class="helper appearance-status" role="status" hidden></p>
       </div>
     </details>
     <details id="textSettings" class="settings-section">
@@ -736,6 +780,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.182-tlacitka-a-lookbook" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.182 – Ovládání, hledání a Lookbook</strong><small>Vlastní vzhled tlačítek a polí, plynulejší přechody, hledání kategorií a otevřené štítky v Lookbooku.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.181-akcenty-a-pismo" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.181 – Akcenty, písmo a barvy stavů</strong><small>Custom Accent se svítivostí, nastavení písma a barevné složky a stavy ve všech schématech.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.180-custom-oled" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.180 – Custom a OLED černá</strong><small>Důraz na Custom, hlubší černá, samostatný kontrast ploch a rychlé volby černobílého režimu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.179-oznaceni-slozek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.179 – Označení ve složkách</strong><small>Traity přebírají označení ze složky. Názvy složek jsou dál od ikon a skryté složky mají tlumenější text.</small></span><span class="version-tag">Uloženo</span></a>

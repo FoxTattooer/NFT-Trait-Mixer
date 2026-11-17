@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.182 | checkpoint/v0.7.182-tlacitka-a-lookbook | Vzhled tlačítek a polí, plynulejší ovládání, hledání kategorií a složek a otevřené štítky Lookbooku. |
 | 0.7.181 | checkpoint/v0.7.181-akcenty-a-pismo | Samostatná schémata, Custom Accent se svítivostí, volby písma a barvy stavů i v OLED. |
 | 0.7.180 | checkpoint/v0.7.180-custom-oled | Kompaktnější nabídka schémat, Custom s OLED černou, černobílou volbou a kontrastem ploch. |
 | 0.7.179 | checkpoint/v0.7.179-oznaceni-slozek | Dědění označení podle umístění traitu, větší odsazení názvů složek a tlumenější názvy skrytých složek. |

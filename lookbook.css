@@ -226,7 +226,10 @@
   min-height: 40px; padding: 10px 9px; font-size: 12px; line-height: 20px; cursor: pointer; overflow-wrap: anywhere;
 }
 .lookbook-tag-filter-shell { position: relative; flex: 1 0 100%; min-width: 0; }
-#lookbookTags > summary { min-height: 44px; padding-inline-end: 49px; }
+#lookbookTagFilterTitle {
+  display: flex; align-items: center; min-height: 44px; margin: 0;
+  padding: 5px 49px 5px 9px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere;
+}
 #lookbookTagGroupAdd {
   position: absolute; inset-block-start: 1px; inset-inline-end: 1px;
   width: 44px; min-height: 44px; padding: 0; border: 0; box-shadow: none; background: transparent;
@@ -251,22 +254,14 @@
 #lookbookGroupStatus:not(:empty) { padding: 0 8px 7px; }
 #lookbookTags .tag-group-head { justify-content: flex-start; gap: 4px; }
 #lookbookTags .tag-group-head > p { font-size: 13px; }
-#lookbookTags .tag-group-head > :is(p, .tag-group-rename, .tag-group-more) { opacity: .65; }
+#lookbookTags .tag-group-head > :is(p, .tag-group-rename) { opacity: .65; }
 #lookbookTags .tag-group-head > button:focus-visible { opacity: 1; }
-#lookbookTags .tag-group-more { margin-inline-start: auto; }
 .tag-group-head .tag-group-rename {
   flex: 0 0 34px; width: 34px; min-height: 34px; padding: 0; border: 0;
   background: transparent; color: var(--scheme-muted, #d3c3d1); box-shadow: none;
 }
 .tag-group-rename .icon { width: 14px; height: 14px; }
 .tag-group-head p { margin: 0; overflow-wrap: anywhere; }
-.tag-group-head .tag-group-more {
-  min-height: 30px; padding: 3px 5px; border: 0; border-radius: 5px;
-  background: transparent; color: #d3c3d1; box-shadow: none; font-size: 11px; white-space: nowrap;
-}
-@media (pointer: coarse) {
-  .tag-group-head .tag-group-more { min-height: 44px; }
-}
 #lookbookTags .tag-grid button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 #lookbookTagMoveDialog { width: min(360px, calc(100% - 24px)); padding: 10px; }
 .lookbook-tag-move-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
@@ -294,12 +289,11 @@
 .tag-grid button span, .tag-picker-choice span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #44283c; color: #fff3f9; }
 #lookbookTags .tag-grid {
-  display: flex; flex-wrap: wrap; gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 106px), 1fr)); gap: 5px;
 }
 #lookbookTags .tag-grid button {
-  --tag-icon-size: 32px;
-  flex: 0 1 auto; max-width: 100%; min-height: 44px;
-  gap: 5px; padding: 3px 6px;
+  --tag-icon-size: 30px;
+  position: relative; min-height: 44px; gap: 4px; padding: 3px 4px;
 }
 #lookbookTags .tag-grid button > span:last-child { min-width: 0; }
 .lookbook-assigned-tags button { min-height: 44px; }
@@ -308,6 +302,10 @@
 .tag-grid button[aria-pressed=true]::after {
   content: ""; width: 7px; height: 4px; flex: 0 0 7px; margin-inline-start: auto;
   border: solid #ffd4ec; border-width: 0 0 2px 2px; transform: rotate(-45deg);
+}
+#lookbookTags .tag-grid button[aria-pressed=true]::after {
+  position: absolute; inset-inline-start: 23px; inset-block-end: 7px; margin: 0;
+  filter: drop-shadow(0 0 2px #000);
 }
 .tag-swatch, .material-swatch {
   box-sizing: border-box; display: inline-grid; place-items: center;

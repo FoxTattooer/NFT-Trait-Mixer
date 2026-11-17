@@ -565,7 +565,7 @@ function layerStatusBadges(item, iconOnly, source) {
   return Object.entries(layerStatusLabels).filter(([key]) => source[key]).map(([key, label]) => {
     const title = source === item ? label : esc(`${label} · Ze složky ${source.name}`);
     return iconOnly
-      ? `<span class="category-mark-icon" data-mark="${key}" role="img" aria-label="${title}" title="${title}">${icon(layerStatusIcons[key])}</span>`
+      ? `<span class="category-mark-icon" data-mark="${key}" role="img" aria-label="${title}" title="${title}"${source === item ? '' : ' data-inherited-mark'}>${icon(layerStatusIcons[key])}</span>`
       : `<span class="layer-${key}-mark"${source === item ? '' : ` title="${title}" data-inherited-mark`}>${label}</span>`;
   }).join('');
 }
@@ -766,7 +766,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}"${folderMark ? ` data-mark="${folderMark}"` : ''} ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, false, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, true, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -1368,7 +1368,7 @@ function renderCategories(hidden, categories) {
     const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
-        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView || mark ? 'folder' : 'folder-tree')}
           <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
@@ -1499,8 +1499,6 @@ function illustratedTagSample(label) {
 function tagSample(label) {
   return illustratedTagSample(label) || `<span class="tag-swatch" aria-hidden="true">${icon('tag')}</span>`;
 }
-const expandedLookbookTagGroups = new Set();
-const LOOKBOOK_TAG_GROUP_PREVIEW = 4;
 function tagDefaultGroupTitles() {
   return { ...M.LOOKBOOK_TAG_GROUP_TITLES, ...state.lookbookTagGroupTitles };
 }
@@ -1521,11 +1519,12 @@ function renderTagFilter(root, options, selected, label) {
   const list = root.querySelector('.tag-filter-options');
   const focused = list.contains(document.activeElement) ? document.activeElement : null;
   const scrollTop = list.scrollTop;
-  const compactGroups = root.id === 'lookbookTags';
-  root.hidden = !compactGroups && !options.size;
-  root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
+  const editableGroups = root.id === 'lookbookTags';
+  root.hidden = !editableGroups && !options.size;
+  const heading = editableGroups ? $('lookbookTagFilterTitle') : root.querySelector('summary');
+  heading.textContent = selected.size ? `${label} · ${selected.size}` : label;
   const groups = new Map();
-  if (compactGroups) {
+  if (editableGroups) {
     for (const title of state.lookbookCustomTagGroups || []) {
       const key = M.lookbookTagKey(title);
       groups.set(key, { key, title, items: [] });
@@ -1541,25 +1540,20 @@ function renderTagFilter(root, options, selected, label) {
   const materialKey = M.lookbookTagKey(materials), otherKey = M.lookbookTagKey(other);
   const order = key => key === materialKey ? 0 : key === otherKey ? 2 : 1;
   const sorted = [...groups.values()].sort((a, b) => order(a.key) - order(b.key) || a.title.localeCompare(b.title, 'cs'));
-  list.innerHTML = sorted.map(({ key, title, items }, groupIndex) => {
-    const expandable = compactGroups && items.length > LOOKBOOK_TAG_GROUP_PREVIEW;
-    const expanded = expandedLookbookTagGroups.has(key);
-    const groupId = `${root.id}-group-${groupIndex}`;
-    return `<div class="tag-filter-group" role="group" aria-label="${esc(title)}">
-      ${compactGroups || sorted.length > 1 ? `<div class="tag-group-head"><p>${esc(title)}</p>
-        ${compactGroups ? `<button type="button" class="subtle tag-group-rename" data-tag-group-rename value="${esc(key)}" aria-haspopup="dialog" aria-label="Přejmenovat skupinu ${esc(title)}" title="Přejmenovat skupinu">${icon('edit')}</button>` : ''}
-        ${expandable ? `<button type="button" class="tag-group-more" data-tag-group-toggle value="${esc(key)}" aria-controls="${groupId}" aria-expanded="${expanded}">${expanded ? 'Méně' : `Všechny (${items.length})`}</button>` : ''}</div>` : ''}
+  list.innerHTML = sorted.map(({ key, title, items }) =>
+    `<div class="tag-filter-group" role="group" aria-label="${esc(title)}">
+      ${editableGroups || sorted.length > 1 ? `<div class="tag-group-head"><p>${esc(title)}</p>
+        ${editableGroups ? `<button type="button" class="subtle tag-group-rename" data-tag-group-rename value="${esc(key)}" aria-haspopup="dialog" aria-label="Přejmenovat skupinu ${esc(title)}" title="Přejmenovat skupinu">${icon('edit')}</button>` : ''}</div>` : ''}
       ${!items.length ? '<p class="tag-group-empty">Zatím bez štítků</p>' : ''}
-      <div class="tag-grid" id="${groupId}">${items.map(([tagKey, name], index) =>
-        `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}" ${compactGroups ? 'aria-keyshortcuts="Shift+F10"' : ''} ${expandable && !expanded && index >= LOOKBOOK_TAG_GROUP_PREVIEW && !selected.has(tagKey) ? 'hidden' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
-      ).join('')}</div></div>`;
-  }).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
+      <div class="tag-grid">${items.map(([tagKey, name]) =>
+        `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}"${editableGroups ? ' aria-keyshortcuts="Shift+F10"' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
+      ).join('')}</div></div>`
+  ).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
   list.scrollTop = scrollTop;
   if (focused) {
-    const action = focused.matches('[data-tag-group-rename]') ? '[data-tag-group-rename]'
-      : focused.matches('[data-tag-group-toggle]') ? '[data-tag-group-toggle]' : '[data-tag-filter]';
-    const next = [...list.querySelectorAll(action)].find(button => button.value === focused.value && !button.hidden);
-    (next || root.querySelector('summary')).focus({ preventScroll: true });
+    const action = focused.matches('[data-tag-group-rename]') ? '[data-tag-group-rename]' : '[data-tag-filter]';
+    const next = [...list.querySelectorAll(action)].find(button => button.value === focused.value);
+    (next || heading).focus({ preventScroll: true });
   }
 }
 function toggleTagFilter(selected, key) {
@@ -1717,20 +1711,39 @@ function renderTraitSearch(search, enabled) {
   let markup = '';
   if (searching) {
     const prefix = [], other = [];
-    const wholeProject = search === layerTraitSearch && !onlyActiveTraits;
+    const editorSearch = search === layerTraitSearch;
+    const wholeProject = editorSearch && !onlyActiveTraits;
     const categories = wholeProject ? state.cats : state.cats.filter(categoryPassesFilter);
-    for (const cat of categories) for (const trait of wholeProject ? cat.traits : listedTraits(cat)) {
-      const name = foldTraitName(trait.name);
+    const addMatch = (cat, item, kind) => {
+      const name = foldTraitName(item.name);
       if (terms.every(term => name.includes(term))) {
-        (name.startsWith(terms[0]) ? prefix : other).push({ cat, trait });
+        (name.startsWith(terms[0]) ? prefix : other).push({ cat, item, kind });
       }
+    };
+    for (const cat of categories) {
+      if (editorSearch) {
+        addMatch(cat, cat, 'category');
+        const ids = wholeProject ? null : matchingLayerIds(cat);
+        for (const folder of organizerFolders(cat.id).folders) {
+          if (!ids || ids.has(folder.id)) addMatch(cat, folder, 'folder');
+        }
+      }
+      for (const trait of wholeProject ? cat.traits : listedTraits(cat)) addMatch(cat, trait, 'trait');
     }
     const matches = [...prefix, ...other];
-    markup = matches.length ? matches.slice(0, limit).map(({ cat, trait }) =>
-      button('reveal-trait', `<span class="layer-thumb">${safeMode ? '' : layerThumbnail(cat, trait)}</span>
-        <span class="trait-search-copy"><strong>${esc(trait.name)}</strong><small>${esc(cat.name)}</small></span>${icon('chevron')}`,
-        trait.id, '', 'type="button" class="trait-search-result"')).join('') :
-      '<p class="empty-list" role="status">Žádné traity neodpovídají hledání.</p>';
+    markup = matches.length ? matches.slice(0, limit).map(({ cat, item, kind }) => {
+      const isTrait = kind === 'trait';
+      const preview = isTrait ? (safeMode ? '' : layerThumbnail(cat, item)) : icon('folder');
+      let subtitle = cat.name;
+      if (kind === 'category') subtitle = 'Kategorie';
+      if (kind === 'folder') {
+        const path = organizerPath(organizerFolders(cat.id).folders, item.parentId);
+        subtitle = ['Složka', cat.name, path].filter(Boolean).join(' · ');
+      }
+      return button(isTrait ? 'reveal-trait' : 'reveal-searched-group', `<span class="layer-thumb${isTrait ? '' : ' trait-search-folder'}">${preview}</span>
+        <span class="trait-search-copy"><strong>${esc(item.name)}</strong><small>${esc(subtitle)}</small></span>${icon('chevron')}`,
+        item.id, '', `type="button" class="trait-search-result"${isTrait ? '' : ` data-kind="${kind}" data-category="${esc(cat.id)}"`}`);
+    }).join('') : `<p class="empty-list" role="status">${editorSearch ? 'Žádné traity, kategorie ani složky neodpovídají hledání.' : 'Žádné traity neodpovídají hledání.'}</p>`;
     if (matches.length > limit) {
       markup += button('more-trait-results', 'Zobrazit další shody', '', 'down', 'type="button" class="subtle trait-search-more"');
     }
@@ -1747,7 +1760,7 @@ function setLayerTraitSearchOpen(open) {
 }
 function renderLayerTraitSearch() {
   const field = $('layerTraitSearchField');
-  if (!state.cats.length || !portraitWorkspace.matches) setLayerTraitSearchOpen(false);
+  if (!state.cats.length) setLayerTraitSearchOpen(false);
   renderTraitSearch(layerTraitSearch, mobilePanel === 'layers' && !field.hidden);
 }
 function revealTrait({ cat, trait }, source) {
@@ -1755,6 +1768,18 @@ function revealTrait({ cat, trait }, source) {
   setLayerTraitSearchOpen(false);
   if (!categoryPassesFilter(cat) || matchingLayerIds(cat)?.has(trait.id) === false) resetCategoryFilters();
   revealLayerRow(cat, 'traits', trait.id, organizerFolders(cat.id).assignments[trait.id], view);
+}
+function revealLayerCategory(category, view, expand = false) {
+  layerBrowseHistory.push(view);
+  active = category.id;
+  if (expand && !openLayerCategories.has(category.id)) openLayerCategories.set(category.id, LAYER_BATCH);
+  selectWorkspaceTab(true);
+  showPanel('layers');
+  render(true);
+  const row = $(`layer-branch-${category.id}`)?.previousElementSibling.querySelector('.category-pick');
+  row?.focus({ preventScroll: true });
+  row?.scrollIntoView({ block: 'nearest' });
+  resetWorkspaceScroll();
 }
 function revealLayerRow(cat, kind, id, parentId, view) {
   const { folders } = organizerFolders(cat.id);
@@ -2440,6 +2465,9 @@ let customAccent, accentBeforePreview;
 const textAppearanceKey = 'nft-text-appearance';
 const textAppearanceControls = [...$('textSettings').querySelectorAll('input[type="range"]')];
 const appearanceFont = $('appearanceFont');
+const controlAppearanceKey = 'nft-control-appearance';
+const controlAppearanceRanges = [...$('controlAppearanceSettings').querySelectorAll('input[type="range"]')];
+const quietControlMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const controlAccents = new Set([
   'auto', 'custom', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
   'mint', 'amber', 'bordeaux', 'olive', 'sand', 'neon-red', 'neon-lime', 'neon-uv',
@@ -2556,6 +2584,29 @@ function restoreTextAppearance() {
 function saveTextAppearance() {
   const settings = { font: appearanceFont.value, ...readAppearanceRanges(textAppearanceControls) };
   saveAppearancePreference(textAppearanceKey, JSON.stringify(settings), $('textAppearanceStatus'));
+}
+function previewControlAppearance() {
+  for (const range of controlAppearanceRanges) {
+    document.body.style.setProperty(`--ui-control-${range.name}`, String(Number(range.value) / 100));
+    displayAppearanceRange(range);
+  }
+}
+function restoreControlAppearance(saved = savedAppearance(controlAppearanceKey)) {
+  fillAppearanceRanges(controlAppearanceRanges, savedAppearanceRanges(controlAppearanceRanges, saved));
+  previewControlAppearance();
+}
+function saveControlAppearance() {
+  saveAppearancePreference(controlAppearanceKey, JSON.stringify(readAppearanceRanges(controlAppearanceRanges)), $('controlAppearanceStatus'));
+}
+function pulseControl(event) {
+  const intensity = Number($('controlSurfacePulse').value);
+  if (!intensity || quietControlMotion.matches) return;
+  const button = event.target.closest?.('button:is([aria-pressed],.icon-button):not(:disabled)');
+  if (!button?.animate || !button.closest('.app-header,#appLayout,#lookbookDialog,#settingsDialog')) return;
+  const glow = `drop-shadow(0 0 ${3 + intensity * .08}px color-mix(in srgb,var(--control-accent) ${intensity}%,transparent))`;
+  button.animate([{ filter:'none' }, { filter:glow, offset:.28 }, { filter:'none' }], {
+    duration:650, easing:'ease-out',
+  });
 }
 function applyColorScheme(value) {
   const scheme = colorSchemes.has(value) ? value : 'pink';
@@ -2748,6 +2799,56 @@ for (const control of [appearanceFont, ...textAppearanceControls]) {
   control.addEventListener('input', previewTextAppearance);
   control.addEventListener('change', () => { previewTextAppearance(); saveTextAppearance(); });
 }
+for (const range of controlAppearanceRanges) {
+  range.addEventListener('input', previewControlAppearance);
+  range.addEventListener('change', () => { previewControlAppearance(); saveControlAppearance(); });
+}
+document.addEventListener('click', pulseControl, true);
+const controlHint = document.createElement('div');
+controlHint.className = 'workspace-control-hint';
+controlHint.setAttribute('aria-hidden', 'true');
+const hintButtons = ':is(.workspace-tools,.app-header,.lookbook-head,.lookbook-layer-filters) button.icon-button[aria-label],.category-status-filters button';
+let hintTimer, hintButton, hintTitle;
+function hideControlHint() {
+  clearTimeout(hintTimer);
+  controlHint.classList.remove('is-visible');
+  if (hintTitle !== null && hintButton && !hintButton.hasAttribute('title')) hintButton.title = hintTitle;
+  hintButton = null;
+}
+function showControlHint(button, label) {
+  if (!label || !button.isConnected) return;
+  hideControlHint();
+  hintButton = button;
+  hintTitle = button.getAttribute('title');
+  button.removeAttribute('title');
+  (button.closest('dialog') || document.body).append(controlHint);
+  controlHint.textContent = label;
+  const rect = button.getBoundingClientRect(), width = controlHint.offsetWidth, height = controlHint.offsetHeight;
+  controlHint.style.left = `${Math.max(8, Math.min(rect.left + (rect.width - width) / 2, innerWidth - width - 8))}px`;
+  controlHint.style.top = `${rect.top >= height + 12 ? rect.top - height - 6 : rect.bottom + 6}px`;
+  controlHint.classList.add('is-visible');
+  hintTimer = setTimeout(hideControlHint, 1650);
+}
+document.addEventListener('pointerover', event => {
+  const button = event.target.closest?.(hintButtons);
+  if (!button || event.pointerType !== 'mouse' || button.contains(event.relatedTarget)) return;
+  hideControlHint();
+  hintButton = button;
+  hintTitle = null;
+  hintTimer = setTimeout(() => showControlHint(button, button.getAttribute('aria-label')), 380);
+});
+document.addEventListener('pointerout', event => {
+  if (hintButton?.contains(event.target) && !hintButton.contains(event.relatedTarget)) hideControlHint();
+});
+document.addEventListener('click', event => {
+  const button = event.target.closest?.('.category-status-filters button[data-filter-mode]');
+  if (!button || !event.detail) return;
+  queueMicrotask(() => {
+    const mode = { include:'Jen označené', exclude:'Označené skryté', off:'Filtr vypnutý' }[button.dataset.filterMode];
+    if (mode) showControlHint(button, `${layerStatusLabels[button.dataset.id] || button.textContent.trim()} · ${mode}`);
+  });
+}, true);
+document.addEventListener('scroll', hideControlHint, { capture:true, passive:true });
 
 let openShowroom, diagnosticsFromHistory = false;
 function closeDiagnostics() {
@@ -2817,23 +2918,28 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'reveal-trait': if (located) revealTrait(located, element); break;
+    case 'reveal-searched-group': {
+      const category = M.category(state, element.dataset.category);
+      if (!category) break;
+      const folder = element.dataset.kind === 'folder' && organizerFolders(category.id).folders.find(item => item.id === id);
+      if (element.dataset.kind === 'folder' && !folder) break;
+      const view = captureLayerView(element);
+      setLayerTraitSearchOpen(false);
+      layerTraitSearch.input.blur();
+      if (!categoryPassesFilter(category) || (folder && matchingLayerIds(category)?.has(id) === false)) resetCategoryFilters();
+      if (folder) {
+        (organizerExpanded[category.id] ||= new Set()).add(folder.id);
+        revealLayerRow(category, 'folders', id, folder.parentId, view);
+      } else revealLayerCategory(category, view, true);
+      break;
+    }
     case 'reveal-flagged-group': {
       const category = M.category(state, element.dataset.category);
       if (!category || !categoryPassesFilter(category)) break;
       if (element.dataset.kind === 'folder') {
         const folder = organizerFolders(category.id).folders.find(item => item.id === id);
         if (folder) revealLayerRow(category, 'folders', id, folder.parentId, captureLayerView(element));
-      } else {
-        layerBrowseHistory.push(captureLayerView(element));
-        active = category.id;
-        selectWorkspaceTab(true);
-        showPanel('layers');
-        render(true);
-        const row = $('cats').querySelector(`[data-action="select-category"][data-id="${id}"]`);
-        row?.focus({ preventScroll: true });
-        row?.scrollIntoView({ block: 'nearest' });
-        resetWorkspaceScroll();
-      }
+      } else revealLayerCategory(category, captureLayerView(element));
       break;
     }
     case 'toggle-layer-review':
@@ -3224,6 +3330,13 @@ async function handleAction(action, id, element) {
       $('settingsDialog').showModal();
       break;
     case 'close-settings': $('settingsDialog').close(); break;
+    case 'toggle-control-preview':
+      element.setAttribute('aria-pressed', String(element.getAttribute('aria-pressed') !== 'true'));
+      break;
+    case 'reset-control-appearance':
+      restoreControlAppearance({});
+      saveControlAppearance();
+      break;
     case 'open-custom-scheme': openCustomScheme(); break;
     case 'close-custom-scheme': $('customSchemeDialog').close(); break;
     case 'open-custom-accent': openCustomAccent(); break;
@@ -3708,6 +3821,7 @@ async function init() {
   setWorkspaceTabsCollapsed(false);
   restoreColorScheme();
   restoreTextAppearance();
+  restoreControlAppearance();
   try { quickTraitsVisible = localStorage.getItem(quickTraitsPreference) !== 'true'; } catch { /* use the default */ }
   const finishLog = window.TraitDiagnostics?.start('startup');
   try {

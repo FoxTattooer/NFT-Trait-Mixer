@@ -392,6 +392,34 @@ body.compact-workspace[data-color-scheme=mono] :is(button,summary,select,input,t
     box-shadow:var(--workspace-accent-shadow)!important;
   }
 }
+.workspace-control-hint {
+  position:fixed;z-index:120;pointer-events:none;visibility:hidden;opacity:0;
+  max-width:calc(100vw - 16px);padding:5px 8px;border:1px solid var(--scheme-stroke);
+  border-radius:8px;background:var(--scheme-control);color:var(--scheme-text);
+  box-shadow:0 4px 12px #0008;font-size:11px;
+}
+.workspace-control-hint.is-visible {visibility:visible;opacity:1}
+@media (prefers-reduced-motion:no-preference) {
+  :is(#lookbookDialog,#settingsDialog,#customSchemeDialog,#customAccentDialog)[open],
+  :is(#layerTraitSearchField,#layerTraitSearchResults,#layerTree .category-branch):not([hidden]) {
+    animation:control-panel-in .19s cubic-bezier(.22,.75,.25,1);
+  }
+  body.compact-workspace :is(#workspaceTabs,#settingsDialog,.workspace-tools,.lookbook-segments,#lookbookTags,.category-status-filters,#layerTraitSearchResults)
+  button:not(:disabled) {transition:scale .17s ease-out,translate .17s ease-out,border-color .17s ease-out,box-shadow .17s ease-out}
+  body.compact-workspace :is(#workspaceTabs,#settingsDialog,.workspace-tools,.lookbook-segments,#lookbookTags,.category-status-filters,#layerTraitSearchResults)
+  button:active:not(:disabled) {
+    scale:calc(1 - var(--ui-control-active,.50) * .055);
+    translate:0 calc(var(--ui-control-active,.50) * 2px);
+    transition-duration:.08s;
+  }
+  #layerTree .category-pick > .icon:first-child {transition:transform .19s ease-out}
+  .workspace-control-hint {translate:0 3px;transition:opacity .16s ease,translate .16s ease,visibility .16s}
+  .workspace-control-hint.is-visible {translate:0 0}
+}
+@keyframes control-panel-in {
+  from {opacity:.62;translate:0 4px}
+  to {opacity:1;translate:0 0}
+}
 
 /* Older controls in Správa and the preview strip share the chosen surfaces. */
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(
@@ -777,4 +805,54 @@ body.compact-workspace #snapshotsPanel .library-category>summary::before {color:
 @keyframes workspace-surface-in {
   from {opacity:.78;translate:0 -3px}
   to {opacity:1;translate:0 0}
+}
+
+#controlAppearanceSettings h3 {margin:10px 0 4px;font-size:13px}
+.control-appearance-preview {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;
+  padding:7px;border:1px solid var(--scheme-stroke);border-radius:10px;background:var(--scheme-panel);
+}
+.control-appearance-preview :is(button,input) {width:100%;min-width:0;min-height:44px;margin:0;font-size:13px}
+.control-appearance-preview button {gap:5px;padding:5px 6px}
+.control-appearance-preview button[aria-pressed=true] {
+  background-color:var(--workspace-accent-wash);border-color:var(--workspace-accent-border);color:var(--workspace-accent-icon);
+}
+.control-appearance-reset {min-height:44px;margin-top:6px}
+
+/* Keep each control's existing surface color and add a light edge and depth. */
+body.compact-workspace[data-color-scheme] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog)
+:is(button,.workspace-tools summary,input:is([type=text],[type=search],[type=number]),select,textarea):not(:where(
+  .category-pick,.layer-tree-main,.layer-tree-eye,.layer-tree-more,.quick-trait,.trait-card,
+  .lookbook-card,.lookbook-category-tags,.tag-group-rename,.lookbook-edit button,#lookbookTagGroupAdd,.drag-handle
+)) {
+  --ui-bevel-light:calc(var(--ui-control-contrast,.42) * .105 + var(--ui-control-sheen,.36) * .14 + var(--ui-interaction-light,0));
+  --ui-bevel-dark:calc(var(--ui-control-depth,.52) * .46 + var(--ui-control-contrast,.42) * .15);
+  --ui-bevel-rim:var(--ui-interaction-color,var(--scheme-text));
+  border-radius:calc(4px + var(--ui-control-radius,.45) * 14px)!important;
+  background-image:linear-gradient(175deg,rgb(255 255 255 / var(--ui-bevel-light)),transparent 51%,rgb(0 0 0 / var(--ui-bevel-dark)))!important;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--ui-control-sheen,.36) * .43)),
+    inset 0 calc(-1px - var(--ui-control-depth,.52) * 2px) calc(var(--ui-control-depth,.52) * 4px) rgb(0 0 0 / calc(var(--ui-control-depth,.52) * .65)),
+    0 calc(var(--ui-control-depth,.52) * 5px) calc(var(--ui-control-depth,.52) * 10px) rgb(0 0 0 / calc(var(--ui-control-depth,.52) * .8)),
+    0 0 calc(var(--ui-control-glow,.12) * 20px + var(--ui-interaction-spread,0px))
+      color-mix(in srgb,var(--ui-bevel-rim) min(100%,calc(var(--ui-control-glow,.12) * 65% + var(--ui-interaction-halo,0%))),transparent)!important;
+}
+body.compact-workspace[data-color-scheme] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog)
+:is(button[aria-pressed=true],button[aria-expanded=true],button.is-active,button:active,.workspace-tools details[open]>summary,
+  input:is([type=text],[type=search],[type=number]):focus,select:focus,textarea:focus):not(:disabled) {
+  --ui-interaction-color:var(--category-mark-color,var(--workspace-accent-icon));
+  --ui-interaction-light:calc(var(--ui-control-active,.50) * .16);
+  --ui-interaction-halo:calc(var(--ui-control-active,.50) * 16% + var(--accent-glow-opacity,0%) * .48);
+  --ui-interaction-spread:calc(var(--accent-glow-scale,0) * 5px);
+}
+body.compact-workspace[data-color-scheme] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog)
+button:not(:where(.category-pick,.layer-tree-main,.lookbook-card)) > .icon {
+  opacity:calc(.5 + var(--ui-control-icons,1) * .5);
+}
+@media (hover:hover) and (pointer:fine) {
+  body.compact-workspace[data-color-scheme] :is(.app-header,#appLayout,#lookbookDialog,#settingsDialog)
+  :is(button,.workspace-tools summary,input,select,textarea):hover:not(:disabled,:active,[aria-pressed=true],[aria-expanded=true],.is-active,:focus) {
+    --ui-interaction-light:calc(var(--ui-control-hover,.38) * .17);
+    --ui-interaction-halo:calc(var(--ui-control-hover,.38) * 13%);
+  }
 }
