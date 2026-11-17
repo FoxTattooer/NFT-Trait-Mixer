@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.166 | checkpoint/v0.7.166-kompaktni-lookbook | Hledání pod lupou, zarovnaný editor traitu a kompaktní výběr štítků s většími ikonami. |
 | 0.7.165 | checkpoint/v0.7.165-nazev-traitu | Pole v úpravě vrstvy přímo přejmenovává trait v projektu i v Lookbooku. |
 | 0.7.164 | checkpoint/v0.7.164-final-lookbook | Finál se skládáním sestav, kartami FIN a OUT, ostrými výřezy, řazením a hromadnou správou. Lookbook s textovým hledáním a přímým přejmenováním traitů. |
 | 0.7.163 | checkpoint/v0.7.163-5panel | Headwear štítek 5panel s ikonou v Lookbooku, editoru a Showroomu, dostupný i offline. |

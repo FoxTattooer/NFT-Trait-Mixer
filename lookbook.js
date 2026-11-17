@@ -7,6 +7,7 @@
   const chapters = $('lookbookChapters'), content = $('lookbookContent');
   const detailArea = $('lookbookDetailArea'), sheetArea = $('lookbookSheetArea');
   const traitTools = $('lookbookTraitTools'), traitEdit = $('lookbookTraitEdit'), traitSearch = $('lookbookTraitSearch');
+  const searchToggle = $('lookbookSearchToggle'), searchToggleIcon = searchToggle.querySelector('use');
   let searchTerms = [];
   const rarities = new Map([[M.DEFAULT_RARITY_WEIGHT, 'Běžný'], [50, 'Neobvyklý'], [20, 'Vzácný'], [5, 'Výjimečný']]);
   const percent = new Intl.NumberFormat('cs-CZ', { style: 'percent', maximumFractionDigits: 2 });
@@ -430,12 +431,12 @@
         `<option value="${value}" ${value === weight ? 'selected' : ''}>${title}</option>`).join('')}
         <option value="custom" ${rarities.has(weight) ? '' : 'selected'}>Vlastní</option></select></label>
       <label>Váha losování<input name="weight" type="number" min="0" max="${M.MAX_RARITY_WEIGHT}" step="any" inputmode="decimal" value="${weight}"></label>
-    </div><p class="lookbook-help">Základní šanci v kategorii ovlivňuje váha. Výsledný výběr může změnit pravidlo.</p>` : '';
+    </div><p class="lookbook-help">Váha určuje základní šanci. Pravidla mohou výsledek změnit.</p>` : '';
     return `<details class="lookbook-edit"><summary>${trait ? 'Upravit vrstvu' : 'Upravit kartu'}</summary><form>
       ${trait ? `<label>Název traitu<input name="traitName" maxlength="120" value="${esc(item.name)}"></label>` :
         `<label>Název karty v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>`}
       ${rarity}
-      <label>Příběh<textarea name="story" rows="3" maxlength="${M.LOOKBOOK_STORY_LIMIT}">${esc(item.story || '')}</textarea></label>
+      <label>Příběh<textarea name="story" rows="${trait ? 2 : 3}" maxlength="${M.LOOKBOOK_STORY_LIMIT}">${esc(item.story || '')}</textarea></label>
     </form></details>`;
   }
 
@@ -670,8 +671,7 @@
     origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
     view = 'traits';
-    traitSearch.value = '';
-    searchTerms = [];
+    resetTraitSearch();
     renderFilters();
     const cat = M.category(state, active);
     if (cat?.traits.length) selectTrait(cat, state.selected[cat.id]);
@@ -744,6 +744,36 @@
     toggleTagFilter(tagFilters[view], control.value);
     refreshResults(tagIcons.contains(control) ? tagIcons : filterRoot);
   });
+  function showTraitSearch(expanded) {
+    traitSearch.hidden = !expanded;
+    searchToggle.setAttribute('aria-expanded', String(expanded));
+    searchToggleIcon.setAttribute('href', expanded ? '#i-close' : '#i-search');
+    const title = expanded ? 'Zavřít hledání' : 'Hledat traity';
+    searchToggle.setAttribute('aria-label', title);
+    searchToggle.title = title;
+  }
+  function resetTraitSearch() {
+    traitSearch.value = '';
+    searchTerms = [];
+    showTraitSearch(false);
+  }
+  function closeTraitSearch() {
+    const filtered = searchTerms.length > 0;
+    resetTraitSearch();
+    if (filtered) refreshResults(traitTools);
+    searchToggle.focus({ preventScroll:true });
+  }
+  searchToggle.addEventListener('click', () => {
+    if (traitSearch.hidden) {
+      showTraitSearch(true);
+      traitSearch.focus({ preventScroll:true });
+    } else closeTraitSearch();
+  });
+  traitSearch.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || event.isComposing) return;
+    event.preventDefault();
+    closeTraitSearch();
+  });
   traitSearch.addEventListener('input', () => {
     if (view !== 'traits') return;
     saveCard();
@@ -792,7 +822,7 @@
         markFilters.clear();
       }
       if (!M.matchesLookbookTags(target.trait, tagFilters.traits, M.inheritedLayerTags(state, target.cat, target.trait))) tagFilters.traits.clear();
-      if (!matchesTraitSearch(target.trait)) { traitSearch.value = ''; searchTerms = []; }
+      if (!matchesTraitSearch(target.trait)) resetTraitSearch();
       selectTrait(target.cat, target.trait.id);
     }
     render();
