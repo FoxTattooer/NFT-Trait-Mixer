@@ -1087,6 +1087,8 @@ assert.equal(w.inspectStepNumber(), stepBefore + 1);
 assert(!find('#lookbookDetailArea .lookbook-tag-picker').open);
 assert(find('[data-lookbook-tag-remove][value="Cowboy"] .tag-swatch-art'));
 const fivePanelPicker = find('#lookbookDetailArea .lookbook-tag-picker');
+const gun = fivePanelPicker.querySelector('[data-layer-tag-option][value="GUN"]');
+assert(gun.closest('label').querySelector('.tag-swatch-gun'));
 fivePanelPicker.open = true;
 const fivePanel = fivePanelPicker.querySelector('[data-layer-tag-option][value="5panel"]');
 assert(fivePanel.closest('label').querySelector('.tag-swatch-5panel'));

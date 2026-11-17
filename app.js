@@ -1369,7 +1369,7 @@ const lookbookApprovedSpriteTags = [
   'Baret', 'Bucket', 'Crown', 'Samurai', 'Basic',
 ];
 const lookbookApprovedTags = [
-  ...lookbookApprovedSpriteTags, '5panel',
+  ...lookbookApprovedSpriteTags, '5panel', 'GUN',
   'Cup', 'Emerald', 'Gold', 'Lime', 'Mosaic', 'Orange', 'Purple', 'Rainbow', 'Red', 'Silver', 'Water',
 ];
 const lookbookIconKeys = new Map([...lookbookApprovedSpriteTags, 'Headwear'].map((label, index) => [label.toLowerCase().replaceAll(' ', ''), index]));
@@ -1387,6 +1387,7 @@ function illustratedTagSample(label) {
   if (material) return `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`;
   const key = foldTraitName(label).replace(/[^a-z0-9]/g, '');
   if (key === '5panel') return '<span class="tag-swatch tag-swatch-5panel" aria-hidden="true"></span>';
+  if (key === 'gun') return '<span class="tag-swatch tag-swatch-gun" aria-hidden="true"></span>';
   const index = lookbookIconKeys.get(lookbookIconAliases.get(key) || key);
   if (index !== undefined) {
     // The six-column sprite follows lookbookIconKeys.

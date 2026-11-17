@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.175 | checkpoint/v0.7.175-stitek-gun | Černobílý štítek GUN je k dispozici ve výběru štítků. |
 | 0.7.174 | checkpoint/v0.7.174-barvy-slozek | Ikona složky v seznamu Vrstev přebírá barvu označení kategorie. |
 | 0.7.173 | checkpoint/v0.7.173-on-zelena-verze | Filtr ON a zelené číslo verze na tlačítkách aktualizace v editoru i Lookbooku. |
 | 0.7.172 | checkpoint/v0.7.172-aktivni-traity | Tlačítko AKTIV ve Vrstvách zobrazí traity z aktuálního náhledu. |

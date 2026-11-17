@@ -314,6 +314,9 @@
 .tag-swatch-5panel {
   background: #030303 url('art/lookbook/5panel.webp') center / cover no-repeat;
 }
+.tag-swatch-gun {
+  background: #000 url('art/lookbook/gun.webp') center / contain no-repeat;
+}
 .material-swatch {
   background: var(--material-base, #141317) var(--material-tag, none) center / cover no-repeat;
 }
