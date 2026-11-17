@@ -1022,6 +1022,20 @@ assert.deepEqual([...M.locate(w.inspectState(), 'compare-0').trait.lookbookTags]
 assert.equal(w.inspectStepNumber(), stepBefore + 1);
 assert(!find('#lookbookDetailArea .lookbook-tag-picker').open);
 assert(find('[data-lookbook-tag-remove][value="Cowboy"] .tag-swatch-art'));
+const fivePanelPicker = find('#lookbookDetailArea .lookbook-tag-picker');
+fivePanelPicker.open = true;
+const fivePanel = fivePanelPicker.querySelector('[data-layer-tag-option][value="5panel"]');
+assert(fivePanel.closest('label').querySelector('.tag-swatch-5panel'));
+fivePanel.click();
+fivePanelPicker.querySelector('[data-lookbook-tag-apply]').click();
+assert(M.locate(w.inspectState(), 'compare-0').trait.lookbookTags.includes('5panel'));
+assert(find('#lookbookTags [aria-label="Headwear"] [value="5panel"] .tag-swatch-5panel'));
+assert(find('[data-lookbook-tag-remove][value="5panel"] .tag-swatch-5panel'));
+filterBook('5panel');
+assert.deepEqual(bookTraitIds(), ['compare-0']);
+filterBook('5panel');
+click('[data-lookbook-tag-remove][value="5panel"]');
+
 assert.equal(get('lookbookTagGroups'), null);
 assert.equal(get('lookbookTags').nextElementSibling, get('lookbookTagIcons'));
 const quickBookFilter = tag => `#lookbookTagIcons [data-tag-filter][value="${tag}"]`;

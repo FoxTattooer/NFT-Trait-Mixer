@@ -1335,14 +1335,15 @@ function fillSelect(element, values, placeholder) {
   element.disabled = !values.length;
 }
 const ruleTagFilters = { source: new Set(), target: new Set() };
-const lookbookIconLabels = [
+const lookbookSpriteLabels = [
   'Hair', 'Sunglasses', 'Shoulder', 'Facemask', 'Chains', 'Straps',
   'Eyes', 'Skin', 'Backtrait', 'Background', 'Clothes', 'Cape',
   'Goku', 'Spaghetti', 'Afro', 'Mohawk', 'Dreads', 'Man Bun',
   'Fisherman', 'Doggy', 'Snapback', 'Hat', 'Cowboy', 'Beanie',
   'Baret', 'Bucket', 'Crown', 'Samurai', 'Basic', 'Headwear',
 ];
-const lookbookIconKeys = new Map(lookbookIconLabels.map((label, index) => [label.toLowerCase().replaceAll(' ', ''), index]));
+const lookbookIconLabels = [...lookbookSpriteLabels, '5panel'];
+const lookbookIconKeys = new Map(lookbookSpriteLabels.map((label, index) => [label.toLowerCase().replaceAll(' ', ''), index]));
 const lookbookIconAliases = new Map(Object.entries({
   hairs: 'hair', vlasy: 'hair', ucesy: 'hair', bryle: 'sunglasses', slunecnibryle: 'sunglasses',
   oci: 'eyes', kuze: 'skin', plet: 'skin', pozadi: 'background', obleceni: 'clothes',
@@ -1356,9 +1357,10 @@ function illustratedTagSample(label) {
   const material = window.TraitShowroom?.materialId(label);
   if (material) return `<span class="material-swatch" data-material="${material}" aria-hidden="true"></span>`;
   const key = foldTraitName(label).replace(/[^a-z0-9]/g, '');
+  if (key === '5panel') return '<span class="tag-swatch tag-swatch-5panel" aria-hidden="true"></span>';
   const index = lookbookIconKeys.get(lookbookIconAliases.get(key) || key);
   if (index !== undefined) {
-    // The six-column sprite follows the order of lookbookIconLabels.
+    // The six-column sprite follows the order of lookbookSpriteLabels.
     const x = (index % 6) * 20, y = Math.floor(index / 6) * 25;
     return `<span class="tag-swatch tag-swatch-art" style="--tag-x:${x}%;--tag-y:${y}%" aria-hidden="true"></span>`;
   }
@@ -1377,6 +1379,7 @@ function tagDefaultGroupTitles() {
 function tagGroupTitle(key, name) {
   const groups = state.lookbookTagGroups || {};
   if (Object.hasOwn(groups, key)) return groups[key];
+  if (key === '5panel') return 'Headwear';
   const titles = tagDefaultGroupTitles();
   return (window.TraitShowroom?.materialId(name) || window.TraitShowroom?.colorHex(name)) ? titles.materials : titles.other;
 }

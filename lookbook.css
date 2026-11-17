@@ -241,6 +241,9 @@
 .tag-swatch-art {
   background: #030303 url('art/lookbook/tag-icons.webp') var(--tag-x) var(--tag-y) / 600% 500% no-repeat;
 }
+.tag-swatch-5panel {
+  background: #030303 url('art/lookbook/5panel.webp') center / cover no-repeat;
+}
 .material-swatch {
   background: var(--material-base, #141317) var(--material-tag, none) center / cover no-repeat;
 }
