@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
   <link rel="stylesheet" href="compact.css?build=07179">
-  <link rel="stylesheet" href="schemes.css?build=07177">
+  <link rel="stylesheet" href="schemes.css?build=07180">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
@@ -25,7 +25,7 @@
   <script src="project.js?build=07179" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07179" defer></script>
-  <script src="diagnostics.js?build=07179" defer></script>
+  <script src="diagnostics.js?build=07180" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,7 +34,7 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
-  <script src="app.js?build=07179" defer></script>
+  <script src="app.js?build=07180" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07179" defer></script>
@@ -138,8 +138,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.179" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.179</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.180" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.180</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -359,8 +359,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.179" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.179</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.180" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.180</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -475,20 +475,27 @@
         <svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg>
       </summary>
       <div class="settings-choices">
-        <div class="scheme-grid" role="group" aria-label="Barevná schémata">
-          <button type="button" data-action="set-color-scheme" data-scheme="pink" aria-label="Magic Eden (ME)" aria-pressed="true"><span class="scheme-swatch" aria-hidden="true"></span><span>ME</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="blue" aria-label="Magic Eden Blue (ME Blue)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME Blue</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="eden-new" aria-label="Magic Eden New (ME New)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME New</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="mono" aria-label="Black &amp; White (B&amp;W)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>B&amp;W</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="amber" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Jantar</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="violet" aria-label="Fialový neon" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Fialový</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="graphite-grey" aria-label="Grafit (Graphite Grey)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Grafit</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="icy" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Icy</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="deep-water" aria-label="Deep Water Blue" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Deep Water</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="bordeaux" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Bordó</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="olive" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Oliva</span></button>
-          <button type="button" data-action="set-color-scheme" data-scheme="sand" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Písek</span></button>
-          <button type="button" data-action="open-custom-scheme" data-scheme="custom" aria-haspopup="dialog" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Custom</span></button>
+        <div class="scheme-picker">
+          <div class="scheme-grid scheme-grid-main" role="group" aria-label="Hlavní barevná schémata">
+            <button type="button" data-action="open-custom-scheme" data-scheme="custom" aria-haspopup="dialog" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Custom</span><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>
+            <button type="button" data-action="set-color-scheme" data-scheme="mono" aria-label="Black &amp; White (B&amp;W)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>B&amp;W</span></button>
+            <button type="button" data-action="set-color-scheme" data-scheme="graphite-grey" aria-label="Grafit (Graphite Grey)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Grafit</span></button>
+            <button type="button" data-action="set-color-scheme" data-scheme="pink" aria-label="Magic Eden (ME)" aria-pressed="true"><span class="scheme-swatch" aria-hidden="true"></span><span>ME</span></button>
+          </div>
+          <details id="extraColorSchemes" class="scheme-picker-extra">
+            <summary><span>Další schémata</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+            <div class="scheme-grid" role="group" aria-label="Další barevná schémata">
+              <button type="button" data-action="set-color-scheme" data-scheme="blue" aria-label="Magic Eden Blue (ME Blue)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME Blue</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="eden-new" aria-label="Magic Eden New (ME New)" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>ME New</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="amber" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Jantar</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="violet" aria-label="Fialový neon" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Fialový</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="icy" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Icy</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="deep-water" aria-label="Deep Water Blue" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Deep Water</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="bordeaux" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Bordó</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="olive" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Oliva</span></button>
+              <button type="button" data-action="set-color-scheme" data-scheme="sand" aria-pressed="false"><span class="scheme-swatch" aria-hidden="true"></span><span>Písek</span></button>
+            </div>
+          </details>
         </div>
         <div id="accentChoices" class="accent-picker" role="group" aria-labelledby="accentChoicesTitle">
           <h3 id="accentChoicesTitle">Akcent ovládání</h3>
@@ -534,16 +541,23 @@
         <button type="button" class="icon-button subtle" data-action="close-custom-scheme" aria-label="Zrušit úpravy schématu">×</button>
       </div>
       <div class="custom-scheme-preview scheme-swatch" aria-hidden="true"></div>
+      <div class="custom-scheme-presets">
+        <button type="button" data-action="custom-scheme-preset" data-id="mono">Černobílá</button>
+        <button type="button" data-action="custom-scheme-preset" data-id="oled">OLED černá</button>
+      </div>
       <div class="custom-scheme-sliders">
+        <label for="customSchemeBrightness">Jas</label>
+        <input id="customSchemeBrightness" name="brightness" type="range" min="0" max="100" value="22">
+        <output id="customSchemeBrightnessValue" for="customSchemeBrightness">22 %</output>
+        <label for="customSchemeContrast">Kontrast ploch</label>
+        <input id="customSchemeContrast" name="contrast" type="range" min="0" max="100" value="38">
+        <output id="customSchemeContrastValue" for="customSchemeContrast">38 %</output>
+        <label for="customSchemeSaturation">Sytost</label>
+        <input id="customSchemeSaturation" name="saturation" type="range" min="0" max="100" value="0">
+        <output id="customSchemeSaturationValue" for="customSchemeSaturation">0 %</output>
         <label for="customSchemeHue">Odstín</label>
         <input id="customSchemeHue" name="hue" type="range" min="0" max="360" value="210">
         <output id="customSchemeHueValue" for="customSchemeHue">210°</output>
-        <label for="customSchemeBrightness">Jas</label>
-        <input id="customSchemeBrightness" name="brightness" type="range" min="0" max="100" value="45">
-        <output id="customSchemeBrightnessValue" for="customSchemeBrightness">45 %</output>
-        <label for="customSchemeSaturation">Sytost</label>
-        <input id="customSchemeSaturation" name="saturation" type="range" min="0" max="100" value="65">
-        <output id="customSchemeSaturationValue" for="customSchemeSaturation">65 %</output>
       </div>
       <button class="primary full-width" type="submit">Použít schéma</button>
     </form>
@@ -653,6 +667,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.180-custom-oled" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.180 – Custom a OLED černá</strong><small>Důraz na Custom, hlubší černá, samostatný kontrast ploch a rychlé volby černobílého režimu.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.179-oznaceni-slozek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.179 – Označení ve složkách</strong><small>Traity přebírají označení ze složky. Názvy složek jsou dál od ikon a skryté složky mají tlumenější text.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.178-filtry-a-stitky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.178 – Filtry a čitelnější vrstvy</strong><small>Obnova filtrů po aktualizaci, větší názvy vrstev a kompaktní štítky s většími ikonami.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.177-viditelnost-custom" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.177 – Viditelnost a Custom</strong><small>Filtry se obnoví po aktualizaci. Čitelnější vrstvy, vlastní schéma a zarovnané štítky.</small></span><span class="version-tag">Uloženo</span></a>

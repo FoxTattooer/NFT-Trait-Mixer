@@ -102,18 +102,61 @@ body.compact-workspace,
   --scheme-glow:#ddba8b40;
 }
 :is(body[data-color-scheme=custom],.scheme-grid [data-scheme=custom]) {
-  --scheme-bg:hsl(var(--custom-hue) calc(var(--custom-saturation) * .3) calc(5% + var(--custom-brightness) * .12));
-  --scheme-panel:hsl(var(--custom-hue) calc(var(--custom-saturation) * .34) calc(9% + var(--custom-brightness) * .15));
-  --scheme-control:hsl(var(--custom-hue) calc(var(--custom-saturation) * .38) calc(13% + var(--custom-brightness) * .17));
-  --scheme-stroke:hsl(var(--custom-hue) calc(var(--custom-saturation) * .5) calc(30% + var(--custom-brightness) * .22));
+  --custom-base-lightness:calc(var(--custom-brightness) * .17);
+  --custom-surface-gap:calc(1% + var(--custom-contrast) * .1);
+  --scheme-bg:hsl(var(--custom-hue) calc(var(--custom-saturation) * .3) var(--custom-base-lightness));
+  --scheme-panel:hsl(var(--custom-hue) calc(var(--custom-saturation) * .34) calc(var(--custom-base-lightness) + var(--custom-surface-gap) * .62));
+  --scheme-control:hsl(var(--custom-hue) calc(var(--custom-saturation) * .38) calc(var(--custom-base-lightness) + var(--custom-surface-gap) * 1.2));
+  --scheme-stroke:hsl(var(--custom-hue) calc(var(--custom-saturation) * .5) calc(36% + var(--custom-brightness) * .16 + var(--custom-surface-gap) * .46));
   --scheme-accent:hsl(var(--custom-hue) var(--custom-saturation) calc(66% + var(--custom-brightness) * .17));
   --scheme-text:hsl(var(--custom-hue) calc(var(--custom-saturation) * .24) 95%);
   --scheme-muted:hsl(var(--custom-hue) calc(var(--custom-saturation) * .2) 76%);
   --scheme-wash:color-mix(in srgb,var(--scheme-accent) 14%,var(--scheme-control));
-  --scheme-primary:hsl(var(--custom-hue) calc(var(--custom-saturation) * .7) calc(21% + var(--custom-brightness) * .15));
+  --scheme-primary:hsl(var(--custom-hue) calc(var(--custom-saturation) * .7) calc(6% + var(--custom-base-lightness) + var(--custom-surface-gap)));
   --scheme-primary-end:var(--scheme-control);
-  --scheme-glow:color-mix(in srgb,var(--scheme-accent) 27%,transparent);
+  --scheme-glow:color-mix(in srgb,var(--scheme-accent) 16%,transparent);
 }
+body.compact-workspace[data-color-scheme=custom] {
+  --text:var(--scheme-text);--muted:var(--scheme-muted);
+  --scheme-checker-base:var(--scheme-panel);--scheme-checker-alt:var(--scheme-control);
+  color:var(--scheme-text);
+}
+body.compact-workspace[data-color-scheme=custom][data-custom-monochrome] {
+  --control-accent:var(--scheme-accent);
+  --control-accent-glow:var(--scheme-glow);
+  --layer-out-color:var(--scheme-muted);
+}
+body[data-color-scheme=custom][data-custom-monochrome] #accentChoices {display:none}
+body[data-color-scheme=custom][data-custom-monochrome] .settings-choices {grid-template-columns:minmax(0,1fr)}
+body[data-color-scheme=custom][data-custom-monochrome] :is(.category-status-filters [data-id], .category-mark-icon[data-mark], .category-pick[data-mark]) {
+  --category-mark-color:var(--scheme-muted);
+}
+body[data-color-scheme=custom][data-custom-monochrome] :is(.layer-wip-mark,.layer-trash-mark,.layer-draw-mark,.layer-out-mark) {
+  color:var(--scheme-muted);
+}
+body[data-color-scheme=custom] #lookbookDialog {
+  color:var(--scheme-text);
+}
+body[data-color-scheme=custom] #lookbookDialog :is(.lookbook-head,.lookbook-segments,.lookbook-detail,.lookbook-trait-tools,.tag-filter,.lookbook-tag-editor) {
+  background:var(--scheme-panel);border-color:var(--scheme-stroke);color:var(--scheme-text);
+}
+body[data-color-scheme=custom] #lookbookTags .tag-grid button {
+  background:var(--scheme-control);border-color:var(--scheme-stroke);color:var(--scheme-text);
+}
+body[data-color-scheme=custom] #lookbookTags .tag-grid button[aria-pressed=true] {
+  background:var(--workspace-accent-wash);border-color:var(--workspace-accent-border);
+}
+body[data-color-scheme=custom] #lookbookTags .tag-grid button[aria-pressed=true]::after {
+  border-color:var(--workspace-accent-icon);
+}
+body[data-color-scheme=custom][data-custom-monochrome] .lookbook-sheet {
+  --paper:#d5d5d5;--ink:#242424;--muted-ink:#4a4a4a;--rule:#999;
+  --mark:#555;--tape:#ddd9;
+  border-color:#a5a5a5;
+  background:radial-gradient(ellipse at 18% 6%,#e1e1e1,transparent 67%),var(--paper);
+}
+body[data-color-scheme=custom][data-custom-monochrome] .lookbook-card[aria-pressed=true] {background:#0001}
+body[data-color-scheme=custom][data-custom-monochrome] .lookbook-art {background:#f8f8f8}
 
 
 .settings-dialog {
@@ -127,7 +170,11 @@ body.compact-workspace,
 .settings-heading {display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 5px;padding-left:4px}
 .settings-heading h2 {margin:0;font-size:19px}
 .settings-heading button {min-width:44px;min-height:44px}
-.scheme-swatch.custom-scheme-preview {height:46px;margin:6px 0 12px}
+.custom-scheme-presets {display:flex;gap:6px;margin:0 0 8px}
+.custom-scheme-presets button {
+  flex:1 1 0;min-height:44px;min-width:0;padding:4px;
+  background:var(--scheme-control);border-color:var(--scheme-stroke);color:var(--scheme-text);
+}
 .custom-scheme-sliders {
   display:grid;grid-template-columns:auto minmax(0,1fr) 48px;align-items:center;gap:4px 10px;
   margin-bottom:12px;padding:0 4px;font-size:14px;
@@ -153,14 +200,28 @@ body.compact-workspace,
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px;
   --scheme-card-bg:var(--scheme-control);--scheme-card-stroke:var(--scheme-stroke);
 }
+.scheme-grid-main {grid-template-columns:repeat(3,minmax(0,1fr));padding-bottom:4px}
 .scheme-grid button {
-  position:relative;display:grid;grid-template-rows:22px 1fr;align-items:center;gap:3px;
-  justify-content:stretch;text-align:center;min-height:52px;min-width:0;padding:4px;
+  position:relative;display:grid;grid-template-rows:16px 1fr;align-items:center;gap:3px;
+  justify-content:stretch;text-align:center;min-height:44px;min-width:0;padding:4px;
   border:1px solid var(--scheme-card-stroke);border-radius:8px;
   background:var(--scheme-card-bg);color:#f8f8f8;font-size:11px;line-height:1.15;
 }
+.scheme-grid-main [data-scheme=custom] {
+  grid-column:1 / -1;grid-template:1fr / 50px minmax(0,1fr) 16px;
+  text-align:start;gap:9px;min-height:48px;padding:6px 10px;font-size:14px;font-weight:650;
+}
+.scheme-grid-main [data-scheme=custom] .icon {width:16px;height:16px;color:var(--scheme-accent)}
+.scheme-picker-extra > summary {
+  display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:44px;
+  margin-inline:8px;padding:4px;color:var(--scheme-muted,var(--text));cursor:pointer;list-style:none;font-size:12px;
+}
+.scheme-picker-extra > summary::-webkit-details-marker {display:none}
+.scheme-picker-extra > summary .icon {width:15px;height:15px}
+.scheme-picker-extra[open] > summary .icon {transform:rotate(90deg)}
+.scheme-picker-extra > .scheme-grid {padding-top:0}
 .scheme-swatch {
-  position:relative;display:block;height:22px;overflow:hidden;
+  position:relative;display:block;height:16px;overflow:hidden;
   border:1px solid var(--scheme-stroke);border-radius:5px;
   background:linear-gradient(110deg,var(--scheme-bg) 8%,var(--scheme-primary) 57%,var(--scheme-accent));
   box-shadow:inset 0 1px var(--scheme-sheen);
@@ -171,9 +232,14 @@ body.compact-workspace,
   background:linear-gradient(145deg,var(--scheme-control),var(--scheme-bg));box-shadow:0 3px 7px #0008;
 }
 .scheme-swatch::after {
-  content:"";position:absolute;inset:7px 47% 7px 8px;border-radius:2px;
+  content:"";position:absolute;inset:5px 47% 5px 8px;border-radius:2px;
   background:var(--scheme-accent);box-shadow:0 0 6px var(--scheme-glow);
 }
+.scheme-swatch.custom-scheme-preview {
+  height:42px;margin:6px 0 8px;
+  background:linear-gradient(to right,var(--scheme-bg) 25%,var(--scheme-panel) 25% 50%,var(--scheme-control) 50% 75%,var(--scheme-accent) 75%);
+}
+.custom-scheme-preview::before,.custom-scheme-preview::after {content:none}
 .scheme-grid [data-scheme=eden-new] .scheme-swatch {background:linear-gradient(115deg,#202943,#5b73d0 43%,#889af5 73%,#a7dbff)}
 .scheme-grid [data-scheme=violet] .scheme-swatch {background:linear-gradient(115deg,#1d1a30,#6e5ba8 57%,#c2b4ff)}
 .scheme-grid [data-scheme=amber] .scheme-swatch {background:linear-gradient(155deg,#261c19,#704937 56%,#b4795e)}
@@ -360,8 +426,8 @@ body[data-color-scheme]:not([data-color-scheme=pink]) :is(.dropzone:not(.is-drag
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(
   .canvas-wrap,.layer-thumb,.snapshot-art,.trait-card img,.library-trait img,.library-current
 ) {
-  background-color:#1e1f22;
-  background-image:repeating-conic-gradient(#2b2c30 0 25%,#222326 0 50%);
+  background-color:var(--scheme-checker-base,#1e1f22);
+  background-image:repeating-conic-gradient(var(--scheme-checker-alt,#2b2c30) 0 25%,var(--scheme-checker-base,#222326) 0 50%);
 }
 body[data-color-scheme]:not([data-color-scheme=pink]) .header-menu-content .history-menu-actions button,
 body[data-color-scheme]:not([data-color-scheme=pink]) :is(.history-step:not(.is-current),.stage .preview-inline-actions button) {

@@ -279,8 +279,11 @@ assert.equal(get('colorSchemes').open,false,'settings opens at the section list'
 click('#colorSchemes summary');
 assert.equal(get('colorSchemes').open,true,'the color scheme row opens the palette picker');
 const schemes = [...get('settingsDialog').querySelectorAll('.scheme-grid [data-scheme]')];
-assert.deepEqual(schemes.map(button => button.textContent.trim()),
-  ['ME', 'ME Blue', 'ME New', 'B&W', 'Jantar', 'Fialový', 'Grafit', 'Icy', 'Deep Water', 'Bordó', 'Oliva', 'Písek', 'Custom']);
+assert.deepEqual([...get('settingsDialog').querySelectorAll('.scheme-grid-main [data-scheme]')].map(button => button.textContent.trim()),
+  ['Custom', 'B&W', 'Grafit', 'ME']);
+assert.equal(get('extraColorSchemes').open, false);
+click('#extraColorSchemes summary');
+assert.equal(get('extraColorSchemes').open, true);
 for (const {dataset: {scheme}} of schemes.filter(button => button.dataset.scheme !== 'custom')) {
   const selector = `[data-scheme="${scheme}"]`;
   click(selector);
@@ -306,19 +309,37 @@ click('[data-action="close-custom-scheme"]');
 await waitFor(() => w.document.body.dataset.colorScheme === 'sand');
 click(customChoice);
 assert.equal(customHue.value, '210', 'cancel discards the draft');
-for (const [id, value] of [['customSchemeHue','128'],['customSchemeBrightness','70'],['customSchemeSaturation','30']]) {
+for (const [id, value] of [['customSchemeHue','128'],['customSchemeBrightness','70'],['customSchemeSaturation','30'],['customSchemeContrast','58']]) {
   get(id).value = value;
   get(id).dispatchEvent(new w.Event('input', { bubbles:true }));
 }
 get('customSchemeForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
 assert(!get('customSchemeDialog').open);
 assert.equal(w.localStorage.getItem('nft-color-scheme'), 'custom');
-assert.deepEqual(JSON.parse(w.localStorage.getItem('nft-custom-color-scheme')), { hue:128, brightness:70, saturation:30 });
+assert.deepEqual(JSON.parse(w.localStorage.getItem('nft-custom-color-scheme')), { hue:128, brightness:70, saturation:30, contrast:58 });
 w.document.body.dataset.colorScheme = 'pink';
 w.document.body.style.removeProperty('--custom-hue');
 w.reloadColorScheme();
 assert.equal(w.document.body.dataset.colorScheme, 'custom');
 assert.equal(w.document.body.style.getPropertyValue('--custom-hue'), '128deg');
+assert.equal(w.document.body.style.getPropertyValue('--custom-contrast'), '58%');
+w.localStorage.setItem('nft-custom-color-scheme', JSON.stringify({ hue:128, brightness:70, saturation:30 }));
+w.reloadColorScheme();
+assert.equal(w.document.body.style.getPropertyValue('--custom-contrast'), '38%', 'older custom settings acquire the new default');
+click(customChoice);
+click('[data-action="custom-scheme-preset"][data-id="mono"]');
+assert.equal(get('customSchemeBrightness').value, '70');
+assert.equal(get('customSchemeSaturation').value, '0');
+assert(w.document.body.hasAttribute('data-custom-monochrome'));
+click('[data-action="custom-scheme-preset"][data-id="oled"]');
+assert.equal(get('customSchemeBrightnessValue').value, '0 %');
+assert.equal(get('customSchemeContrastValue').value, '38 %', 'OLED black keeps the separation between surfaces');
+get('customSchemeForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
+w.reloadColorScheme();
+assert.equal(w.document.body.dataset.colorScheme, 'custom');
+assert.equal(w.document.body.style.getPropertyValue('--custom-brightness'), '0%');
+assert.equal(w.document.body.style.getPropertyValue('--custom-saturation'), '0%');
+assert(w.document.body.hasAttribute('data-custom-monochrome'));
 const accent = name => find(`#accentChoices [data-control-accent="${name}"]`);
 click('[data-scheme="graphite-grey"]');
 assert.equal(w.document.body.dataset.controlAccent, 'auto');

@@ -2467,6 +2467,7 @@ const colorSchemes = new Set([
   'bordeaux', 'olive', 'sand', 'custom',
 ]);
 function applyCustomSchemeTokens(palette) {
+  document.body.toggleAttribute('data-custom-monochrome', palette.saturation === 0);
   for (const control of customSchemeControls) {
     const value = palette[control.name];
     document.body.style.setProperty(`--custom-${control.name}`, `${value}${control.name === 'hue' ? 'deg' : '%'}`);
@@ -3136,11 +3137,18 @@ async function handleAction(action, id, element) {
     case 'quick-next': scrollQuickTraits(1); break;
     case 'open-settings':
       $('colorSchemes').open = false;
+      $('extraColorSchemes').open = false;
       $('settingsDialog').showModal();
       break;
     case 'close-settings': $('settingsDialog').close(); break;
     case 'open-custom-scheme': openCustomScheme(); break;
     case 'close-custom-scheme': $('customSchemeDialog').close(); break;
+    case 'custom-scheme-preset':
+      if (!$('customSchemeDialog').open) break;
+      $('customSchemeSaturation').value = '0';
+      if (id === 'oled') $('customSchemeBrightness').value = '0';
+      previewCustomScheme();
+      break;
     case 'set-color-scheme': chooseColorScheme(element?.dataset.scheme); break;
     case 'set-control-accent': chooseControlAccent(element?.dataset.controlAccent); break;
     case 'set-accent-coverage':
