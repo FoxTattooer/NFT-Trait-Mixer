@@ -167,35 +167,75 @@
     return new Blob([...body, ...directory, end], { type: 'application/zip' });
   }
 
-  function zipProject(model, { project, title, readImage, backup, composite, progress = () => {} }) {
-    const top = fileName(title), folder = new Blob([]);
+  function projectFolderPlan(model, project, title) {
+    const entries = [];
     const ordered = (name, index, length) => String(index + 1).padStart(Math.max(2, String(length).length), '0') + ' ' + fileName(name);
+    for (const [index, category] of project.cats.entries()) {
+      const parts = [ordered(category.name,index,project.cats.length)];
+      const children = model.layerChildren(project,category);
+      entries.push({ parts });
+      const stack = [{ parts, rows:children(null), next:0 }];
+      while (stack.length) {
+        const branch = stack.at(-1);
+        if (branch.next >= branch.rows.length) { stack.pop(); continue; }
+        const i = branch.next++, { item,kind } = branch.rows[i];
+        const name = ordered(item.name,i,branch.rows.length);
+        if (kind === 'folders') {
+          const sub = [...branch.parts,name];
+          entries.push({ parts:sub });
+          stack.push({ parts:sub,rows:children(item.id),next:0 });
+        } else entries.push({ parts:[...branch.parts,name+'.png'], trait:item });
+      }
+    }
+    return { name:fileName(title),entries };
+  }
+
+  function zipProject(model, { project, title, readImage, backup, composite, progress = () => {} }) {
+    const plan = projectFolderPlan(model,project,title), top = plan.name, folder = new Blob([]);
     let done = 0;
     async function* entries() {
       yield { name: top + '/', blob: folder };
-      for (const [index, category] of project.cats.entries()) {
-        const path = `${top}/${ordered(category.name, index, project.cats.length)}/`;
-        const children = model.layerChildren(project, category);
-        yield { name: path, blob: folder };
-        const stack = [{ path, rows: children(null), next: 0 }];
-        while (stack.length) {
-          const branch = stack.at(-1);
-          if (branch.next >= branch.rows.length) { stack.pop(); continue; }
-          const i = branch.next++, { item, kind } = branch.rows[i];
-          const itemPath = branch.path + ordered(item.name, i, branch.rows.length);
-          if (kind === 'folders') {
-            yield { name: itemPath + '/', blob: folder };
-            stack.push({ path: itemPath + '/', rows: children(item.id), next: 0 });
-          } else {
-            yield { name: itemPath + '.png', blob: await readImage(item) };
-            progress(++done);
-          }
-        }
+      for (const { parts,trait } of plan.entries) {
+        const name = top + '/' + parts.join('/');
+        if (trait) {
+          yield { name, blob:await readImage(trait) };
+          progress(++done);
+        } else yield { name:name+'/',blob:folder };
       }
       if (backup) yield { name: top + '/project.json', blob: await backup() };
       if (composite) yield { name: top + '/final.png', blob: composite };
     }
     return zipStored(entries());
+  }
+
+  async function writeExportFolder(parent, plan, readImage, progress = () => {}) {
+    let name = plan.name, destination;
+    for (let suffix = 2; !destination; suffix++) {
+      try { await parent.getDirectoryHandle(name); }
+      catch (error) {
+        if (error.name === 'NotFoundError') { destination = await parent.getDirectoryHandle(name,{ create:true }); break; }
+        if (error.name !== 'TypeMismatchError') throw error;
+      }
+      name = `${plan.name} (${suffix})`;
+    }
+    const dirs = new Map([['',destination]]);
+    const total = plan.entries.filter(entry => entry.trait).length;
+    let done = 0;
+    for (const { parts,trait } of plan.entries) {
+      const folder = dirs.get(parts.slice(0,-1).join('/'));
+      const child = parts.at(-1);
+      if (!trait) {
+        dirs.set(parts.join('/'),await folder.getDirectoryHandle(child,{ create:true }));
+        continue;
+      }
+      const blob = await readImage(trait);
+      const handle = await folder.getFileHandle(child,{ create:true });
+      const writable = await handle.createWritable();
+      try { await writable.write(blob); await writable.close(); }
+      catch (error) { await writable.abort().catch(() => {}); throw error; }
+      progress(++done,total,name);
+    }
+    return { name,count:done };
   }
 
   const loadWorkspace = (db, key = 'final') => read(db, 'workspace', 'get', key);
@@ -369,20 +409,20 @@
     return { project,images };
   }
 
-  function zipFolderTemplate(title, paths) {
-    const root = fileName(title) + '/', empty = new Blob([]), names = new Set([root]);
+  function folderTemplatePlan(title, paths) {
+    const folders = new Map();
     for (const path of paths) {
-      let name = root;
+      let parts = [];
       for (const part of relativePath(path || '.').split('/').filter(Boolean)) {
-        name += fileName(part) + '/';
-        names.add(name);
+        parts = [...parts,fileName(part)];
+        folders.set(parts.join('/'),{ parts });
       }
     }
-    return zipStored([...names].map(name => ({ name,blob:empty })));
+    return { name:fileName(title),entries:[...folders.values()] };
   }
-
   const api = { open, snapshot, save, list, load, image, fileName, zipProject, loadWorkspace, saveWorkspace,
-    parseLayout, directoryFiles, folderCategories, finCategories, projectCategories, exportScopes, filterExportGroups, draftProject, zipFolderTemplate };
+    parseLayout, directoryFiles, folderCategories, finCategories, projectCategories, exportScopes, filterExportGroups, draftProject,
+    projectFolderPlan, folderTemplatePlan, writeExportFolder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitFinal = api;
 })(globalThis);

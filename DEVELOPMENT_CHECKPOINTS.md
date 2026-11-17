@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.162 | checkpoint/v0.7.162-export-do-slozky | Finál ukládá skutečné složky, samostatná PNG nebo PSD. PNG lze na iPhonu sdílet do Souborů. Zamčené kopie mají obnovitelnou zálohu JSON. |
 | 0.7.161 | checkpoint/v0.7.161-exportni-centrum | Kompaktní centrum exportu PNG a PSD s výběrem složek, označení, vlajek a štítků a s průběžným náhledem. Export kategorií s počtem v horní liště vrstev. |
 | 0.7.160 | checkpoint/v0.7.160-oznaceni-out | Označení OUT pro vrstvy, složky a kategorie, včetně filtrů, hromadných akcí a historie. |
 | 0.7.159 | checkpoint/v0.7.159-prejmenovani-a-stitky-slozek | Přejmenování klepnutím na název, kompaktnější výběr štítků a místní odebrání zděděných štítků. |

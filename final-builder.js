@@ -109,7 +109,7 @@ function renderFinalDraftSettings() {
     <p class="helper"><code>HAIRS = Hlava/Účesy</code> načte PNG ze složky i jejích podsložek. Tečka označuje kořen.</p>
     <label>Vlastní cesty jednotlivých položek<textarea name="slots" rows="4" spellcheck="false" autocapitalize="off" placeholder="HAIRS / Cowboy Afro = Výjimky/Cowboy Afro.png">${esc(slots)}</textarea></label>
     <p class="helper">U položky zadej přímo PNG nebo složku, kde je jedno PNG či soubor pojmenovaný podle položky.</p>
-    <div class="final-draft-settings-actions"><button type="button" class="subtle" data-final-draft="use-inventory">Převzít strom ze Soupisu</button><button type="button" class="subtle" data-final-draft="folder-template">Stáhnout složky ZIP</button></div>
+    <div class="final-draft-settings-actions"><button type="button" class="subtle" data-final-draft="use-inventory">Převzít strom ze Soupisu</button><button type="button" class="subtle" data-final-draft="folder-template">Vytvořit složky</button></div>
     <div class="final-draft-settings-actions"><button type="button" class="subtle" data-final-draft="settings">Zpět</button><button type="submit" class="primary">Potvrdit cesty</button></div>
   </form>`;
 }
@@ -123,7 +123,7 @@ function renderFinalDraftPreview(groups,group,excluded,used) {
   const rendered = finalDraftPreviewOpen ? [...groups].reverse().map(candidate => finalDraftChoice(candidate,excluded)).filter(Boolean) : [];
   const select = group && finalDraftPreviewOpen ? `<label>Vrstva v náhledu · ${esc(group.name)}<select id="finalDraftPreviewLayer" data-preview-key="${esc(finalDraftPreviewKey(group))}">
     <option value="auto">První zahrnutá vrstva</option><option value="none" ${finalDraftPreviewChoices.get(finalDraftPreviewKey(group)) === 'none' ? 'selected' : ''}>Skrýt kategorii v náhledu</option>${group.rows.filter(row => !excluded.has(row.id)).map(row => `<option value="${esc(row.id)}" ${finalDraftPreviewChoices.get(finalDraftPreviewKey(group)) === row.id ? 'selected' : ''}>${esc(row.name)}</option>`).join('')}</select></label>` : '';
-  return `<details id="finalDraftPreview" class="final-draft-preview" ${finalDraftPreviewOpen ? 'open' : ''}><summary>Náhled kombinace</summary>${finalDraftPreviewOpen ? `<div class="inventory-composition" aria-label="Složený náhled exportu">${rendered.length ? rendered.map(row => draftPreview(row,used,true)).join('') : '<p>Kombinace nemá vybrané vrstvy.</p>'}</div>${select}<p class="helper">${finalExportFormat === 'psd' ? 'Vybrané varianty budou v PSD po otevření viditelné. Ostatní zaškrtnuté vrstvy budou skryté a půjdou zapnout.' : 'ZIP obsahuje všechna zaškrtnutá PNG ve složkách.'}</p>` : ''}</details>`;
+  return `<details id="finalDraftPreview" class="final-draft-preview" ${finalDraftPreviewOpen ? 'open' : ''}><summary>Náhled kombinace</summary>${finalDraftPreviewOpen ? `<div class="inventory-composition" aria-label="Složený náhled exportu">${rendered.length ? rendered.map(row => draftPreview(row,used,true)).join('') : '<p>Kombinace nemá vybrané vrstvy.</p>'}</div>${select}<p class="helper">${finalExportFormat === 'psd' ? 'Vybrané varianty budou v PSD po otevření viditelné. Ostatní zaškrtnuté vrstvy budou skryté a půjdou zapnout.' : finalExportFormat === 'tree' ? 'Použije se struktura složek vybraných vrstev.' : 'Ukládají se všechna zaškrtnutá PNG.'}</p>` : ''}</details>`;
 }
 async function finalDraftFolderAction(action, control) {
   const form = $('finalDraftSettingsForm');
@@ -144,7 +144,7 @@ async function finalDraftFolderAction(action, control) {
     } else {
       const paths = current.flatMap(category => [category.path,...(byName.get(category.name)?.folders || []).map(folder => [category.path,folder].filter(Boolean).join('/'))]);
       const name = state.name + ' – Složky Finálu';
-      download(await TraitFinal.zipFolderTemplate(name,paths),TraitFinal.fileName(name)+'.zip');
+      openFolderExport(TraitFinal.folderTemplatePlan(name,paths));
       $('finalStatus').textContent = 'Struktura složek připravena.';
     }
   } catch (error) { $('finalStatus').textContent = error.message; }
@@ -174,6 +174,7 @@ function renderFinalBuilder() {
       <div class="final-draft-sources" role="group" aria-label="Formát exportu">
         <button type="button" class="subtle" data-final-draft="png" aria-pressed="${finalExportFormat==='png'}">PNG</button>
         <button type="button" class="subtle" data-final-draft="psd" aria-pressed="${finalExportFormat==='psd'}">PSD</button>
+        <button type="button" class="subtle" data-final-draft="tree" aria-pressed="${finalExportFormat==='tree'}">Složky</button>
       </div>
       <button type="button" class="subtle icon-button final-export-settings" data-final-draft="settings" aria-expanded="${finalDraftSettings}" aria-label="Nastavení složek" title="Nastavení složek">${icon('settings')}</button></div>
     ${finalDraftSettings ? renderFinalDraftSettings() : `
@@ -193,11 +194,11 @@ function renderFinalBuilder() {
         ${group.rows.length > list.length ? '<button type="button" class="subtle" data-final-draft="more">Další vrstvy</button>' : ''}` :
         `<p class="helper">${sources.length ? 'Žádná vrstva neodpovídá výběru.' : finalDraftSource === 'folders' ? 'Vyber složku s PNG.' : 'Otevři projekt s vrstvami nebo vyber složku s PNG.'}</p>`}`}
     </section>`;
-  const psd = finalExportFormat === 'psd';
+  const psd = finalExportFormat === 'psd', tree = finalExportFormat === 'tree';
   const bar = $('finalExportBar');
   bar.hidden = finalDraftSettings;
-  bar.innerHTML = `<div><strong>Vybráno ${total} / ${matching}</strong><small>${psd ? 'PSD · vrstvy a skupiny' : 'PNG · ZIP se složkami'}</small></div>
-    ${finalDraftURL ? `<a href="${esc(finalDraftURL.url)}" download="${esc(finalDraftURL.name)}">${psd ? 'Stáhnout PSD' : 'Stáhnout ZIP'}</a>` : `<button type="button" class="primary" data-final-draft="export" ${total ? '' : 'disabled'}>${psd ? 'Připravit PSD' : 'Připravit ZIP'}</button>`}`;
+  bar.innerHTML = `<div><strong>Vybráno ${total} / ${matching}</strong><small>${psd ? 'PSD · vrstvy a skupiny' : tree ? 'Prázdná struktura složek' : 'PNG · uložení do složky'}</small></div>
+    ${finalDraftURL ? `<a href="${esc(finalDraftURL.url)}" download="${esc(finalDraftURL.name)}">Stáhnout PSD</a>` : `<button type="button" class="primary" data-final-draft="export" ${total ? '' : 'disabled'}>${psd ? 'Připravit PSD' : tree ? 'Vytvořit složky' : 'Uložit PNG'}</button>`}`;
   $('finalStatus').textContent = finalDraftStatus;
   const preview = $('finalDraftPreview');
   preview?.addEventListener('toggle',() => {
@@ -281,44 +282,50 @@ async function encodeFinalPsd(groups, progress) {
   };
   return TraitPsdExport.encode(groups,{ canvas,load,write:ag.writePsd,progress });
 }
-async function prepareFinalDraftExport() {
+function finalDraftExportData() {
   const title = state.name + ' – Finál';
   const excluded = new Set(finalDraftData().excluded[finalDraftSource] || []);
   const selected = finalExportSelection(finalDraftCategories(),excluded);
   const { project,images } = TraitFinal.draftProject(M,title,selected,new Set());
   if (!images.size) throw new Error('Vyber alespoň jednu vrstvu.');
-  const format = finalExportFormat;
-  let blob;
-  if (format === 'psd') {
-    const groups = [];
-    for (const [index,category] of project.cats.entries()) {
-      const chosen = finalDraftChoice(selected[index],excluded);
-      const children = M.layerChildren(project,category);
-      async function branch(parent) {
-        const nodes = [];
-        for (const { item,kind } of children(parent)) {
-          if (kind === 'folders') nodes.push({ name:item.name,children:await branch(item.id) });
-          else {
-            const row = images.get(item.id);
-            nodes.push({ name:item.name,visible:row === chosen,blob:await readFinalExportImage(row) });
-          }
-        }
-        return nodes;
-      }
-      groups.push({ name:category.name,children:await branch(null) });
-    }
-    blob = await encodeFinalPsd(groups,(done,total) => {
-      $('finalStatus').textContent = done === total ? 'Zapisuji PSD…' : `Připravuji vrstvy PSD ${done} / ${total}…`;
-    });
-  } else {
-    blob = await TraitFinal.zipProject(M,{ project,title,
-      readImage:trait => readFinalExportImage(images.get(trait.id)),
-      progress:done => { $('finalStatus').textContent = `Připravuji PNG ${done} / ${images.size}…`; },
-    });
-  }
-  finalDraftURL = { url:URL.createObjectURL(blob), name:TraitFinal.fileName(title)+(format === 'psd' ? '.psd' : '.zip') };
-  finalDraftStatus = `${format === 'psd' ? 'PSD' : 'ZIP'} připraven ke stažení · ${counted(images.size,'vrstva','vrstvy','vrstev')}.`;
+  return { title, excluded, selected, project, images };
 }
+async function prepareFinalDraftPsd() {
+  const { title,excluded,selected,project,images } = finalDraftExportData();
+  const groups = [];
+  for (const [index,category] of project.cats.entries()) {
+    const chosen = finalDraftChoice(selected[index],excluded);
+    const children = M.layerChildren(project,category);
+    async function branch(parent) {
+      const nodes = [];
+      for (const { item,kind } of children(parent)) {
+        if (kind === 'folders') nodes.push({ name:item.name,children:await branch(item.id) });
+        else {
+          const row = images.get(item.id);
+          nodes.push({ name:item.name,visible:row === chosen,blob:await readFinalExportImage(row) });
+        }
+      }
+      return nodes;
+    }
+    groups.push({ name:category.name,children:await branch(null) });
+  }
+  const blob = await encodeFinalPsd(groups,(done,total) => {
+    $('finalStatus').textContent = done === total ? 'Zapisuji PSD…' : `Připravuji vrstvy PSD ${done} / ${total}…`;
+  });
+  finalDraftURL = { url:URL.createObjectURL(blob), name:TraitFinal.fileName(title)+'.psd' };
+  finalDraftStatus = `PSD připraven ke stažení · ${counted(images.size,'vrstva','vrstvy','vrstev')}.`;
+}
+function openFinalDraftFolder() {
+  try {
+    const { title,project,images } = finalDraftExportData();
+    const plan = TraitFinal.projectFolderPlan(M,project,title);
+    if (finalExportFormat === 'tree') plan.entries = plan.entries.filter(entry => !entry.trait);
+    openFolderExport(plan,trait => readFinalExportImage(images.get(trait.id)));
+  } catch (error) {
+    $('finalStatus').textContent = error.message;
+  }
+}
+
 async function setFinalDraftRows(ids, included) {
   const draft = finalDraftData(), excluded = new Set(draft.excluded[finalDraftSource] || []);
   for (const id of ids) {
@@ -333,7 +340,8 @@ finalDialog.addEventListener('click', event => {
   if (action === 'use-inventory' || action === 'folder-template') { void finalDraftFolderAction(action,control); return; }
   if (action === 'pick-root') { draftRootInput.click(); return; }
   if (action === 'export') {
-    finalBuilderWork(prepareFinalDraftExport,finalExportFormat === 'psd' ? 'Připravuji PSD…' : 'Připravuji ZIP…');
+    if (finalExportFormat === 'psd') finalBuilderWork(prepareFinalDraftPsd,'Připravuji PSD…');
+    else openFinalDraftFolder();
     return;
   }
   if (action === 'toggle-group') {
@@ -346,7 +354,7 @@ finalDialog.addEventListener('click', event => {
   if (action === 'fin' || action === 'folders') {
     if (finalDraftSource !== action) clearFinalDraftDownload();
     finalDraftSource = action; finalDraftIndex = 0; finalDraftLimit = 36; finalDraftSettings = false;
-  } else if (action === 'png' || action === 'psd') {
+  } else if (action === 'png' || action === 'psd' || action === 'tree') {
     if (finalExportFormat !== action) clearFinalDraftDownload();
     finalExportFormat = action;
   } else if (action === 'preset') {

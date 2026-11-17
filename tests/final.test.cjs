@@ -191,11 +191,18 @@ test('layered PSD retains PNG pixels, original coordinates, nested groups and ch
   assert.deepEqual(progress,[[1,3],[2,3],[3,3]]);
 });
 
-test('the empty ZIP scaffold creates the exact hierarchy for configured folder paths', async () => {
-  const archive=await Final.zipFolderTemplate('Finál',['Hlava/Účesy/Afro','Hlava/Účesy/Goku','Oblečení']);
-  const reader=new zip.ZipReader(new zip.BlobReader(archive),{ useWebWorkers:false });
-  const entries=await reader.getEntries();
-  assert(entries.every(entry=>entry.directory));
-  assert.deepEqual(entries.map(entry=>entry.filename),['Finál/','Finál/Hlava/','Finál/Hlava/Účesy/','Finál/Hlava/Účesy/Afro/','Finál/Hlava/Účesy/Goku/','Finál/Oblečení/']);
-  await reader.close();
+test('the empty folder scaffold writes the configured directories and keeps a previous export intact', async () => {
+  const paths = new Set(['Finál','Finál/Starší']);
+  function directory(path = '') {
+    return { async getDirectoryHandle(name,options) {
+      const child = [path,name].filter(Boolean).join('/');
+      if (!paths.has(child) && !options?.create) throw new DOMException('Missing directory','NotFoundError');
+      paths.add(child);
+      return directory(child);
+    } };
+  }
+  const plan = Final.folderTemplatePlan('Finál',['Hlava/Účesy/Afro','Hlava/Účesy/Goku','Oblečení']);
+  assert.deepEqual(await Final.writeExportFolder(directory(),plan),{ name:'Finál (2)',count:0 });
+  assert.deepEqual([...paths],['Finál','Finál/Starší','Finál (2)','Finál (2)/Hlava','Finál (2)/Hlava/Účesy',
+    'Finál (2)/Hlava/Účesy/Afro','Finál (2)/Hlava/Účesy/Goku','Finál (2)/Oblečení']);
 });

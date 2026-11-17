@@ -1,7 +1,7 @@
 /* Editable FIN marks and read-only copies. */
 'use strict';
 const finalDialog = $('finalDialog');
-let finalConnection, finalEntries = [], finalArchive, finalCategory, finalPath = [], finalLimit = 80, finalURL;
+let finalConnection, finalEntries = [], finalArchive, finalCategory, finalPath = [], finalLimit = 80;
 let finalView = 'compose', finalMarkedCategory, finalMarkedEdit;
 let finalRarityCategory, finalRarityFolder = '', finalRarityCount = null, finalRarityRow = null;
 let finalRarityDraft = false, finalRarityFixed = new Map();
@@ -140,17 +140,6 @@ function finalDatabase() {
   return finalConnection;
 }
 
-function clearFinalDownload() {
-  if (finalURL) {
-    const url = finalURL;
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    finalURL = null;
-  }
-  const link = $('finalDownload');
-  link.removeAttribute('href');
-  link.hidden = true;
-}
-
 const markedTraits = category => category.traits.filter(trait => !trait.out && (category.fin || trait.fin));
 const markedFolders = category => organizerFolders(category.id).folders.filter(folder => folder.fin);
 const markedItems = category => [...markedFolders(category), ...markedTraits(category)];
@@ -210,7 +199,7 @@ function renderFinal() {
   if (compose || rarities) {
     $('finalViews').hidden = false;
     $('finalTitle').textContent = 'Finál';
-    for (const id of ['finalBack','finalLock','finalPath','finalMore','finalSave','finalExport','finalDownload']) $(id).hidden = true;
+    for (const id of ['finalBack','finalLock','finalPath','finalMore','finalSave','finalExport','finalBackup']) $(id).hidden = true;
     if (compose) { renderFinalBuilder(); loadFinalBuilder(); }
     else {
       clearFinalDraftPreviews(); clearFinalDraftDownload();
@@ -231,7 +220,8 @@ function renderFinal() {
   $('finalViews').querySelector('[data-final-action="show-archives"]').setAttribute('aria-pressed', String(!showMarked));
   $('finalBack').hidden = !archiveOpen && !category;
   $('finalSave').hidden = archiveOpen || showMarked;
-  $('finalExport').hidden = !archiveOpen || !!finalURL;
+  $('finalExport').hidden = !archiveOpen || !finalArchive.entry.count;
+  $('finalBackup').hidden = !archiveOpen;
   $('finalLock').hidden = !archiveOpen;
   $('finalTitle').textContent = finalArchive?.entry.title || 'Finál';
   $('finalPath').textContent = archiveOpen
@@ -265,7 +255,6 @@ function resetFinalNavigation() {
   finalMarkedCategory = finalMarkedEdit = null;
   finalPath = [];
   finalLimit = 80;
-  clearFinalDownload();
 }
 
 async function withFinalStorage(phase, status, action) {
@@ -437,25 +426,19 @@ finalDialog.addEventListener('click', async event => {
       });
       break;
     }
-    case 'export': {
-      const { entry, project } = finalArchive;
-      await withFinalStorage('final-export', 'Připravuji ZIP…', async database => {
-        const readImage = trait => TraitFinal.image(database, finalArchive, trait);
-        const blob = await TraitFinal.zipProject(M, {
-          project, title: entry.title, readImage,
-          backup: () => {
-            $('finalStatus').textContent = 'Přidávám obnovitelnou zálohu projektu…';
-            return TraitStorage.backup(null, project, readImage);
-          },
-          progress: done => { $('finalStatus').textContent = `Připravuji ZIP · PNG ${done} / ${entry.count}…`; },
-        });
-        const link = $('finalDownload');
-        finalURL = URL.createObjectURL(blob);
-        link.href = finalURL;
-        link.download = TraitFinal.fileName(entry.title) + '.zip';
-        link.hidden = false;
-        $('finalExport').hidden = true;
-        $('finalStatus').textContent = 'ZIP je připravený. Po stažení ho otevři v Souborech.';
+    case 'export-png': {
+      const archive = finalArchive;
+      const plan = TraitFinal.projectFolderPlan(M,archive.project,archive.entry.title);
+      openFolderExport(plan,async trait => TraitFinal.image(await finalDatabase(),archive,trait));
+      break;
+    }
+    case 'backup': {
+      const archive = finalArchive;
+      await withFinalStorage('final-export','Připravuji zálohu…',async database => {
+        const readImage = trait => TraitFinal.image(database,archive,trait);
+        const backup = await TraitStorage.backup(null,archive.project,readImage);
+        download(backup,TraitFinal.fileName(archive.entry.title)+'.json');
+        $('finalStatus').textContent = 'Záloha JSON připravená ke stažení.';
       });
       break;
     }

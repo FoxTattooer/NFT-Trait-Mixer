@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {Window}=require('happy-dom'),{IDBFactory,IDBObjectStore}=require('fake-indexeddb');
 const {createCanvas,loadImage}=require('@napi-rs/canvas');
 const M=require('../project'),S=require('../storage');
-const zip=require('../vendor/procreate-zip');
+const {File}=require('node:buffer');
 async function waitFor(fn){for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,10));}throw Error('UI timeout');}
 (async()=>{
 global.indexedDB=new IDBFactory();const p=M.empty(),c=createCanvas(2,2),ctx=c.getContext('2d');
@@ -41,7 +41,7 @@ w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuf
 w.HTMLCanvasElement.prototype.toDataURL=function(){return this.native.toDataURL('image/png');};
 w.__downloads=[];
 w.fetch=async url=>{assert.match(url,/inventory-dripd\.json/);return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../inventory-dripd.json','utf8'))};};
-w.eval(['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','app.js','trait-comparison.js','lookbook-cards.js','lookbook.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+w.eval(['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','app.js','trait-comparison.js','lookbook-cards.js','lookbook.js','folder-export.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -1334,22 +1334,42 @@ click('#categoryExportAll');
 assert.match(get('categoryExportCount').textContent, /3 kategorie · 4 PNG/);
 click('#categoryExportChoices input[value="export-c"]');
 assert.match(get('categoryExportCount').textContent, /2 kategorie · 3 PNG/);
+const exportDirectories = new Set(), exportedPNGs = new Map();
+function directory(path = '') {
+  return {
+    async getDirectoryHandle(name,options) {
+      const child = [path,name].filter(Boolean).join('/');
+      if (!exportDirectories.has(child) && !options?.create) throw new DOMException('Missing directory','NotFoundError');
+      exportDirectories.add(child);
+      return directory(child);
+    },
+    async getFileHandle(name,{create}) {
+      assert(create);
+      return { async createWritable() {
+        let blob;
+        return {
+          async write(value) { blob = value; },
+          async close() { exportedPNGs.set(path+'/'+name,blob); },
+        };
+      } };
+    },
+  };
+}
+w.showDirectoryPicker = async options => { assert.equal(options.mode,'readwrite'); return directory(); };
 click('#categoryExportSubmit');
-const exportedSelection = get('categoryExportDownload');
-await waitFor(() => !exportedSelection.hidden);
-assert.equal(exportedSelection.download, 'Výběr – PNG vrstev.zip');
-const selectionZip = new zip.ZipReader(new zip.BlobReader(urls.get(exportedSelection.getAttribute('href'))), { useWebWorkers: false });
-const exportedPNGs = (await selectionZip.getEntries()).filter(entry => !entry.directory);
-assert.deepEqual(exportedPNGs.map(entry => entry.filename), [
+assert(get('folderExportDialog').open);
+click('#folderExportWrite');
+await waitFor(() => get('folderExportStatus').textContent.startsWith('Uloženo 3 PNG'));
+assert.deepEqual([...exportedPNGs.keys()], [
   'Výběr – PNG vrstev/01 Klobouky/01 Podskupina/01 Skrytá vrstva.png',
   'Výběr – PNG vrstev/01 Klobouky/02 Klobouk.png',
   'Výběr – PNG vrstev/02 Vlasy/01 Vlasy.png',
 ]);
-for (const [index, entry] of exportedPNGs.entries()) {
-  assert.equal(Buffer.from(await entry.getData(new zip.Uint8ArrayWriter(), { checkSignature: true })).toString('base64'),
-    [pngB, pngA, pngB][index].split(',')[1]);
+for (const [index,blob] of [...exportedPNGs.values()].entries()) {
+  assert.equal(Buffer.from(await blob.arrayBuffer()).toString('base64'),[pngB,pngA,pngB][index].split(',')[1]);
 }
-await selectionZip.close();
+click('#folderExportClose');
+await waitFor(() => get('folderExportEntries').children.length === 0);
 assert.equal(w.inspectState().selected['export-b'], 'export-hair');
 assert.equal(M.locate(w.inspectState(), 'export-hidden').trait.hidden, true);
 click('[data-action="close-category-export"]');
@@ -1990,16 +2010,36 @@ await waitFor(()=>find('[data-final-draft="export"]').disabled);
 assert.match(get('finalExportBar').textContent,/Vybráno 0 \/ 1/);
 click('[data-final-draft="toggle-group"]');
 await waitFor(()=>!find('[data-final-draft="export"]').disabled);
+click('[data-final-draft="tree"]');
 click('[data-final-draft="export"]');
-await waitFor(()=>find('#finalExportBar a[download]'));
-const exportLink = () => find('#finalExportBar a[download]');
-const filteredZip = new zip.ZipReader(new zip.BlobReader(urls.get(exportLink().getAttribute('href'))),{useWebWorkers:false});
-const exportedPaths = (await filteredZip.getEntries()).filter(entry=>!entry.directory).map(entry=>entry.filename);
-await filteredZip.close();
-assert.equal(exportedPaths.length,1);
-assert.match(exportedPaths[0],/Spaghetti WIP\/.*Basic\/.*Spaghetti Lime\.png$/);
+assert.match(get('folderExportEntries').textContent,/Spaghetti WIP.*Basic/s);
+assert(!get('folderExportEntries').querySelector('button'));
+click('#folderExportWrite');
+await waitFor(() => get('folderExportStatus').textContent.startsWith('Vytvořena složka'));
+assert([...exportDirectories].some(path => path.includes('Spaghetti WIP') && path.endsWith('Basic')));
+assert.equal(exportedPNGs.size,3);
+click('#folderExportClose');
+await waitFor(() => get('folderExportEntries').children.length === 0);
+w.showDirectoryPicker = undefined;
+const BrowserFile = w.File;
+w.File = File;
+let shared;
+Object.defineProperty(w.navigator,'canShare',{ value:({files}) => files.length === 1 });
+Object.defineProperty(w.navigator,'share',{ value:async ({files}) => { shared = files; } });
+click('[data-final-draft="png"]');
+click('[data-final-draft="export"]');
+assert(get('folderExportWrite').hidden);
+assert.match(get('folderExportPath').textContent,/Spaghetti WIP.*Basic/);
+await waitFor(() => !get('folderExportShare').hidden);
+click('#folderExportShare');
+await waitFor(() => shared?.length === 1 && !get('folderExportShare').disabled);
+assert.match(shared[0].name,/Spaghetti Lime\.png$/);
+assert.equal(shared[0].type,'image/png');
+w.File = BrowserFile;
+click('#folderExportClose');
+await waitFor(() => get('folderExportEntries').children.length === 0);
 click('[data-final-draft="psd"]');
-assert(!exportLink(),'format change invalidates the previous download');
+const exportLink = () => find('#finalExportBar a[download]');
 const agExport = require('ag-psd');
 w.agPsd = agExport;
 w.Worker = undefined;

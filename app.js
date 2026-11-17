@@ -2041,15 +2041,6 @@ async function exportPackage() {
 
 const categoryExportDialog = $('categoryExportDialog');
 const categoryExportInputs = () => [...$('categoryExportChoices').querySelectorAll('input[type="checkbox"]')];
-function clearCategoryExportDownload() {
-  const link = $('categoryExportDownload');
-  const url = link.getAttribute('href');
-  if (url) setTimeout(() => URL.revokeObjectURL(url), 60000);
-  link.removeAttribute('href');
-  link.hidden = true;
-  $('categoryExportSubmit').hidden = false;
-  $('categoryExportStatus').hidden = true;
-}
 function selectedExportCategories() {
   const selected = new Set(categoryExportInputs().filter(input => input.checked).map(input => input.value));
   return state.cats.filter(category => selected.has(category.id));
@@ -2068,55 +2059,16 @@ function openCategoryExport() {
       <span class="bulk-pick"><input type="checkbox" value="${esc(category.id)}" ${layerBulkSelection.has(category.id) ? 'checked' : ''}><span class="bulk-pick-mark" aria-hidden="true">${icon('check')}</span></span>
       <span>${esc(category.name)}</span><small>${category.traits.length} PNG</small>
     </label>`).join('');
-  clearCategoryExportDownload();
   updateCategoryExportSelection();
   categoryExportDialog.showModal();
 }
-$('categoryExportChoices').addEventListener('change', () => {
-  clearCategoryExportDownload();
-  updateCategoryExportSelection();
-});
-categoryExportDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-categoryExportDialog.addEventListener('close', clearCategoryExportDownload);
+$('categoryExportChoices').addEventListener('change', updateCategoryExportSelection);
 
-async function exportSelectedCategories() {
+function exportSelectedCategories() {
   const project = { ...state, cats: selectedExportCategories() };
-  const total = project.cats.reduce((count, category) => count + category.traits.length, 0);
-  if (!total || exporting) return;
-  const finish = window.TraitDiagnostics?.start('category-png-export');
-  const status = $('categoryExportStatus');
-  const controls = [...categoryExportDialog.querySelectorAll('button, input')];
-  controls.forEach(control => { control.disabled = true; });
-  busy = true;
-  categoryExportDialog.setAttribute('aria-busy', 'true');
-  status.hidden = false;
-  status.textContent = `Připravuji PNG · 0 / ${total}`;
-  render(true);
-  try {
-    const title = project.name + ' – PNG vrstev';
-    const blob = await TraitFinal.zipProject(M, {
-      project, title,
-      readImage: trait => TraitStorage.imageBlob(db, trait.data),
-      progress: done => { status.textContent = `Připravuji PNG · ${done} / ${total}`; },
-    });
-    const link = $('categoryExportDownload');
-    link.href = URL.createObjectURL(blob);
-    link.download = TraitFinal.fileName(title) + '.zip';
-    link.hidden = false;
-    $('categoryExportSubmit').hidden = true;
-    link.focus({ preventScroll: true });
-    status.textContent = `ZIP s ${total} PNG je připravený ke stažení.`;
-  } catch (error) {
-    window.TraitDiagnostics?.error('category-png-export', error);
-    status.textContent = error.message || 'ZIP se nepodařilo připravit.';
-  } finally {
-    busy = false;
-    categoryExportDialog.removeAttribute('aria-busy');
-    controls.forEach(control => { control.disabled = false; });
-    updateCategoryExportSelection();
-    render(true);
-    finish?.();
-  }
+  if (busy || exporting || !project.cats.some(category => category.traits.length)) return;
+  const plan = TraitFinal.projectFolderPlan(M,project,project.name + ' – PNG vrstev');
+  openFolderExport(plan,trait => TraitStorage.imageBlob(db,trait.data));
 }
 
 function readFile(file) {
@@ -2827,11 +2779,10 @@ async function handleAction(action, id, element) {
     case 'select-all-export-categories': {
       const inputs = categoryExportInputs(), select = inputs.some(input => !input.checked);
       inputs.forEach(input => { input.checked = select; });
-      clearCategoryExportDownload();
       updateCategoryExportSelection();
       break;
     }
-    case 'export-selected-categories': await exportSelectedCategories(); break;
+    case 'export-selected-categories': exportSelectedCategories(); break;
     case 'add-traits': {
       const categoryId = element?.dataset.category || active;
       if (!M.category(state, categoryId)) { toast('Nejdřív přidej kategorii.', true); showPanel('layers'); }

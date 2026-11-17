@@ -2,7 +2,6 @@
 import argparse
 import json
 import re
-import zipfile
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -155,14 +154,14 @@ def run(page, context, url, stress, mask):
     page.get_by_role('button', name='Finál', exact=True).click()
     page.get_by_role('button', name='Uložit projekt do Finálu').click()
     expect(page.locator('#finalStatus')).to_contain_text('uložená v tomto zařízení', timeout=30000)
-    page.get_by_role('button', name='Připravit ZIP').click()
-    with page.expect_download() as zipped:
-        page.get_by_role('link', name='Stáhnout ZIP').click(timeout=30000)
-    with zipfile.ZipFile(zipped.value.path()) as archive:
-        assert sum(name.endswith('.png') for name in archive.namelist()) == 610
-        assert archive.testzip() is None
+    with page.expect_download(timeout=90000) as saved:
+        page.get_by_role('button', name='Stáhnout zálohu JSON').click()
+    backup = json.loads(saved.value.path().read_bytes())
+    traits = [trait for category in backup['cats'] for trait in category['traits']]
+    assert len(traits) == 610
+    assert all(trait['data'].startswith('data:image/png;base64,') for trait in traits)
     page.get_by_role('button', name='Zavřít Finál').click()
-    print('610-layer project archived in Final and all 610 PNG entries verified in ZIP', flush=True)
+    print('610-layer project archived in Final and all 610 PNG entries verified in the JSON backup', flush=True)
     choose(stress)
     expect(page.locator('#psdTree input[data-imported=true]')).to_have_count(610)
     expect(page.locator('#psdConfirm')).to_be_disabled()

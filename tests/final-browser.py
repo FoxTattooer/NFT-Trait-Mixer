@@ -1,8 +1,7 @@
 """Verify Final snapshots, offline persistence and the extracted project backup."""
 import argparse
-import io
+import base64
 import json
-import zipfile
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -92,19 +91,22 @@ def run(context, url):
     original_png = png_download.value.path().read_bytes()
     assert original_png[:8] == b'\x89PNG\r\n\x1a\n'
 
-    page.get_by_role('button', name='Připravit ZIP').click()
-    with page.expect_download() as zip_download:
-        page.get_by_role('link', name='Stáhnout ZIP').click()
-    assert zip_download.value.suggested_filename == 'Dready.zip'
-    with zipfile.ZipFile(io.BytesIO(zip_download.value.path().read_bytes())) as archive:
-        assert archive.testzip() is None
-        root = 'Dready/01 Hlavy/01 Dready/01 Tmavé/'
-        assert archive.getinfo(root + '01 Prázdná/').is_dir()
-        assert archive.read(root + '02 Černé _ A.png') == original_png
-        json_backup = archive.read('Dready/project.json')
+    page.locator('#finalExport').click()
+    expect(page.locator('#folderExportPath')).to_contain_text('Tmavé')
+    if page.locator('#folderExportList').get_attribute('open') is None:
+        page.locator('#folderExportEntriesTitle').click()
+    with page.expect_download() as folder_png_download:
+        page.locator('#folderExportEntries button').click()
+    assert folder_png_download.value.path().read_bytes() == original_png
+    page.locator('#folderExportClose').click()
+    with page.expect_download() as json_download:
+        page.get_by_role('button', name='Stáhnout zálohu JSON').click()
+    assert json_download.value.suggested_filename == 'Dready.json'
+    json_backup = json_download.value.path().read_bytes()
     backed_up = json.loads(json_backup)
     assert backed_up['name'] == 'Projekt B'
     assert len(backed_up['cats'][0]['traits']) == 1
+    assert base64.b64decode(backed_up['cats'][0]['traits'][0]['data'].split(',')[1]) == original_png
     assert backed_up['cats'][0]['traits'][0]['note'] == 'Poznámka k vrstvě'
     page.get_by_role('button', name='Zavřít Finál').click()
     page.locator('#projectFile').set_input_files({'name': 'project.json', 'mimeType': 'application/json', 'buffer': json_backup})
@@ -114,7 +116,7 @@ def run(context, url):
     open_final()
     assert page.locator('#finalDialog').bounding_box()['height'] <= 393
     assert not errors, errors
-    print('two projects, frozen copy after editor deletion and offline restart, exact PNG, ZIP extraction, JSON restore and both layouts passed')
+    print('two projects, frozen copy after editor deletion and offline restart, exact PNG, folder PNG export, JSON restore and both layouts passed')
 
 
 if __name__ == '__main__':

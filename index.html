@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07161">
-  <link rel="stylesheet" href="compact.css?build=07161">
+  <link rel="stylesheet" href="compact.css?build=07162">
   <link rel="stylesheet" href="schemes.css?build=07161">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
@@ -24,8 +24,8 @@
   <link rel="stylesheet" href="lookbook.css?build=07159">
   <script src="project.js?build=07160" defer></script>
   <script src="storage.js?build=07109" defer></script>
-  <script src="final.js?build=07161" defer></script>
-  <script src="diagnostics.js?build=07161" defer></script>
+  <script src="final.js?build=07162" defer></script>
+  <script src="diagnostics.js?build=07162" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -34,13 +34,14 @@
   <script src="layer-inventory.js?build=07160" defer></script>
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07160" defer></script>
-  <script src="app.js?build=07161" defer></script>
+  <script src="app.js?build=07162" defer></script>
   <script src="trait-comparison.js?build=07157" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07159" defer></script>
-  <script src="final-ui.js?build=07161" defer></script>
+  <script src="folder-export.js?build=07162" defer></script>
+  <script src="final-ui.js?build=07162" defer></script>
   <script src="psd-export.js?build=07161" defer></script>
-  <script src="final-builder.js?build=07161" defer></script>
+  <script src="final-builder.js?build=07162" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
   <script src="inventory-base-ui.js?build=07131" defer></script>
@@ -137,8 +138,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.161" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.161</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.162" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.162</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -599,6 +600,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.162-export-do-slozky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.162 – Export do složky</strong><small>Prázdný strom složek, PNG ve složkách nebo vrstvené PSD. Na iPhonu lze uložit PNG přes sdílení do Souborů.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.161-exportni-centrum" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.161 – Exportní centrum</strong><small>PNG ve složkách a vrstvené PSD s filtry. Export kategorií s počtem kategorií v horní liště vrstev.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.160-oznaceni-out" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.160 – Označení OUT</strong><small>OUT přibylo do nabídek označení, hromadných akcí, filtrů a historie kroků.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.159-prejmenovani-a-stitky-slozek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.159 – Přejmenování a štítky složek</strong><small>Klepnutí na název přejmenovává. Zděděné štítky lze odebrat ve zvolené složce.</small></span><span class="version-tag">Uloženo</span></a>
@@ -726,11 +728,28 @@
       <span id="categoryExportCount" role="status"></span>
     </div>
     <div id="categoryExportChoices" class="category-export-choices" role="group" aria-label="Kategorie k exportu"></div>
-    <p id="categoryExportStatus" class="helper" role="status" hidden></p>
     <div class="final-actions">
-      <button id="categoryExportSubmit" type="button" class="primary" data-action="export-selected-categories" disabled>Připravit ZIP s PNG</button>
-      <a id="categoryExportDownload" class="outline" download hidden><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Stáhnout ZIP</a>
+      <button id="categoryExportSubmit" type="button" class="primary" data-action="export-selected-categories" disabled>Uložit PNG</button>
     </div>
+  </dialog>
+  <dialog id="folderExportDialog" class="folder-export-dialog" aria-labelledby="folderExportTitle">
+    <header class="final-header">
+      <h2 id="folderExportTitle">Uložit PNG</h2>
+      <button id="folderExportClose" type="button" class="icon-button subtle" aria-label="Zavřít uložení souborů">✕</button>
+    </header>
+    <p id="folderExportName"></p>
+    <p id="folderExportHelp" class="helper"></p>
+    <button id="folderExportWrite" type="button" class="primary" hidden></button>
+    <label id="folderExportSelectRow" hidden>Složka s PNG
+      <select id="folderExportSelect"></select>
+    </label>
+    <p id="folderExportPath" class="helper" hidden></p>
+    <button id="folderExportShare" type="button" class="primary" hidden></button>
+    <details id="folderExportList">
+      <summary id="folderExportEntriesTitle"></summary>
+      <ul id="folderExportEntries"></ul>
+    </details>
+    <p id="folderExportStatus" class="helper" role="status"></p>
   </dialog>
   <dialog id="finalDialog" class="final-dialog" aria-labelledby="finalTitle">
     <header class="final-header">
@@ -751,8 +770,8 @@
     <div id="finalExportBar" class="final-draft-export" hidden></div>
     <div class="final-actions">
       <button id="finalSave" type="button" class="primary" data-final-action="save"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Uložit projekt do Finálu</button>
-      <button id="finalExport" type="button" class="primary" data-final-action="export" hidden>Připravit ZIP</button>
-      <a id="finalDownload" class="outline" download hidden><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Stáhnout ZIP</a>
+      <button id="finalExport" type="button" class="primary" data-final-action="export-png" hidden>Uložit PNG</button>
+      <button id="finalBackup" type="button" class="subtle" data-final-action="backup" hidden>Stáhnout zálohu JSON</button>
     </div>
   </dialog>
   <dialog id="historyDialog" class="history-dialog" aria-labelledby="historyTitle"><div class="history-dialog-head"><div><span class="eyebrow">PROJEKT</span><h2 id="historyTitle">Historie kroků <span id="historyCount">1</span></h2></div><button type="button" data-action="close-history" class="icon-button subtle" aria-label="Zavřít historii">✕</button></div><p class="helper">Rozbal krok pro podrobnosti. Tlačítkem Přejít na krok obnovíš jeho stav. Historie platí pro aktuální otevření aplikace.</p><div id="historyList" class="history-list" aria-label="Historie úprav projektu"></div></dialog>
