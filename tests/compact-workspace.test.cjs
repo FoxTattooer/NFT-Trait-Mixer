@@ -1041,6 +1041,9 @@ const bookPicker = find('#lookbookDetailArea .lookbook-tag-picker');
 click('#lookbookDetailArea .lookbook-tag-picker > summary');
 assert(bookPicker.open);
 const assignTags = bookPicker.querySelector('[data-lookbook-tag-apply]');
+for (const label of ['Beige','Black','Blue','Brown','Headwear']) {
+  assert(!bookPicker.querySelector(`[value="${label}"]`));
+}
 const bookCowboy = bookPicker.querySelector('[value="Cowboy"]');
 const bookSpaghetti = bookPicker.querySelector('[value="Spaghetti"]');
 assert(bookCowboy.closest('label').querySelector('.tag-swatch-art'));
@@ -1934,7 +1937,7 @@ const swatchProject = M.empty();
 swatchProject.cats = [{
   id: 'swatch-skin', name: 'SKIN', traits: [
     { id: 'swatch-palette', name: 'Vlastní barva', data: finalAsset, lookbookTags: ['Tyrkysová', 'Afro'] },
-    { id: 'swatch-material', name: 'Vlastní materiál', data: finalAsset, lookbookTags: ['Emerald'] },
+    { id: 'swatch-material', name: 'Vlastní materiál', data: finalAsset, lookbookTags: ['Emerald', 'Beige'] },
   ],
 }];
 w.useTestProject(swatchProject);
@@ -1979,6 +1982,9 @@ await waitFor(() => !get('showroomDialog').open);
 click('#openLookbook');
 assert.equal(find('#lookbookTagIcons [value="tyrkysová"] .palette-swatch').style.getPropertyValue('--swatch'), '#4dcac9');
 assert(find('#lookbookTagIcons [value="emerald"] [data-material="emerald"]'));
+const storedBeige = find('#lookbookDetailArea .lookbook-tag-picker [value="Beige"]');
+assert(storedBeige.closest('label').querySelector('.palette-swatch'));
+assert(!find('#lookbookDetailArea .lookbook-tag-picker [value="Blue"]'));
 assert(find('#lookbookDetailArea .lookbook-tag-picker [value="Silver"]').closest('label').querySelector('[data-material="silver"]'));
 click('#lookbookExit');
 await waitFor(() => !get('lookbookDialog').open);

@@ -26,7 +26,7 @@
   ]);
   function availableTagOptions() {
     const options = projectTagOptions();
-    for (const label of [...lookbookIconLabels, ...(window.TraitShowroom?.swatchLabels || [])]) {
+    for (const label of lookbookApprovedTags) {
       const key = M.lookbookTagKey(label);
       if (!options.has(key)) options.set(key, label);
     }
