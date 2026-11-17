@@ -1,12 +1,32 @@
 /* Select and review project layers or local PNG folders before exporting. */
 'use strict';
-let finalDraft, finalDraftLoad, finalDraftSource = 'fin', finalDraftIndex = 0, finalDraftLimit = 36;
+const FINAL_DRAFT_PAGE = 48;
+let finalDraft, finalDraftLoad, finalDraftSource = 'fin', finalDraftIndex = 0, finalDraftLimit = FINAL_DRAFT_PAGE;
 let finalDraftSettings = false, finalDraftURL, finalDraftStatus = '', finalDraftPreviewOpen = false;
 let finalExportFormat = 'png', psdLibrary;
-const finalExportFilters = {
-  fin: { scopes:new Set(), marks:new Set(['fin']), flags:new Set(), tags:new Set(), anyTag:false },
-  folders: { scopes:new Set() },
-};
+const newFinalFilters = (...marks) => ({ scopes:new Set(), marks:new Set(marks), flags:new Set(), tags:new Set(), anyTag:false });
+const finalExportFilters = { fin:newFinalFilters('fin'), folders:newFinalFilters(), build:newFinalFilters(), onlyFin:newFinalFilters(), onlyOut:newFinalFilters() };
+const finalStatusView = () => ['fin','out'].includes(finalView);
+const finalFilters = () => finalExportFilters[finalView === 'compose' ? finalDraftSource :
+  finalView === 'fin' ? 'onlyFin' : finalView === 'out' ? 'onlyOut' : 'build'];
+const finalDraftPicks = new Map(), finalBuildLayers = new Map();
+const finalCollator = new Intl.Collator('cs', { numeric:true });
+let finalDraftSort = 'project', finalComposeSource = 'fin', finalBuildPreviewOpen = true;
+
+function openFinalBuilderView(view) {
+  if (finalView === 'compose') finalComposeSource = finalDraftSource;
+  if (finalView !== view) clearFinalDraftDownload();
+  finalView = view;
+  finalDraftSource = view === 'compose' ? finalComposeSource : 'fin';
+  finalDraftIndex = 0;
+  finalDraftLimit = FINAL_DRAFT_PAGE;
+  finalDraftSettings = false;
+  finalDraftStatus = '';
+}
+function finalDraftPicked() {
+  if (!finalDraftPicks.has(finalView)) finalDraftPicks.set(finalView,new Set());
+  return finalDraftPicks.get(finalView);
+}
 const finalExportSections = new Set();
 const finalDraftPreviewChoices = new Map();
 const finalDraftPreviews = new Map();
@@ -34,20 +54,21 @@ function finalDraftSources() {
   return TraitFinal.folderCategories(layout,draft.files);
 }
 function finalDraftCategories(sources = finalDraftSources()) {
-  return TraitFinal.filterExportGroups(M,sources,finalExportFilters[finalDraftSource]);
+  const filters = finalFilters();
+  return TraitFinal.filterExportGroups(M,sources,finalStatusView() ? { ...filters, marks:new Set([finalView]) } : filters);
 }
 function finalExportSelection(groups, excluded) {
   return groups.map(group => ({ ...group, rows:group.rows.filter(row => !excluded.has(row.id)) })).filter(group => group.rows.length);
 }
 function finalExportFilterChanged() {
   clearFinalDraftDownload();
-  finalDraftLimit = 36; finalDraftStatus = '';
+  finalDraftLimit = FINAL_DRAFT_PAGE; finalDraftStatus = '';
 }
 function finalExportSection(key, title, body, className = '') {
   return `<details class="${className}" data-final-export-section="${key}" ${finalExportSections.has(key) ? 'open' : ''}><summary>${title}</summary>${body}</details>`;
 }
 function renderFinalExportFilters(sources, scopes) {
-  const filters = finalExportFilters[finalDraftSource];
+  const filters = finalFilters();
   const fromProject = finalDraftSource === 'fin';
   const choices = (field, items, labelFor) => `<div class="final-filter-choices">${items.map(([key,label]) =>
     `<label class="final-filter-chip"><input type="checkbox" data-final-filter="${field}" value="${esc(key)}" ${filters[field].has(key) ? 'checked' : ''}>${labelFor(key,label)}</label>`).join('')}</div>`;
@@ -65,15 +86,15 @@ function renderFinalExportFilters(sources, scopes) {
   const detail = scopes.length ? finalExportSection('scopes', `Složky${selectedScopes.length ? ' · '+selectedScopes.length : ''}`,
     `<div class="final-filter-folders">${scopes.map(scope => `<label style="--folder-indent:${Math.min(scope.depth,5)}" title="${esc(scope.path)}"><input type="checkbox" data-final-filter="scopes" value="${esc(scope.key)}" ${filters.scopes.has(scope.key) ? 'checked' : ''}>${icon('folder')}<span>${esc(scope.name)}</span><small>${scope.count}</small></label>`).join('')}</div>`) : '';
   const metadata = fromProject ?
-    finalExportSection('marks','Označení',choices('marks',[...Object.entries(layerStatusLabels),['','Bez označení']],(key,value) =>
-      `${key ? icon(layerStatusIcons[key]) : ''}${label(key,value)}`)) +
+    (finalStatusView() ? '' : finalExportSection('marks','Označení',choices('marks',[...Object.entries(layerStatusLabels),['','Bez označení']],(key,value) =>
+      `${key ? icon(layerStatusIcons[key]) : ''}${label(key,value)}`))) +
     finalExportSection('flags','Vlajky',choices('flags',[...flagged,['','Bez vlajky']],(key,value) =>
       `${key ? flagIcon(key) : ''}${label(key,value)}`)) +
     (tagOptions.length ? finalExportSection('tags','Štítky',
       `<label class="final-tag-match">Shoda štítků<select id="finalTagMatch"><option value="all">Všechny vybrané</option><option value="any" ${filters.anyTag ? 'selected' : ''}>Alespoň jeden</option></select></label>` +
       choices('tags',tagOptions,(_,value) => tagSample(value)+label('',value))) : '') : '';
   return `<div class="final-export-filter-panel">
-    ${fromProject ? `<div class="final-export-presets" role="group" aria-label="Rychlý výběr označení">${[['fin','FIN'],['out','OUT'],['','Vše']].map(([key,value]) =>
+    ${fromProject && !finalStatusView() ? `<div class="final-export-presets" role="group" aria-label="Rychlý výběr označení">${[['fin','FIN'],['out','OUT'],['','Vše']].map(([key,value]) =>
       `<button type="button" data-final-draft="preset" data-mark="${key}" aria-pressed="${key ? filters.marks.size === 1 && filters.marks.has(key) : !filters.marks.size}">${value}</button>`).join('')}</div>` : ''}
     ${finalExportSection('filters',icon('sliders')+`<span>Filtry${selectedNames.length ? ' · '+selectedNames.length : ''}</span>`,
       detail+metadata+(selectedNames.length ? '<button type="button" class="subtle" data-final-draft="reset-filters">Vymazat filtry</button>' : ''),'final-export-filters')}
@@ -94,7 +115,12 @@ function clearFinalDraftDownload() {
 }
 function draftPreview(row,used,full = false) {
   if (safeMode) return '';
-  if (!row.blob) return full ? `<img ${imageAttributes(row.trait.data)} alt="" decoding="async">` : layerThumbnail(row.category,row.trait);
+  if (!full) {
+    const classes = 'final-draft-thumbnail layer-cropped-thumbnail';
+    if (!row.blob) return layerThumbnail(row.category,row.trait,classes);
+    return `<img class="${classes}" data-layer-thumbnail data-final-blob="${esc(row.id)}" alt="" decoding="async">`;
+  }
+  if (!row.blob) return `<img ${imageAttributes(row.trait.data)} alt="" decoding="async">`;
   used.add(row.blob);
   if (!finalDraftPreviews.has(row.blob)) finalDraftPreviews.set(row.blob,URL.createObjectURL(row.blob));
   return `<img src="${esc(finalDraftPreviews.get(row.blob))}" alt="" loading="lazy" decoding="async">`;
@@ -151,24 +177,67 @@ async function finalDraftFolderAction(action, control) {
   finally { control.disabled = false; }
 }
 
+function finalBuildRows() {
+  return state.cats.flatMap(category => {
+    const trait = category.traits.find(item => item.id === finalBuildLayers.get(category.id));
+    return trait ? [{ category,trait,id:trait.id,name:trait.name }] : [];
+  });
+}
+function renderFinalBuild(used) {
+  const rows = finalBuildRows();
+  const selected = Object.fromEntries(rows.map(({ category,id }) => [category.id,id]));
+  const draft = { ...state, selected, selectedExtras:{}, cats:state.cats.map(category => ({ ...category, visible:Object.hasOwn(selected,category.id) })) };
+  const shown = new Set(visibleLayers(draft).map(trait => trait.id));
+  const pictures = [...rows].reverse().filter(row => shown.has(row.id)).map(row => draftPreview(row,used,true)).join('');
+  return `<details class="final-build-preview" ${finalBuildPreviewOpen ? 'open' : ''}><summary>Sestava · ${rows.length}</summary>
+    <div class="inventory-composition" aria-label="Náhled sestavy">${pictures || '<p>Vyber traity tlačítkem + na kartách.</p>'}</div>
+    ${rows.length ? `<div class="final-build-parts">${rows.map(row => `<button type="button" class="subtle" data-final-draft="remove-build" data-id="${esc(row.category.id)}" aria-label="Odebrat ${esc(row.name)} ze sestavy" title="${esc(row.category.name)}">${esc(row.name)} ×</button>`).join('')}</div>` : ''}
+    ${rows.length === shown.size ? '' : '<p class="helper">Skryté vrstvy a vrstvy blokované pravidly se v náhledu nezobrazují.</p>'}
+  </details>`;
+}
+async function saveFinalBuild() {
+  if (!finalBuildRows().length) return;
+  const name = await ask({ title:'Uložit sestavu', value:`Sestava ${state.snapshots.length + 1}`, submit:'Uložit sestavu' });
+  if (!name || !finalDialog.open || finalView !== 'build') return;
+  const selected = Object.fromEntries(finalBuildRows().map(({ category,id }) => [category.id,id]));
+  const visibility = Object.fromEntries(state.cats.map(category => [category.id,Object.hasOwn(selected,category.id)]));
+  snapshotPage = Math.floor(state.snapshots.length / SNAPSHOT_PAGE_SIZE);
+  change(() => state.snapshots.push({ id:M.uid(),name,selected,selectedExtras:{},visibility,rulesEnabled:state.rulesEnabled }), 'Sestava uložena',true);
+  $('finalStatus').textContent = 'Sestava uložena.';
+}
+const finalSortLabels = { project:'Pořadí projektu', name:'Název', mark:'Označení', tags:'Štítky', flag:'Vlajka', path:'Složka' };
+function sortedFinalRows(rows) {
+  if (finalDraftSort === 'project') return rows;
+  const value = row => finalDraftSort === 'tags' ? [...row.tags || []].sort(finalCollator.compare).join(' · ') :
+    finalDraftSort === 'mark' ? layerStatusLabels[row.mark] || '' :
+    finalDraftSort === 'flag' ? M.FLAG_COLORS[row.flag] || '' : row[finalDraftSort] || '';
+  const sorted = rows.map(row => ({ row, key:value(row) }));
+  return sorted.sort((a,b) => Number(!a.key) - Number(!b.key) || finalCollator.compare(a.key,b.key) ||
+    finalCollator.compare(a.row.name,b.row.name)).map(({ row }) => row);
+}
+
 function renderFinalBuilder() {
   for (const section of $('finalRows').querySelectorAll('[data-final-export-section]')) {
     const key = section.dataset.finalExportSection;
     if (section.open) finalExportSections.add(key); else finalExportSections.delete(key);
   }
   const draft = finalDraftData(), sources = finalDraftSources(), scopes = TraitFinal.exportScopes(sources);
-  const filters = finalExportFilters[finalDraftSource], scopeKeys = new Set(scopes.map(scope => scope.key));
+  const filters = finalFilters(), scopeKeys = new Set(scopes.map(scope => scope.key));
   for (const scope of filters.scopes) if (!scopeKeys.has(scope)) filters.scopes.delete(scope);
   const groups = finalDraftCategories(sources).filter(group => group.rows.length || group.unresolved?.length);
+  const exporting = finalView === 'compose', building = finalView === 'build';
   const excluded = new Set(draft.excluded[finalDraftSource] || []);
-  const selected = group => group.rows.reduce((count,row) => count + !excluded.has(row.id),0);
+  const picked = finalDraftPicked();
+  const isPicked = row => exporting ? !excluded.has(row.id) : picked.has(row.id);
+  const selected = group => group.rows.reduce((count,row) => count + isPicked(row),0);
   const total = groups.reduce((count,group) => count + selected(group),0);
   const matching = groups.reduce((count,group) => count + group.rows.length,0);
   finalDraftIndex = Math.max(0, Math.min(finalDraftIndex,groups.length-1));
   const group = groups[finalDraftIndex], used = new Set();
-  const list = group?.rows.slice(0,finalDraftLimit) || [];
+  const list = group ? sortedFinalRows(group.rows).slice(0,finalDraftLimit) : [];
+  const buildSelection = building ? finalBuildLayers.get(group?.id) : null;
   $('finalRows').innerHTML = `<section class="final-draft">
-    <div class="final-draft-controls"><div class="final-draft-sources" role="group" aria-label="Zdroj vrstev">
+    ${exporting ? `<div class="final-draft-controls"><div class="final-draft-sources" role="group" aria-label="Zdroj vrstev">
       <button type="button" class="subtle" data-final-draft="fin" aria-pressed="${finalDraftSource==='fin'}">Projekt</button>
       <button type="button" class="subtle" data-final-draft="folders" aria-pressed="${finalDraftSource==='folders'}">Složky PNG</button></div>
       <div class="final-draft-sources" role="group" aria-label="Formát exportu">
@@ -176,35 +245,57 @@ function renderFinalBuilder() {
         <button type="button" class="subtle" data-final-draft="psd" aria-pressed="${finalExportFormat==='psd'}">PSD</button>
         <button type="button" class="subtle" data-final-draft="tree" aria-pressed="${finalExportFormat==='tree'}">Složky</button>
       </div>
-      <button type="button" class="subtle icon-button final-export-settings" data-final-draft="settings" aria-expanded="${finalDraftSettings}" aria-label="Nastavení složek" title="Nastavení složek">${icon('settings')}</button></div>
+      <button type="button" class="subtle icon-button final-export-settings" data-final-draft="settings" aria-expanded="${finalDraftSettings}" aria-label="Nastavení složek" title="Nastavení složek">${icon('settings')}</button></div>` : ''}
     ${finalDraftSettings ? renderFinalDraftSettings() : `
       ${finalDraftSource === 'folders' ? `<div class="final-draft-root"><span>${draft.rootName ? `${esc(draft.rootName)} · ${draft.files.length} PNG` : 'Kořenová složka'}</span><button type="button" class="subtle" data-final-draft="pick-root">${draft.rootName ? 'Změnit složku' : 'Vybrat ze Souborů'}</button></div>` : ''}
       ${renderFinalExportFilters(sources,scopes)}
+      ${building ? renderFinalBuild(used) : ''}
+      ${finalView === 'fin' ? '<button type="button" class="subtle final-fin-folders" data-final-action="show-marked">FIN složky a podrobnosti</button>' : ''}
       ${group ? `<div class="final-draft-step"><button type="button" class="icon-button subtle" data-final-draft="previous" aria-label="Předchozí kategorie" ${finalDraftIndex ? '' : 'disabled'}>‹</button>
         <label><span>Kategorie ${finalDraftIndex+1} / ${groups.length}</span><select id="finalDraftCategory" aria-label="Přejít na kategorii">${groups.map((entry,index) => `<option value="${index}" ${index===finalDraftIndex ? 'selected' : ''}>${esc(entry.name)} · ${selected(entry)} / ${entry.rows.length}</option>`).join('')}</select></label>
         <button type="button" class="icon-button subtle" data-final-draft="next" aria-label="Další kategorie" ${finalDraftIndex+1 < groups.length ? '' : 'disabled'}>›</button></div>
         ${group.path !== undefined ? `<p class="helper">Cesta kategorie · <code>${esc(group.path || '.')}</code></p>` : ''}
-        ${renderFinalDraftPreview(groups,group,excluded,used)}
+        ${exporting ? renderFinalDraftPreview(groups,group,excluded,used) : ''}
         ${group.unresolved?.length ? `<details class="final-draft-missing"><summary>${group.unresolved.length} položek čeká na PNG</summary><ul>${group.unresolved.map(slot => `<li>${esc(slot.name)} · <code>${esc(slot.path || '.')}</code></li>`).join('')}</ul></details>` : ''}
-        ${list.length ? `<div class="final-export-list-head"><strong>Vrstvy v kategorii</strong><button type="button" class="subtle" data-final-draft="toggle-group">${selected(group) === group.rows.length ? 'Odebrat vše' : 'Vybrat vše'}</button></div>
-          <div class="final-draft-grid">${list.map(row => `<label class="final-draft-card" title="${esc([row.name,row.path,layerStatusLabels[row.mark],...(row.tags || [])].filter(Boolean).join(' · '))}">
-            <span class="final-draft-art">${draftPreview(row,used)}</span><span class="final-draft-card-label"><input type="checkbox" data-final-draft-row="${esc(row.id)}" ${excluded.has(row.id) ? '' : 'checked'}><span><strong>${esc(row.name)}</strong>${row.path ? `<small>${esc(row.path)}</small>` : ''}</span></span>
-            ${row.mark || row.flag || row.tags?.length ? `<span class="final-export-meta">${layerMarkBadges({ [row.mark]:Boolean(row.mark), flag:row.flag })}${layerTagMarker(row.tags)}</span>` : ''}
-          </label>`).join('')}</div>` : ''}
+        ${list.length ? `<div class="final-export-list-head">
+          <label>Řadit <select id="finalDraftSort" aria-label="Řadit traity">${Object.entries(finalSortLabels).map(([key,label]) =>
+            `<option value="${key}" ${finalDraftSort === key ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+          <button type="button" class="subtle" data-final-draft="toggle-group">${selected(group) === group.rows.length ? 'Zrušit kategorii' : 'Vybrat kategorii'}</button>
+          <button type="button" class="subtle" data-final-draft="toggle-all">${total === matching ? 'Zrušit vše' : 'Vybrat vše'}</button>
+        </div>
+          <div class="final-draft-grid">${list.map(row => `<div class="final-draft-card" title="${esc([row.name,row.path,layerStatusLabels[row.mark],...(row.tags || [])].filter(Boolean).join(' · '))}">
+            <label class="final-draft-pick"><input type="checkbox" aria-label="Vybrat ${esc(row.name)}" data-final-draft-row="${esc(row.id)}" ${isPicked(row) ? 'checked' : ''}>
+              <span class="final-draft-art">${draftPreview(row,used)}</span><strong>${esc(row.name)}</strong></label>
+            <div class="final-export-meta">${layerMarkBadges({ [row.mark]:Boolean(row.mark), flag:row.flag })}${layerTagMarker(row.tags)}</div>
+            ${building ? `<button type="button" class="subtle final-build-add" data-final-draft="build-choose" data-id="${esc(row.id)}" aria-label="${buildSelection === row.id ? 'Odebrat' : 'Přidat'} ${esc(row.name)} ${buildSelection === row.id ? 'ze sestavy' : 'do sestavy'}" aria-pressed="${buildSelection === row.id}">${icon(buildSelection === row.id ? 'check' : 'plus')}</button>` : ''}
+          </div>`).join('')}</div>` : ''}
         ${group.rows.length > list.length ? '<button type="button" class="subtle" data-final-draft="more">Další vrstvy</button>' : ''}` :
         `<p class="helper">${sources.length ? 'Žádná vrstva neodpovídá výběru.' : finalDraftSource === 'folders' ? 'Vyber složku s PNG.' : 'Otevři projekt s vrstvami nebo vyber složku s PNG.'}</p>`}`}
     </section>`;
   const psd = finalExportFormat === 'psd', tree = finalExportFormat === 'tree';
   const bar = $('finalExportBar');
   bar.hidden = finalDraftSettings;
-  bar.innerHTML = `<div><strong>Vybráno ${total} / ${matching}</strong><small>${psd ? 'PSD · vrstvy a skupiny' : tree ? 'Prázdná struktura složek' : 'PNG · uložení do složky'}</small></div>
-    ${finalDraftURL ? `<a href="${esc(finalDraftURL.url)}" download="${esc(finalDraftURL.name)}">Stáhnout PSD</a>` : `<button type="button" class="primary" data-final-draft="export" ${total ? '' : 'disabled'}>${psd ? 'Připravit PSD' : tree ? 'Vytvořit složky' : 'Uložit PNG'}</button>`}`;
+  bar.innerHTML = exporting ? `<div><strong>Vybráno ${total} / ${matching}</strong><small>${psd ? 'PSD · vrstvy a skupiny' : tree ? 'Prázdná struktura složek' : 'PNG · uložení do složky'}</small></div>
+    ${finalDraftURL ? `<a href="${esc(finalDraftURL.url)}" download="${esc(finalDraftURL.name)}">Stáhnout PSD</a>` : `<button type="button" class="primary" data-final-draft="export" ${total ? '' : 'disabled'}>${psd ? 'Připravit PSD' : tree ? 'Vytvořit složky' : 'Uložit PNG'}</button>`}` :
+    `<strong>Vybráno ${total} / ${matching}</strong><div class="final-mark-actions">
+      <select id="finalDraftMark" aria-label="Označit vybrané traity" ${total ? '' : 'disabled'}><option value="">Označit jako…</option>
+        ${Object.entries(layerStatusLabels).map(([key,label]) => `<option value="${key}">${label}</option>`).join('')}
+        ${finalStatusView() ? `<option value="remove">Odebrat ${finalView.toUpperCase()}</option>` : ''}
+      </select><button type="button" class="subtle" data-final-draft="edit-tags" ${total ? '' : 'disabled'}>${icon('tag')} Štítky</button>
+      ${building ? `<button type="button" class="primary" data-final-draft="save-build" ${finalBuildRows().length ? '' : 'disabled'}>Uložit sestavu</button>` : ''}
+    </div>`;
   $('finalStatus').textContent = finalDraftStatus;
+  const buildPreview = $('finalRows').querySelector('.final-build-preview');
+  buildPreview?.addEventListener('toggle',() => { if (buildPreview.isConnected) finalBuildPreviewOpen = buildPreview.open; });
   const preview = $('finalDraftPreview');
   preview?.addEventListener('toggle',() => {
     if (!preview.isConnected || preview.open === finalDraftPreviewOpen) return;
     finalDraftPreviewOpen = preview.open; renderFinalBuilder();
   });
+  const localImages = new Map(list.filter(row => row.blob).map(row => [row.id,row.blob]));
+  for (const image of $('finalRows').querySelectorAll('[data-final-blob]')) {
+    layerThumbnailBlobs.set(image,localImages.get(image.dataset.finalBlob));
+  }
   clearFinalDraftPreviews(used);
   mountThumbnails();
 }
@@ -213,10 +304,10 @@ function loadFinalBuilder() {
   if (finalDraft || finalDraftLoad) return;
   finalDraftLoad = finalDatabase().then(database => TraitFinal.loadWorkspace(database)).then(workspace => {
     finalDraft = workspace || finalDraftData();
-    if (finalDialog.open && finalView === 'compose') renderFinalBuilder();
+    if (finalDialog.open && finalBuilderView()) renderFinalBuilder();
   }).catch(error => {
     finalDraftStatus = error.message;
-    if (finalDialog.open && finalView === 'compose') renderFinalBuilder();
+    if (finalDialog.open && finalBuilderView()) renderFinalBuilder();
   }).finally(() => { finalDraftLoad = null; });
 }
 async function writeFinalDraft(next, message) {
@@ -236,7 +327,7 @@ async function finalBuilderWork(task, working) {
   finally {
     busy = false;
     finalDialog.removeAttribute('aria-busy');
-    if (finalDialog.open && finalView === 'compose') renderFinalBuilder();
+    if (finalDialog.open && finalBuilderView()) renderFinalBuilder();
   }
 }
 const readFinalExportImage = row => row.blob || TraitStorage.imageBlob(db,row.trait.data);
@@ -335,7 +426,7 @@ async function setFinalDraftRows(ids, included) {
 }
 finalDialog.addEventListener('click', event => {
   const control = event.target.closest('[data-final-draft]');
-  if (!control || busy || finalView !== 'compose') return;
+  if (!control || busy || !finalBuilderView()) return;
   const action = control.dataset.finalDraft;
   if (action === 'use-inventory' || action === 'folder-template') { void finalDraftFolderAction(action,control); return; }
   if (action === 'pick-root') { draftRootInput.click(); return; }
@@ -344,33 +435,59 @@ finalDialog.addEventListener('click', event => {
     else openFinalDraftFolder();
     return;
   }
-  if (action === 'toggle-group') {
+  if (action === 'toggle-group' || action === 'toggle-all') {
     const groups = finalDraftCategories().filter(group => group.rows.length || group.unresolved?.length);
-    const ids = groups[finalDraftIndex]?.rows.map(row => row.id) || [];
-    const excluded = new Set(finalDraftData().excluded[finalDraftSource] || []);
-    finalBuilderWork(() => setFinalDraftRows(ids,ids.some(id => excluded.has(id))),'Ukládám výběr…');
+    const rows = action === 'toggle-all' ? groups.flatMap(group => group.rows) : groups[finalDraftIndex]?.rows || [];
+    if (finalView === 'compose') {
+      const excluded = new Set(finalDraftData().excluded[finalDraftSource] || []);
+      finalBuilderWork(() => setFinalDraftRows(rows.map(row => row.id),rows.some(row => excluded.has(row.id))),'Ukládám výběr…');
+    } else {
+      const picked = finalDraftPicked(), selecting = rows.some(row => !picked.has(row.id));
+      rows.forEach(row => selecting ? picked.add(row.id) : picked.delete(row.id));
+      renderFinalBuilder();
+      finalDialog.querySelector(`[data-final-draft="${action}"]`)?.focus({preventScroll:true});
+    }
+    return;
+  }
+  if (action === 'edit-tags') {
+    const rows = finalDraftCategories().flatMap(group => group.rows).filter(row => finalDraftPicked().has(row.id));
+    if (rows.length === 1) window.TraitLookbook?.openLayerTags('trait',rows[0].category.id,rows[0].id,renderFinalBuilder);
+    else window.TraitLookbook?.openBulkLayerTags(rows.map(row => row.id),control,renderFinalBuilder);
+    return;
+  }
+  if (action === 'save-build') { void saveFinalBuild(); return; }
+  if (action === 'build-choose' || action === 'remove-build') {
+    const { id } = control.dataset;
+    const category = action === 'build-choose' ? M.locate(state,id)?.cat : M.category(state,id);
+    if (!category) return;
+    if (action === 'remove-build' || finalBuildLayers.get(category.id) === id) finalBuildLayers.delete(category.id);
+    else finalBuildLayers.set(category.id,id);
+    renderFinalBuilder();
+    if (action === 'build-choose') {
+      [...finalDialog.querySelectorAll('[data-final-draft="build-choose"]')].find(button => button.dataset.id === id)?.focus({preventScroll:true});
+    }
     return;
   }
   if (action === 'fin' || action === 'folders') {
     if (finalDraftSource !== action) clearFinalDraftDownload();
-    finalDraftSource = action; finalDraftIndex = 0; finalDraftLimit = 36; finalDraftSettings = false;
+    finalDraftSource = action; finalComposeSource = action; finalDraftIndex = 0; finalDraftLimit = FINAL_DRAFT_PAGE; finalDraftSettings = false;
   } else if (action === 'png' || action === 'psd' || action === 'tree') {
     if (finalExportFormat !== action) clearFinalDraftDownload();
     finalExportFormat = action;
   } else if (action === 'preset') {
-    const filters = finalExportFilters[finalDraftSource], mark = control.dataset.mark;
+    const filters = finalFilters(), mark = control.dataset.mark;
     filters.marks.clear();
     if (mark) filters.marks.add(mark);
     finalExportFilterChanged();
   } else if (action === 'reset-filters') {
-    const filters = finalExportFilters[finalDraftSource];
+    const filters = finalFilters();
     for (const set of [filters.scopes,filters.marks,filters.flags,filters.tags]) set?.clear();
     filters.anyTag = false;
     finalExportFilterChanged();
   } else if (action === 'settings') finalDraftSettings = !finalDraftSettings;
   else if (action === 'previous' || action === 'next') {
-    finalDraftIndex += action === 'next' ? 1 : -1; finalDraftLimit = 36;
-  } else if (action === 'more') finalDraftLimit += 36;
+    finalDraftIndex += action === 'next' ? 1 : -1; finalDraftLimit = FINAL_DRAFT_PAGE;
+  } else if (action === 'more') finalDraftLimit += FINAL_DRAFT_PAGE;
   finalDraftStatus = '';
   renderFinalBuilder();
   if (action === 'settings' && finalDraftSettings) $('finalDraftSettingsForm').querySelector('textarea').focus({preventScroll:true});
@@ -390,12 +507,12 @@ finalDialog.addEventListener('submit', event => {
   catch (error) { $('finalStatus').textContent = error.message; return; }
   finalBuilderWork(async () => {
     await writeFinalDraft({ ...finalDraftData(),layout },'Cesty potvrzeny.');
-    finalDraftSource = 'folders'; finalDraftSettings = false; finalDraftIndex = 0; finalDraftLimit = 36;
+    finalDraftSource = finalComposeSource = 'folders'; finalDraftSettings = false; finalDraftIndex = 0; finalDraftLimit = FINAL_DRAFT_PAGE;
   },'Ukládám nastavení…');
 });
 finalDialog.addEventListener('change', event => {
   const control = event.target;
-  if (busy || finalView !== 'compose') return;
+  if (busy || !finalBuilderView()) return;
   if (control.id === 'finalDraftPreviewLayer') {
     if (finalExportFormat === 'psd') clearFinalDraftDownload();
     finalDraftPreviewChoices.set(control.dataset.previewKey,control.value); renderFinalBuilder();
@@ -403,7 +520,7 @@ finalDialog.addEventListener('change', event => {
   }
   const field = control.dataset.finalFilter;
   if (field || control.id === 'finalTagMatch') {
-    const filters = finalExportFilters[finalDraftSource];
+    const filters = finalFilters();
     if (field) {
       if (control.checked) filters[field].add(control.value); else filters[field].delete(control.value);
     } else filters.anyTag = control.value === 'any';
@@ -413,13 +530,36 @@ finalDialog.addEventListener('change', event => {
     next?.focus({preventScroll:true});
     return;
   }
+  if (control.id === 'finalDraftSort') {
+    finalDraftSort = control.value; finalDraftLimit = FINAL_DRAFT_PAGE; renderFinalBuilder();
+    $('finalDraftSort').focus({preventScroll:true}); return;
+  }
+  if (control.id === 'finalDraftMark') {
+    if (!control.value) return;
+    const picked = finalDraftPicked();
+    const rows = finalDraftCategories().flatMap(group => group.rows).filter(row => picked.has(row.id));
+    const remove = control.value === 'remove';
+    const mark = remove ? finalView : control.value;
+    const affected = setLayerStatuses(rows.map(row => row.id),mark,!remove);
+    rows.forEach(row => picked.delete(row.id));
+    renderFinalBuilder();
+    $('finalStatus').textContent = affected ? `${layerStatusLabels[mark]} · ${affected} upraveno` :
+      remove ? 'U vybraných traitů se označení dědí ze složky.' : 'Označení už je nastavené.';
+    return;
+  }
   if (control.id === 'finalDraftCategory') {
-    finalDraftIndex = Number(control.value); finalDraftLimit = 36; renderFinalBuilder();
+    finalDraftIndex = Number(control.value); finalDraftLimit = FINAL_DRAFT_PAGE; renderFinalBuilder();
     $('finalDraftCategory').focus({preventScroll:true}); return;
   }
   const id = control.dataset.finalDraftRow;
   if (!id) return;
-  finalBuilderWork(() => setFinalDraftRows([id],control.checked),'Ukládám výběr…');
+  if (finalView === 'compose') finalBuilderWork(() => setFinalDraftRows([id],control.checked),'Ukládám výběr…');
+  else {
+    const picked = finalDraftPicked();
+    if (control.checked) picked.add(id); else picked.delete(id);
+    renderFinalBuilder();
+    [...finalDialog.querySelectorAll('[data-final-draft-row]')].find(input => input.dataset.finalDraftRow === id)?.focus({preventScroll:true});
+  }
 });
 draftRootInput.addEventListener('change', () => {
   const files = [...draftRootInput.files]; draftRootInput.value = '';
@@ -431,5 +571,6 @@ draftRootInput.addEventListener('change', () => {
 });
 finalDialog.addEventListener('close', () => {
   clearFinalDraftPreviews(); clearFinalDraftDownload(); finalDraftStatus = '';
-  finalDraftIndex = 0; finalDraftLimit = 36; finalDraftSettings = false; finalDraftPreviewOpen = false;
+  finalDraftIndex = 0; finalDraftLimit = FINAL_DRAFT_PAGE; finalDraftSettings = false; finalDraftPreviewOpen = false;
+  finalDraftPicks.clear(); finalBuildLayers.clear(); finalBuildPreviewOpen = true;
 });

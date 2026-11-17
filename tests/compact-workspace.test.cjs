@@ -911,7 +911,7 @@ get('openLookbook').closest('details').open = true;
 click('#openLookbook');
 assert(get('lookbookDialog').open);
 assert(!get('openLookbook').closest('details').open);
-assert.deepEqual([...get('lookbookContent').children].map(element => element.id), ['lookbookDetailArea', 'lookbookChapters', 'lookbookSheetArea']);
+assert.deepEqual([...get('lookbookContent').children].map(element => element.id), ['lookbookDetailArea', 'lookbookTraitTools', 'lookbookChapters', 'lookbookSheetArea']);
 assert.equal(get('lookbookContent').nextElementSibling, get('lookbookLayerFilters'));
 assert.equal(get('lookbookLayerFilters').nextElementSibling, get('lookbookFilterBar'));
 assert(get('lookbookFilterBar').nextElementSibling.classList.contains('lookbook-segments'));
@@ -961,6 +961,31 @@ changeControl('#lookbookContent [name="rarity"]', '20');
 assert.match(find('.lookbook-chance').textContent, /^6,25\s*%$/);
 assert.equal(M.locate(w.inspectState(), 'compare-0').trait.name, 'Kopie 1');
 assert.equal(find('[data-lookbook-title]').textContent, 'Redline');
+const lookbookSearch = get('lookbookTraitSearch');
+assert.equal(find('#lookbookTraitEdit summary').textContent, 'Upravit vrstvu');
+lookbookSearch.focus();
+const searchBook = value => {
+  lookbookSearch.value = value;
+  lookbookSearch.dispatchEvent(new w.Event('input', { bubbles:true }));
+  assert.equal(w.document.activeElement,lookbookSearch);
+};
+searchBook('DOPLNKY 1');
+assert.equal(find('[data-lookbook-title]').textContent,'Doplňky 1');
+assert.equal(get('lookbookChapters').children.length,1);
+searchBook('nenalezeny trait');
+assert(get('lookbookTraitEdit').hidden);
+assert.match(get('lookbookSheetArea').textContent,/neodpovídá hledání/);
+searchBook('redline');
+assert.equal(find('[data-lookbook-title]').textContent,'Redline');
+assert(find('[data-lookbook-trait="compare-0"]'));
+searchBook('');
+changeControl('#lookbookTraitEdit [name="traitName"]','Brýle 1');
+assert.equal(M.locate(w.inspectState(),'compare-0').trait.name,'Brýle 1');
+assert.equal(M.locate(w.inspectState(),'compare-0').trait.lookbookName,'Redline');
+searchBook('bryle 1');
+assert(find('[data-lookbook-trait="compare-0"]'));
+searchBook('');
+changeControl('#lookbookTraitEdit [name="traitName"]','Kopie 1');
 click('[data-lookbook-view="looks"]');
 assert(get('lookbookLayerFilters').hidden && get('lookbookFilterBar').hidden);
 assert.equal(find('[data-lookbook-poster-title]').textContent, 'První sestava');
@@ -1609,6 +1634,7 @@ find('#finalDraftSettingsForm [name="slots"]').value='Klobouky / Kovboj = Výjim
 get('finalDraftSettingsForm').dispatchEvent(new w.Event('submit', { bubbles:true,cancelable:true }));
 await waitFor(() => get('finalStatus').textContent.includes('Cesty potvrzeny'));
 assert.match(get('finalRows').textContent,/Klobouky/);
+click('[data-final-action="show-fin"]');
 click('[data-final-action="show-marked"]');
 assert(get('finalDialog').open);
 assert.equal(get('finalRows').querySelectorAll('[data-final-action="open-marked-category"]').length, 2);
@@ -1638,6 +1664,7 @@ assert.equal(M.category(storedFin, 'export-a').fin, true);
 assert.equal(M.locate(storedFin, 'export-hair').trait.fin, true);
 assert.equal(M.locate(storedFin, 'export-hair').trait.name, 'Hotové vlasy');
 finalEntry.click();
+click('[data-final-action="show-fin"]');
 click('[data-final-action="show-marked"]');
 click('#finalRows [data-id="export-b"]');
 click('#finalRows [data-final-action="edit-marked"][data-id="export-hair"]');
@@ -1646,51 +1673,53 @@ get('finalMarkedForm').dispatchEvent(new w.Event('submit', { bubbles: true, canc
 assert.equal(M.locate(w.inspectState(), 'export-hair').trait.fin, undefined);
 assert(!find('#finalRows [data-id="export-b"]'), 'removing the last mark clears that category from the FIN index');
 click('[data-final-action="close"]');
-const rarityProject = M.empty();
-const rarityAsset = w.inspectState().cats.flatMap(category=>category.traits)[0].data;
-rarityProject.cats = [{id:'rarity-cat',name:'Heads',visible:true,traits:Array.from({length:5},(_,index)=>({
-  id:'rarity-'+index,name:'Trait '+(index+1),data:rarityAsset,
-}))}];
-rarityProject.organizer['rarity-cat'] = {
-  folders:[{id:'rarity-folder',name:'Cowboy hats',parentId:null}],
-  assignments:Object.fromEntries(Array.from({length:4},(_,index)=>['rarity-'+index,'rarity-folder'])),
-};
-w.useTestProject(rarityProject);
+const finalAsset = w.inspectState().cats.flatMap(category=>category.traits)[0].data;
+const finalProject = M.empty();
+finalProject.cats = [
+  {id:'final-head',name:'Hlava',traits:[
+    {id:'fin-b',name:'Zebra',data:finalAsset,fin:true,lookbookTags:['5panel']},
+    {id:'fin-a',name:'Alpha',data:finalAsset,fin:true},
+  ]},
+  {id:'final-eye',name:'Oči',traits:[{id:'out-c',name:'Brýle',data:finalAsset,out:true}]},
+];
+w.useTestProject(finalProject);
 finalEntry.click();
-click('[data-final-action="show-rarities"]');
-changeControl('#finalRarityFolder','rarity-folder');
-const rarityShares = () => [...get('finalRows').querySelectorAll('[data-rarity-row] strong')].map(node=>Number.parseFloat(node.textContent.replace(',','.')));
-assert.deepEqual(rarityShares(),[25,25,25,25]);
-click('[data-rarity-row="0"]');
-click('[data-rarity-percent="80"]');
-assert.deepEqual(rarityShares(),[80,6.67,6.67,6.66]);
-click('[data-rarity-row="1"]');
-click('[data-rarity-percent="10"]');
-assert.deepEqual(rarityShares(),[80,10,5,5]);
-click('[data-rarity-row="2"]');
-click('[data-rarity-percent="25"]');
-assert.match(get('finalStatus').textContent,/100/);
-assert.deepEqual(rarityShares(),[80,10,5,5]);
-click('[data-rarity-save]');
-const rarityWeights = () => w.inspectState().cats[0].traits.map(M.rarityWeight);
-assert.deepEqual(rarityWeights(),[320,40,20,20,100]);
-changeControl('#finalRarityCount','8');
-assert.deepEqual(rarityShares(),[12.5,12.5,12.5,12.5]);
-assert(find('[data-rarity-save]').disabled);
-changeControl('#finalRarityCount','');
-assert.deepEqual(rarityShares(),[80,10,5,5]);
+assert(!find('[data-final-action="show-rarities"]'));
+click('[data-final-action="show-fin"]');
+assert.deepEqual([...get('finalRows').querySelectorAll('[data-final-draft-row]')].map(input=>input.dataset.finalDraftRow),['fin-b','fin-a']);
+assert(get('finalDraftMark').disabled);
+changeControl('#finalDraftSort','name');
+assert.equal(find('[data-final-draft-row]').dataset.finalDraftRow,'fin-a');
+const finalThumb = find('.final-draft-thumbnail');
+intersect(finalThumb,true);
+await waitFor(() => finalThumb.hasAttribute('src'));
+assert.equal((await w.__load(finalThumb.getAttribute('src'))).width,240);
+click('[data-final-draft="toggle-all"]');
+assert.match(get('finalExportBar').textContent,/Vybráno 2 \/ 2/);
+changeControl('#finalDraftMark','out');
+assert(w.inspectState().cats[0].traits.every(trait=>trait.out && !trait.fin));
+click('[data-final-action="show-out"]');
+assert.match(get('finalExportBar').textContent,/Vybráno 0 \/ 3/);
+click('[data-final-action="show-build"]');
+click('[data-final-draft="build-choose"][data-id="fin-b"]');
+assert.equal(find('.final-build-preview').querySelectorAll('img').length,1);
+click('[data-final-draft="next"]');
+click('[data-final-draft="build-choose"][data-id="out-c"]');
+assert.equal(find('.final-build-preview').querySelectorAll('img').length,2);
+click('[data-final-draft="save-build"]');
+assert(get('editDialog').open);
+get('dialogInput').value = 'Sestava z Finálu';
+get('dialogForm').dispatchEvent(new w.Event('submit',{ bubbles:true,cancelable:true }));
+await waitFor(() => w.inspectState().snapshots.length === 1);
+assert.equal(w.inspectState().snapshots[0].name,'Sestava z Finálu');
+assert.deepEqual({...w.inspectState().snapshots[0].selected},{'final-head':'fin-b','final-eye':'out-c'});
 click('[data-final-action="close"]');
-assert(await w.waitSave());
-const rarityDatabase = await S.open();
-const savedRarities = M.normalize(await S.read(rarityDatabase,undefined,{lazy:true}),{allowStoredAssets:true});
-rarityDatabase.close();
-assert.deepEqual(savedRarities.cats[0].traits.map(M.rarityWeight),[320,40,20,20,100]);
 // Bulk selection can mix categories, nested folders and traits while retaining their paths.
 const bulkProject = M.empty();
 bulkProject.cats = [
-  { id:'bulk-a', name:'Source A', traits:[{ id:'bulk-a1', name:'Hat', data:rarityAsset }] },
+  { id:'bulk-a', name:'Source A', traits:[{ id:'bulk-a1', name:'Hat', data:finalAsset }] },
   { id:'bulk-b', name:'Source B', traits:[
-    { id:'bulk-b1', name:'Glasses', data:rarityAsset, flag:'blue', lookbookTags:['Afro', 'Původní'] }, { id:'bulk-b2', name:'Goggles', data:rarityAsset },
+    { id:'bulk-b1', name:'Glasses', data:finalAsset, flag:'blue', lookbookTags:['Afro', 'Původní'] }, { id:'bulk-b2', name:'Goggles', data:finalAsset },
   ] },
   { id:'bulk-c', name:'Destination', traits:[] },
 ];
@@ -1888,8 +1917,8 @@ assert.equal(M.locate(w.inspectState(),'bulk-b2').cat.id,'bulk-b');
 const swatchProject = M.empty();
 swatchProject.cats = [{
   id: 'swatch-skin', name: 'SKIN', traits: [
-    { id: 'swatch-palette', name: 'Vlastní barva', data: rarityAsset, lookbookTags: ['Tyrkysová', 'Afro'] },
-    { id: 'swatch-material', name: 'Vlastní materiál', data: rarityAsset, lookbookTags: ['Emerald'] },
+    { id: 'swatch-palette', name: 'Vlastní barva', data: finalAsset, lookbookTags: ['Tyrkysová', 'Afro'] },
+    { id: 'swatch-material', name: 'Vlastní materiál', data: finalAsset, lookbookTags: ['Emerald'] },
   ],
 }];
 w.useTestProject(swatchProject);
@@ -1940,8 +1969,8 @@ await waitFor(() => !get('lookbookDialog').open);
 // Names open rename directly. A tag removed from one folder stays on its siblings.
 const hairs = M.empty();
 hairs.cats = [{ id: 'hairs', name: 'HAIRS', traits: [
-  { id: 'spa', name: 'Spaghetti', data: rarityAsset, lookbookTags: ['Hair', 'Spaghetti'] },
-  { id: 'afro', name: 'Afro', data: rarityAsset, lookbookTags: ['Hair'] },
+  { id: 'spa', name: 'Spaghetti', data: finalAsset, lookbookTags: ['Hair', 'Spaghetti'] },
+  { id: 'afro', name: 'Afro', data: finalAsset, lookbookTags: ['Hair'] },
 ], lookbookTags: ['Hair'] }];
 hairs.organizer.hairs = {
   folders: [{ id: 'spa-wip', name: 'Spa wip', parentId: null }, { id: 'nested', name: 'Basic', parentId: 'spa-wip' }],

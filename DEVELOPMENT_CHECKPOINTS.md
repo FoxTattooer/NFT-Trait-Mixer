@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.164 | checkpoint/v0.7.164-final-lookbook | Finál se skládáním sestav, kartami FIN a OUT, ostrými výřezy, řazením a hromadnou správou. Lookbook s textovým hledáním a přímým přejmenováním traitů. |
 | 0.7.163 | checkpoint/v0.7.163-5panel | Headwear štítek 5panel s ikonou v Lookbooku, editoru a Showroomu, dostupný i offline. |
 | 0.7.162 | checkpoint/v0.7.162-export-do-slozky | Finál ukládá skutečné složky, samostatná PNG nebo PSD. PNG lze na iPhonu sdílet do Souborů. Zamčené kopie mají obnovitelnou zálohu JSON. |
 | 0.7.161 | checkpoint/v0.7.161-exportni-centrum | Kompaktní centrum exportu PNG a PSD s výběrem složek, označení, vlajek a štítků a s průběžným náhledem. Export kategorií s počtem v horní liště vrstev. |

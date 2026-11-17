@@ -749,6 +749,7 @@ function setLayerStatuses(ids, mark, enabled) {
       } else delete item[mark];
     }
   }, `${enabled ? 'Přidáno' : 'Odebráno'} ${layerStatusLabels[mark]} · ${counted(affected.length, 'položka', 'položky', 'položek')}`, true);
+  return affected.length;
 }
 function layerBulkPick(item) {
   return `<label class="layer-bulk-pick bulk-pick"><input type="checkbox" value="${esc(item.id)}" data-layer-bulk-pick aria-label="Vybrat · ${esc(item.name)}"><span class="bulk-pick-mark" aria-hidden="true">${icon('check')}</span></label>`;
@@ -1670,7 +1671,7 @@ function renderSnapshotLayerLibrary() {
 }
 const thumbnailURLs = new Map(), thumbnailQueue = new Set(), thumbnailWatching = new Set();
 const nearbyThumbnails = new Set();
-const thumbnailSources = new WeakMap();
+const thumbnailSources = new WeakMap(), layerThumbnailBlobs = new WeakMap();
 let thumbnailJobs = 0;
 const thumbnailObserver = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
   for (const { target, isIntersecting } of entries) {
@@ -1694,7 +1695,7 @@ const thumbnailObserver = typeof IntersectionObserver === 'function' ? new Inter
 }, { rootMargin: '80px' }) : null;
 function imageAttributes(data) { return TraitStorage.isAsset(data) ? 'data-asset="'+esc(data)+'"' : 'src="'+esc(data)+'"'; }
 function layerThumbnailSource(img) {
-  return M.category(state, img.dataset.category)?.traits.find(t => t.id === img.dataset.trait)?.data;
+  return layerThumbnailBlobs.get(img) || M.category(state, img.dataset.category)?.traits.find(t => t.id === img.dataset.trait)?.data;
 }
 function clearLayerThumbnail(img) {
   if (thumbnailURLs.has(img)) {
@@ -1748,28 +1749,29 @@ function visibleImageBounds(image, canvas) {
     height: Math.ceil(Math.min(height, bottom + 2) * sourceHeight / height) - y,
   };
 }
-async function thumbnailBlob(source, managed, valid, crop) {
+async function thumbnailBlob(source, managed, valid, crop, size = 96) {
   const asset = TraitStorage.isAsset(source);
   if (!asset && !crop) return null;
-  const cacheKey = asset && (crop ? `crop:${source}` : source);
+  const cacheKey = source instanceof Blob ? source : asset && (crop ? `crop:${size}:${source}` : source);
   if (managed && cacheKey && smallThumbnailCache.has(cacheKey)) return smallThumbnailCache.get(cacheKey);
-  const blob = await TraitStorage.imageBlob(db, source);
+  const blob = source instanceof Blob ? source : await TraitStorage.imageBlob(db, source);
   if (!managed || !valid()) return blob;
   const url = URL.createObjectURL(blob);
   const canvas = document.createElement('canvas');
   const scan = crop ? document.createElement('canvas') : null;
-  canvas.width = canvas.height = 96;
+  canvas.width = canvas.height = size;
   let image;
   try {
     image = await decodeImage(url);
     if (!valid()) return blob;
     const ctx = canvas.getContext('2d');
     const bounds = scan && visibleImageBounds(image, scan);
+    if (size > 96) ctx.imageSmoothingQuality = 'high';
     if (bounds) {
-      const scale = 94 / Math.max(bounds.width, bounds.height);
+      const scale = (size - 2) / Math.max(bounds.width, bounds.height);
       const width = bounds.width * scale, height = bounds.height * scale;
-      ctx.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, (96 - width) / 2, (96 - height) / 2, width, height);
-    } else ctx.drawImage(image, 0, 0, 96, 96);
+      ctx.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, (size - width) / 2, (size - height) / 2, width, height);
+    } else ctx.drawImage(image, 0, 0, size, size);
     const thumbnail = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!thumbnail) return blob;
     if (cacheKey) {
@@ -1797,7 +1799,8 @@ function pumpThumbnails() {
     thumbnailJobs++;
     const valid = () => img.isConnected && (!managed || !thumbnailObserver || nearbyThumbnails.has(img));
     const lookbookRenderer = img.classList.contains('lookbook-thumbnail') && window.TraitLookbook?.thumbnail;
-    const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid, img.classList.contains('layer-cropped-thumbnail'));
+    const size = img.classList.contains('final-draft-thumbnail') ? 240 : 96;
+    const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid, img.classList.contains('layer-cropped-thumbnail'), size);
     pending.then(blob => {
       if (!valid()) return;
       if (managed && source !== layerThumbnailSource(img)) { thumbnailQueue.add(img); return; }

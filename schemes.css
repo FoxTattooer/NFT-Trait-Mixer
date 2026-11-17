@@ -618,7 +618,7 @@ body.compact-workspace[data-color-scheme] :is(
   #compareTraits[open]>summary, #snapshotsPanel .library-category[open]>summary,
   #layerInventoryDialog :is(.inv-import-menu,.inv-filter-menu)[open]>summary,
   #layerInventoryDialog .inv-toggle[aria-expanded=true],
-  #finalDialog :is([data-final-draft=settings],[data-rarity-row])[aria-expanded=true]
+  #finalDialog [data-final-draft=settings][aria-expanded=true]
 ) {
   background:var(--workspace-open-surface)!important;
   border-color:var(--workspace-open-stroke)!important;

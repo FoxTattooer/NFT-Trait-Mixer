@@ -3,137 +3,7 @@
 const finalDialog = $('finalDialog');
 let finalConnection, finalEntries = [], finalArchive, finalCategory, finalPath = [], finalLimit = 80;
 let finalView = 'compose', finalMarkedCategory, finalMarkedEdit;
-let finalRarityCategory, finalRarityFolder = '', finalRarityCount = null, finalRarityRow = null;
-let finalRarityDraft = false, finalRarityFixed = new Map();
-const rarityPercent = new Intl.NumberFormat('cs-CZ', { style:'percent', maximumFractionDigits:2 });
-
-function finalRarityScope() {
-  const category = M.category(state,finalRarityCategory) || M.category(state,active) || state.cats[0];
-  if (!category) return null;
-  const { folders, assignments } = organizerFolders(category.id);
-  const folder = folders.find(item => item.id === finalRarityFolder);
-  const children = folder ? organizerDescendants(folders,folder.id) : null;
-  const traits = category.traits.filter(trait => !trait.hidden && (!children || children.has(assignments[trait.id])));
-  return { category,folders,folder,traits,count:finalRarityCount ?? traits.length };
-}
-
-function resetRarityDraft() {
-  finalRarityCount = finalRarityRow = null;
-  finalRarityFixed.clear();
-  finalRarityDraft = false;
-}
-
-function renderFinalRarities() {
-  const rows = $('finalRows');
-  const scope = finalRarityScope();
-  if (!scope) { rows.innerHTML = '<p class="helper">Přidej kategorii s traity v editoru.</p>'; return; }
-  const { category,folders,folder,traits,count } = scope;
-  const visible = traits.slice(0,count);
-  const total = M.rarityTotal(traits);
-  const shares = finalRarityDraft ? M.distributeRarity(count,finalRarityFixed) : null;
-  const simulated = count !== traits.length;
-  const option = (id,name,selected) => `<option value="${esc(id)}"${id === selected ? ' selected' : ''}>${esc(name)}</option>`;
-  const buttons = [0,5,10,25,50,80].map(value => `<button type="button" data-rarity-percent="${value}">${value} %</button>`).join('');
-  const actions = index => `<form class="final-rarity-choices" data-rarity-index="${index}">
-    <div class="final-rarity-presets">${buttons}<button type="button" data-rarity-auto>Automaticky</button></div>
-    <label>Vlastní %<input name="percent" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></label>
-    <button type="submit">Nastavit</button>
-  </form>`;
-  rows.innerHTML = `<div class="final-rarity-panel">
-    <div class="final-rarity-scope">
-      <label>Kategorie<select id="finalRarityCategory">${state.cats.map(item => option(item.id,item.name,category.id)).join('')}</select></label>
-      <label>Složka<select id="finalRarityFolder">${option('','Celá kategorie',folder?.id || '')}${folders.map(item => option(item.id,organizerPath(folders,item.id),folder?.id)).join('')}</select></label>
-    </div>
-    <div class="final-rarity-controls">
-      <label>Počet traitů<input type="number" id="finalRarityCount" min="1" max="${Math.max(10000,traits.length)}" step="1" inputmode="numeric" placeholder="${traits.length} automaticky" value="${finalRarityCount ?? ''}"></label>
-      <button type="button" data-rarity-reset>Rovnoměrně</button>
-    </div>
-    <p class="helper">${simulated ? `Simulace · skutečný počet ${traits.length}. Pro uložení použij skutečný počet.` : `Základní šance ${folder ? 'uvnitř složky' : 'v kategorii'}. Skryté traity se nelosují.`}</p>
-    ${visible.map((trait,index) => {
-      const share = shares?.[index] ?? (total ? M.rarityWeight(trait) / total : 0);
-      return `<div class="final-rarity-row">
-        <button type="button" data-rarity-row="${index}" aria-expanded="${finalRarityRow === index}">
-          <span>${esc(trait.name)}</span><strong>${esc(rarityPercent.format(share))}</strong>${finalRarityFixed.has(index) ? icon('lock') : icon('chevron')}
-        </button>${finalRarityRow === index ? actions(index) : ''}
-      </div>`;
-    }).join('')}
-    ${count > traits.length && shares ? `<p class="helper">Plánované pozice: ${count - traits.length} · celkem ${rarityPercent.format(shares.slice(traits.length).reduce((sum,share) => sum + share,0))}</p>` : ''}
-    ${!count ? '<p class="helper">V tomto výběru nejsou žádné losované traity.</p>' : ''}
-    <button type="button" class="primary" data-rarity-save ${!shares || simulated ? 'disabled' : ''}>Uložit rozdělení</button>
-  </div>`;
-  $('finalRarityCategory').value = category.id;
-  $('finalRarityFolder').value = folder?.id || '';
-}
-
-function setFinalRarity(index, value) {
-  const scope = finalRarityScope();
-  if (!scope || index >= Math.min(scope.count,scope.traits.length)) return;
-  const next = new Map(finalRarityFixed);
-  if (value === null) next.delete(index);
-  else next.set(index,Math.round(value * 100));
-  if (!M.distributeRarity(scope.count,next)) {
-    $('finalStatus').textContent = 'Rozdělení se musí vejít do 100 %. Uvolni některou nastavenou hodnotu nebo uprav procenta.';
-    return;
-  }
-  finalRarityFixed = next;
-  finalRarityDraft = true;
-  finalRarityRow = null;
-  $('finalStatus').textContent = '';
-  renderFinalRarities();
-  $('finalRows').querySelector(`[data-rarity-row="${index}"]`)?.focus({preventScroll:true});
-}
-
-finalDialog.addEventListener('change', event => {
-  if (finalView !== 'rarities' || busy) return;
-  const field = event.target;
-  if (field.id === 'finalRarityCategory') {
-    finalRarityCategory = field.value; finalRarityFolder = '';
-    resetRarityDraft();
-  } else if (field.id === 'finalRarityFolder') {
-    finalRarityFolder = field.value; resetRarityDraft();
-  } else if (field.id === 'finalRarityCount' && field.validity.valid) {
-    const count = field.value === '' ? null : field.valueAsNumber;
-    resetRarityDraft();
-    finalRarityCount = count; finalRarityDraft = count !== null;
-  } else return;
-  $('finalStatus').textContent = '';
-  renderFinalRarities();
-  $(field.id)?.focus({preventScroll:true});
-});
-finalDialog.addEventListener('submit', event => {
-  const form = event.target;
-  if (!form.matches('.final-rarity-choices')) return;
-  event.preventDefault();
-  if (busy || finalView !== 'rarities' || !form.checkValidity()) return;
-  setFinalRarity(Number(form.dataset.rarityIndex),form.elements.namedItem('percent').valueAsNumber);
-});
-finalDialog.addEventListener('click', event => {
-  if (busy || finalView !== 'rarities') return;
-  const button = event.target.closest('button');
-  if (!button) return;
-  const { rarityRow,rarityPercent: value } = button.dataset;
-  if (rarityRow !== undefined) {
-    const index = Number(rarityRow);
-    finalRarityRow = finalRarityRow === index ? null : index;
-    renderFinalRarities();
-    $('finalRows').querySelector(`[data-rarity-row="${index}"]`)?.focus({preventScroll:true});
-  } else if (value !== undefined || button.hasAttribute('data-rarity-auto')) {
-    setFinalRarity(Number(button.closest('form').dataset.rarityIndex),value === undefined ? null : Number(value));
-  } else if (button.hasAttribute('data-rarity-reset')) {
-    finalRarityFixed.clear(); finalRarityDraft = true; finalRarityRow = null;
-    $('finalStatus').textContent = '';
-    renderFinalRarities();
-  } else if (button.hasAttribute('data-rarity-save')) {
-    const scope = finalRarityScope();
-    if (!scope || scope.count !== scope.traits.length) return;
-    const shares = M.distributeRarity(scope.count,finalRarityFixed);
-    if (!shares) return;
-    change(() => M.applyRarityShares(scope.category,scope.traits,shares),'Rozdělení rarit uloženo',true);
-    finalRarityDraft = false;
-    renderFinalRarities();
-    $('finalStatus').textContent = 'Rozdělení rarit uloženo.';
-  }
-});
+const finalBuilderView = () => ['compose','build','fin','out'].includes(finalView);
 
 function finalDatabase() {
   finalConnection ||= TraitFinal.open().catch(error => { finalConnection = null; throw error; });
@@ -190,22 +60,18 @@ function renderFinalMarked(category, edit) {
 }
 
 function renderFinal() {
-  const compose = finalView === 'compose' && !finalArchive;
-  $('finalExportBar').hidden = !compose;
-  const rarities = finalView === 'rarities' && !finalArchive;
+  const builder = finalBuilderView() && !finalArchive;
+  $('finalExportBar').hidden = !builder;
   for (const tab of $('finalViews').querySelectorAll('button')) {
-    tab.setAttribute('aria-pressed', String(!finalArchive && tab.dataset.finalAction === 'show-' + finalView));
+    const view = finalView === 'marked' ? 'fin' : finalView;
+    tab.setAttribute('aria-pressed', String(!finalArchive && tab.dataset.finalAction === 'show-' + view));
   }
-  if (compose || rarities) {
+  if (builder) {
     $('finalViews').hidden = false;
     $('finalTitle').textContent = 'Finál';
     for (const id of ['finalBack','finalLock','finalPath','finalMore','finalSave','finalExport','finalBackup']) $(id).hidden = true;
-    if (compose) { renderFinalBuilder(); loadFinalBuilder(); }
-    else {
-      clearFinalDraftPreviews(); clearFinalDraftDownload();
-      $('finalStatus').textContent = '';
-      renderFinalRarities();
-    }
+    renderFinalBuilder();
+    loadFinalBuilder();
     return;
   }
   clearFinalDraftPreviews(); clearFinalDraftDownload();
@@ -216,8 +82,6 @@ function renderFinal() {
     ? (category.id === finalMarkedEdit ? category : markedItems(category).find(item => item.id === finalMarkedEdit)) : null;
   if (showMarked && !category) finalMarkedCategory = finalMarkedEdit = null;
   $('finalViews').hidden = archiveOpen || !!category;
-  $('finalViews').querySelector('[data-final-action="show-marked"]').setAttribute('aria-pressed', String(showMarked));
-  $('finalViews').querySelector('[data-final-action="show-archives"]').setAttribute('aria-pressed', String(!showMarked));
   $('finalBack').hidden = !archiveOpen && !category;
   $('finalSave').hidden = archiveOpen || showMarked;
   $('finalExport').hidden = !archiveOpen || !finalArchive.entry.count;
@@ -279,7 +143,7 @@ async function withFinalStorage(phase, status, action) {
 
 function openFinalDialog() {
   resetFinalNavigation();
-  finalView = 'compose';
+  openFinalBuilderView('compose');
   renderFinal();
   if (!finalDialog.open) finalDialog.showModal();
 }
@@ -321,7 +185,7 @@ async function saveToFinal(categoryId) {
 }
 
 finalDialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-finalDialog.addEventListener('close', () => { resetFinalNavigation(); resetRarityDraft(); });
+finalDialog.addEventListener('close', resetFinalNavigation);
 function focusFinalMarked() {
   ($('finalRows').querySelector('input,button') || $('finalViews').querySelector('[aria-pressed="true"]')).focus({ preventScroll: true });
 }
@@ -362,10 +226,12 @@ finalDialog.addEventListener('click', async event => {
   const action = control.dataset.finalAction, id = control.dataset.id;
   switch (action) {
     case 'close': finalDialog.close(); break;
-    case 'show-compose':
-      resetFinalNavigation(); finalView = 'compose'; renderFinal(); break;
-    case 'show-rarities':
-      resetFinalNavigation(); finalView = 'rarities'; renderFinal(); $('finalRows').scrollTop = 0; break;
+    case 'show-compose': case 'show-build': case 'show-fin': case 'show-out':
+      resetFinalNavigation();
+      openFinalBuilderView(action.slice(5));
+      renderFinal();
+      $('finalRows').scrollTop = 0;
+      break;
     case 'show-marked':
       resetFinalNavigation();
       finalView = 'marked';

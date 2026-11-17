@@ -6,6 +6,8 @@
   const menu = open.closest('details'), scroll = $('lookbookScroll');
   const chapters = $('lookbookChapters'), content = $('lookbookContent');
   const detailArea = $('lookbookDetailArea'), sheetArea = $('lookbookSheetArea');
+  const traitTools = $('lookbookTraitTools'), traitEdit = $('lookbookTraitEdit'), traitSearch = $('lookbookTraitSearch');
+  let searchTerms = [];
   const rarities = new Map([[M.DEFAULT_RARITY_WEIGHT, 'Běžný'], [50, 'Neobvyklý'], [20, 'Vzácný'], [5, 'Výjimečný']]);
   const percent = new Intl.NumberFormat('cs-CZ', { style: 'percent', maximumFractionDigits: 2 });
   const pageSize = 4;
@@ -54,11 +56,16 @@
     const ids = matchingStatusLayerIds(cat, categoryView, markFilters);
     return ids ? cat.traits.filter(trait => ids.has(trait.id)) : cat.traits;
   }
+  function matchesTraitSearch(trait) {
+    if (!searchTerms.length) return true;
+    const name = foldTraitName(`${trait.name} ${trait.lookbookName || ''}`);
+    return searchTerms.every(term => name.includes(term));
+  }
   function visibleTraits(cat) {
     const traits = traitsMatchingLayerFilters(cat);
-    return tagFilters.traits.size
-      ? traits.filter(trait => M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait)))
-      : traits;
+    if (!tagFilters.traits.size && !searchTerms.length) return traits;
+    return traits.filter(trait => matchesTraitSearch(trait) && (!tagFilters.traits.size ||
+      M.matchesLookbookTags(trait, tagFilters.traits, M.inheritedLayerTags(state, cat, trait))));
   }
   let ruleTags;
   let layerTagTarget, draftLayerTagItem = {};
@@ -150,9 +157,9 @@
     showLayerTagDialog('Štítky', path, item, M.layerTagInheritance(state, cat, item, kind).tags);
   }
 
-  function openBulkLayerTags(ids, returnTo) {
+  function openBulkLayerTags(ids, returnTo, onSave) {
     if (busy || layerTagsDialog.open || !ids.length) return;
-    layerTagTarget = { ids, returnTo };
+    layerTagTarget = { ids, returnTo, onSave };
     showLayerTagDialog('Přidat štítky', 'Vybráno ' + counted(ids.length, 'položka', 'položky', 'položek'));
   }
 
@@ -242,8 +249,10 @@
     if (busy || !layerTagTarget) return;
     addLayerDraftTag($('layerTagsNew').value);
     if (layerTagTarget.ids) {
-      saveBulkLayerTags(layerTagTarget.ids);
+      const { ids, onSave } = layerTagTarget;
+      saveBulkLayerTags(ids);
       layerTagsDialog.close();
+      onSave?.();
       return;
     }
     const { cat, item } = resolveLayerTagTarget();
@@ -422,8 +431,9 @@
         <option value="custom" ${rarities.has(weight) ? '' : 'selected'}>Vlastní</option></select></label>
       <label>Váha losování<input name="weight" type="number" min="0" max="${M.MAX_RARITY_WEIGHT}" step="any" inputmode="decimal" value="${weight}"></label>
     </div><p class="lookbook-help">Základní šanci v kategorii ovlivňuje váha. Výsledný výběr může změnit pravidlo.</p>` : '';
-    return `<details class="lookbook-edit"><summary>Upravit kartu</summary><form>
-      <label>Název v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>
+    return `<details class="lookbook-edit"><summary>${trait ? 'Upravit vrstvu' : 'Upravit kartu'}</summary><form>
+      ${trait ? `<label>Název traitu v projektu<input name="traitName" maxlength="120" value="${esc(item.name)}"></label>` : ''}
+      <label>Název karty v Lookbooku<input name="lookbookName" maxlength="${M.LOOKBOOK_NAME_LIMIT}" value="${esc(item.lookbookName || '')}" placeholder="${esc(item.name)}"></label>
       ${rarity}
       <label>Příběh<textarea name="story" rows="3" maxlength="${M.LOOKBOOK_STORY_LIMIT}">${esc(item.story || '')}</textarea></label>
     </form></details>`;
@@ -436,7 +446,7 @@
       <div class="lookbook-detail-head${trait ? ' lookbook-detail-compact' : ''}"><div class="lookbook-detail-copy"><h3 data-lookbook-title tabindex="-1" title="${title}">${title}</h3><p title="${fullPath}">${esc(path)}</p></div>
       ${trait ? `<div class="lookbook-chance-box"><output class="lookbook-chance" aria-label="Základní šance traitu"></output><span class="lookbook-rarity-label">${item.hidden ? 'Skrytý' : rarities.get(M.rarityWeight(item)) || 'Vlastní'}</span></div>` : ''}</div>
       <p class="lookbook-story" ${item.story ? '' : 'hidden'}>${esc(item.story || '')}</p>
-      ${tags}${trait ? tagEditor(item, M.inheritedLayerTags(state, category(), item)) : ''}${editor(item, trait)}
+      ${tags}${trait ? tagEditor(item, M.inheritedLayerTags(state, category(), item)) : editor(item, false)}
     </section>`;
   }
 
@@ -486,6 +496,8 @@
     folderTagButton.hidden = !folderId;
     folderTagButton.dataset.id = folderId || '';
     detailArea.innerHTML = detail(trait, path, true);
+    traitEdit.hidden = false;
+    traitEdit.innerHTML = editor(trait, true);
     sheetArea.innerHTML = `<section class="lookbook-sheet">
       <div class="lookbook-chapter-heading"><h3>${esc(cat.name)}</h3>
         <div class="lookbook-chapter-meta">
@@ -551,6 +563,9 @@
       control.setAttribute('aria-pressed', String(control.dataset.lookbookView === view));
     }
     renderFilters();
+    traitTools.hidden = view !== 'traits';
+    traitEdit.hidden = true;
+    traitEdit.replaceChildren();
     folderTagButton.hidden = true;
     if (view === 'cards') {
       chapters.hidden = true;
@@ -574,7 +589,7 @@
     chapters.scrollLeft = left;
     if (!selected) {
       const filtered = categoryView !== 'all' || markFilters.size;
-      const emptyTraits = filtered ? 'Vybraným filtrům neodpovídají žádné traity.'
+      const emptyTraits = searchTerms.length ? 'Žádný trait neodpovídá hledání.' : filtered ? 'Vybraným filtrům neodpovídají žádné traity.'
         : tagFilters.traits.size ? 'Žádný trait nemá všechny vybrané štítky.' : 'Přidej do projektu traity a zobrazí se tady.';
       detailArea.replaceChildren();
       sheetArea.innerHTML = view === 'traits'
@@ -594,19 +609,29 @@
     if (view === 'cards') return;
     const item = selectedItem(), form = content.querySelector('form');
     if (!item || !form || busy) return;
+    const nameField = form.elements.namedItem('traitName');
+    const traitName = nameField ? M.normalizeLookbookText(nameField.value, 120) || item.name : item.name;
+    const renamed = traitName !== item.name;
     const name = M.normalizeLookbookText(form.elements.lookbookName.value, M.LOOKBOOK_NAME_LIMIT);
     const story = M.normalizeLookbookText(form.elements.story.value, M.LOOKBOOK_STORY_LIMIT);
     const field = form.elements.weight;
     const weight = field && M.validRarityWeight(field.valueAsNumber) ? field.valueAsNumber : M.rarityWeight(item);
-    if (name !== (item.lookbookName || '') || story !== (item.story || '') || (field && weight !== M.rarityWeight(item))) {
+    if (renamed || name !== (item.lookbookName || '') || story !== (item.story || '') || (field && weight !== M.rarityWeight(item))) {
       change(() => {
+        if (renamed) item.name = traitName;
         if (name) item.lookbookName = name; else delete item.lookbookName;
         if (story) item.story = story; else delete item.story;
         if (field) {
           if (weight === M.DEFAULT_RARITY_WEIGHT) delete item.rarityWeight;
           else item.rarityWeight = weight;
         }
-      }, 'Karta Lookbooku uložena', true);
+      }, renamed ? 'Název traitu uložen' : 'Karta Lookbooku uložena', true);
+    }
+    if (nameField) {
+      nameField.value = item.name;
+      form.elements.lookbookName.placeholder = item.name;
+      const path = detailArea.querySelector('.lookbook-detail-copy p');
+      path.title = `${path.textContent} / ${item.name}`;
     }
     const title = content.querySelector('[data-lookbook-title]');
     title.textContent = label(item);
@@ -641,6 +666,8 @@
     origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
     view = 'traits';
+    traitSearch.value = '';
+    searchTerms = [];
     renderFilters();
     const cat = M.category(state, active);
     if (cat?.traits.length) selectTrait(cat, state.selected[cat.id]);
@@ -662,6 +689,7 @@
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   dialog.addEventListener('close', () => {
     detailArea.replaceChildren();
+    traitEdit.replaceChildren();
     sheetArea.replaceChildren();
     chapters.replaceChildren();
     chapters.hidden = true;
@@ -712,6 +740,12 @@
     toggleTagFilter(tagFilters[view], control.value);
     refreshResults(tagIcons.contains(control) ? tagIcons : filterRoot);
   });
+  traitSearch.addEventListener('input', () => {
+    if (view !== 'traits') return;
+    saveCard();
+    searchTerms = foldTraitName(traitSearch.value).trim().split(/\s+/).filter(Boolean);
+    refreshResults(traitTools);
+  });
   $('lookbookUseRules').addEventListener('click', () => {
     ruleTags = new Set(tagFilters.traits);
     close();
@@ -754,6 +788,7 @@
         markFilters.clear();
       }
       if (!M.matchesLookbookTags(target.trait, tagFilters.traits, M.inheritedLayerTags(state, target.cat, target.trait))) tagFilters.traits.clear();
+      if (!matchesTraitSearch(target.trait)) { traitSearch.value = ''; searchTerms = []; }
       selectTrait(target.cat, target.trait.id);
     }
     render();
@@ -784,7 +819,10 @@
       if (field.value === 'custom') { weight.focus(); weight.select(); return; }
       weight.value = field.value;
     }
-    if (field.form) saveCard();
+    if (field.form) {
+      saveCard();
+      if (searchTerms.length && (field.name === 'traitName' || field.name === 'lookbookName') && view === 'traits') refreshResults(traitTools);
+    }
   });
   content.addEventListener('submit', event => { event.preventDefault(); saveCard(); });
 
