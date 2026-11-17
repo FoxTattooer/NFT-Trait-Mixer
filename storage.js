@@ -225,6 +225,8 @@
     const keys=new Set();for(const project of projects)for(const t of imageRecords(project))if(isAsset(t.data))keys.add(t.data.slice(6));
     pins.set(db,keys);
   }
-  const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng};
+  const readPreference = (db, key) => request(db, 'preference:' + key);
+  const savePreference = (db, key, value) => transaction(db, store => store.put(value, 'preference:' + key));
+  const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng,readPreference,savePreference};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.TraitStorage=api;
 })(globalThis);

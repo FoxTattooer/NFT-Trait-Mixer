@@ -41,7 +41,8 @@ w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuf
 w.HTMLCanvasElement.prototype.toDataURL=function(){return this.native.toDataURL('image/png');};
 w.__downloads=[];
 w.fetch=async url=>{assert.match(url,/inventory-dripd\.json/);return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../inventory-dripd.json','utf8'))};};
-w.eval(['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','app.js','trait-comparison.js','lookbook-cards.js','lookbook.js','folder-export.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n')+`
+const appScripts = ['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','app.js','trait-comparison.js','lookbook-cards.js','lookbook.js','folder-export.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
+w.eval(appScripts+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
 globalThis.inspectState=()=>state;
@@ -1401,7 +1402,9 @@ assert.deepEqual(shownFilterTraits(),['export-bg','filter-clean'],'active filter
 click(categoryBadge('fin'));
 click(categoryBadge('out'));
 click(categoryBadge('out'));
-assert.deepEqual(JSON.parse(w.localStorage.getItem('nft-editor-layer-visibility')), {view:'all',marks:{fin:'include',out:'exclude'},onlyActive:true});
+const {updatedAt: visibilityUpdatedAt, ...editorPreference} = JSON.parse(w.localStorage.getItem('nft-editor-layer-visibility'));
+assert(visibilityUpdatedAt > 0);
+assert.deepEqual(editorPreference, {view:'all',marks:{fin:'include',out:'exclude'},onlyActive:true});
 w.eval('clearActiveTraitFilter(); categoryStatusFilters = new Map(); restoreEditorVisibility(); render(true);');
 assert.deepEqual(categoryIds(),['export-b']);
 assert.equal(find(categoryBadge('fin')).dataset.filterMode,'include');
@@ -1475,6 +1478,46 @@ click('#lookbookExit');
 await waitFor(() => !get('lookbookDialog').open);
 assert.deepEqual(categoryIds(), ['export-b']);
 assert.equal(JSON.stringify(w.inspectState()), beforeFilters, 'Lookbook filtering leaves the project, marks and visibility unchanged');
+click(categoryBadge('fin'));
+click('#activeTraitFilter');
+click('#openLookbook');
+click(bookStatus('out'));
+click(bookStatus('out'));
+click(bookStatus('trash'));
+click(bookStatus('trash'));
+assert(await w.eval('readyForAppReload()'));
+const reopened = new Window({
+  url:'https://nft.test',
+  settings:{disableCSSFileLoading:true,disableJavaScriptFileLoading:true,disableJavaScriptEvaluation:true},
+});
+try {
+  reopened.document.write(fs.readFileSync(__dirname+'/../index.html','utf8'));
+  reopened.indexedDB = w.indexedDB;
+  reopened.Option = function(text, value) {
+    const option = reopened.document.createElement('option');
+    option.text = text; option.value = value;
+    return option;
+  };
+  reopened.HTMLCanvasElement.prototype.getContext = w.HTMLCanvasElement.prototype.getContext;
+  assert.equal(reopened.localStorage.getItem('nft-editor-layer-visibility'), null);
+  reopened.eval(appScripts + '\nglobalThis.closePreferenceTestDb = () => db?.close();');
+  await waitFor(() => reopened.document.querySelector('#appLayout').getAttribute('aria-busy') === 'false');
+  assert.equal(reopened.document.querySelector(categoryBadge('fin')).dataset.filterMode, 'exclude');
+  assert.equal(reopened.document.querySelector('#activeTraitFilter').getAttribute('aria-pressed'), 'true');
+  reopened.document.querySelector('#openLookbook').click();
+  assert(reopened.document.querySelector('#lookbookDialog').open);
+  assert.equal(reopened.document.querySelector(bookStatus('out')).dataset.filterMode, 'exclude');
+  assert.equal(reopened.document.querySelector(bookStatus('trash')).dataset.filterMode, 'exclude');
+  assert.equal(reopened.document.querySelector(bookStatus('fin')).dataset.filterMode, 'off');
+} finally {
+  reopened.closePreferenceTestDb?.();
+  await reopened.happyDOM.abort();
+  reopened.close();
+}
+click('#lookbookCategoryView');
+click('#lookbookExit');
+await waitFor(() => !get('lookbookDialog').open);
+click('#activeTraitFilter');
 click('#layerReviewFilter');
 if (!get('layer-branch-export-c').hidden) click(filterCategory);
 w.useTestProject(exportProject);

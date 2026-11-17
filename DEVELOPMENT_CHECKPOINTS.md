@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.178 | checkpoint/v0.7.178-filtry-a-stitky | Obnova filtrů po aktualizaci, větší názvy vrstev a kompaktní štítky s většími ikonami. |
 | 0.7.177 | checkpoint/v0.7.177-viditelnost-custom | Ukládání filtrů viditelnosti, čitelnější Vrstvy, vlastní barevné schéma a úprava štítků Lookbooku. |
 | 0.7.176 | checkpoint/v0.7.176-vetsi-stitky | Větší ikony a menší okraje ve filtru štítků Lookbooku. |
 | 0.7.175 | checkpoint/v0.7.175-stitek-gun | Černobílý štítek GUN je k dispozici ve výběru štítků. |

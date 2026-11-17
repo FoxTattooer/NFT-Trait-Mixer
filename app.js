@@ -383,6 +383,8 @@ const categoryViewModes = [
   { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
 const editorVisibilityKey = 'nft-editor-layer-visibility';
+const lookbookVisibilityKey = 'nft-lookbook-layer-visibility';
+const layerVisibilitySettings = new Map();
 let categoryFilter = 'all', categoryStatusFilters = new Map();
 let onlyActiveTraits = false, visibleTraitIds = null, activeFilterOpened = null;
 const filteredLayerIds = new Map();
@@ -391,8 +393,7 @@ let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
 let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
 function readLayerVisibility(key) {
-  let saved;
-  try { saved = JSON.parse(localStorage.getItem(key)); } catch { /* use default filters */ }
+  const saved = layerVisibilitySettings.get(key)?.value;
   const view = categoryViewModes.find(mode => mode.id === saved?.view)?.id || 'all';
   const marks = new Map();
   for (const mark of Object.keys(layerStatusLabels)) {
@@ -401,9 +402,33 @@ function readLayerVisibility(key) {
   }
   return { view, marks, onlyActive: saved?.onlyActive === true };
 }
+function persistLayerVisibility(key, setting) {
+  if (!db || setting.persisted) return;
+  setting.write ||= TraitStorage.savePreference(db, key, setting.value)
+    .then(() => { setting.persisted = true; })
+    .catch(() => { /* localStorage still holds the latest filters when available */ })
+    .finally(() => { setting.write = null; });
+  return setting.write;
+}
+async function loadLayerVisibility() {
+  await Promise.all([editorVisibilityKey, lookbookVisibilityKey].map(async key => {
+    let local, saved;
+    try { local = JSON.parse(localStorage.getItem(key)); } catch { /* use the database */ }
+    if (db) saved = await TraitStorage.readPreference(db, key).catch(() => null);
+    if (!saved && !local) return;
+    const useSaved = saved && (!local || (saved.updatedAt || 0) >= (local.updatedAt || 0));
+    const setting = { value: useSaved ? saved : local, persisted: Boolean(useSaved) };
+    layerVisibilitySettings.set(key, setting);
+    await persistLayerVisibility(key, setting);
+  }));
+}
 function saveLayerVisibility(key, view, marks, onlyActive = false) {
-  try { localStorage.setItem(key, JSON.stringify({ view, marks: Object.fromEntries(marks), onlyActive })); }
-  catch { /* filters still work for this session */ }
+  const previous = layerVisibilitySettings.get(key)?.value.updatedAt || 0;
+  const value = { view, marks: Object.fromEntries(marks), onlyActive, updatedAt: Math.max(Date.now(), previous + 1) };
+  const setting = { value, persisted: false };
+  layerVisibilitySettings.set(key, setting);
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* use the database */ }
+  void persistLayerVisibility(key, setting);
 }
 function saveEditorVisibility() {
   saveLayerVisibility(editorVisibilityKey, categoryFilter, categoryStatusFilters, onlyActiveTraits);
@@ -2308,7 +2333,10 @@ function checkAppUpdate(registration) {
 }
 async function readyForAppReload() {
   if (busy) { announceAppUpdate('Aktualizuj až po dokončení probíhající operace.'); return false; }
-  if (revision === persistedRevision || (await flushSave() && revision === persistedRevision)) return true;
+  if (revision === persistedRevision || (await flushSave() && revision === persistedRevision)) {
+    await Promise.all(Array.from(layerVisibilitySettings, ([key, setting]) => persistLayerVisibility(key, setting)));
+    return true;
+  }
   announceAppUpdate('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
   return false;
 }
@@ -3595,6 +3623,7 @@ async function init() {
       }
     }
   } catch (error) { storageFailure(error); }
+  await loadLayerVisibility();
   restoreEditorVisibility();
   $('recoveryNotice').hidden = !safeMode;
   ready = true; $('appLayout').setAttribute('aria-busy', 'false'); render(); setupOffline();

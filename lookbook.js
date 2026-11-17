@@ -15,9 +15,7 @@
   const tagFilters = { traits: new Set(), cards: new Set() };
   const filterRoot = $('lookbookTags');
   const layerFilterBar = $('lookbookLayerFilters'), categoryEye = $('lookbookCategoryView'), folderTagButton = $('lookbookFolderTags');
-  const visibilityKey = 'nft-lookbook-layer-visibility';
-  const { view: savedCategoryView, marks: markFilters } = readLayerVisibility(visibilityKey);
-  let categoryView = savedCategoryView;
+  let categoryView = 'all', markFilters = new Map();
   const tagIcons = $('lookbookTagIcons');
   let tagIconMarkup = '';
   const layerTagsDialog = $('layerTagsDialog');
@@ -669,6 +667,7 @@
 
   open.addEventListener('click', () => {
     if (!ready || busy || dialog.open) return;
+    ({ view: categoryView, marks: markFilters } = readLayerVisibility(lookbookVisibilityKey));
     origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
     $('lookbookUpdateStatus').textContent = '';
@@ -736,7 +735,7 @@
       categoryView = 'all';
       cycleLayerMarkFilter(markFilters, control.dataset.id);
     }
-    saveLayerVisibility(visibilityKey, categoryView, markFilters);
+    saveLayerVisibility(lookbookVisibilityKey, categoryView, markFilters);
     refreshResults(layerFilterBar);
   });
   const tagMoveDialog = $('lookbookTagMoveDialog');
@@ -968,7 +967,7 @@
       if (!traitsMatchingLayerFilters(target.cat).includes(target.trait)) {
         categoryView = 'all';
         markFilters.clear();
-        saveLayerVisibility(visibilityKey, categoryView, markFilters);
+        saveLayerVisibility(lookbookVisibilityKey, categoryView, markFilters);
       }
       if (!M.matchesLookbookTags(target.trait, tagFilters.traits, M.inheritedLayerTags(state, target.cat, target.trait))) tagFilters.traits.clear();
       if (!matchesTraitSearch(target.trait)) resetTraitSearch();

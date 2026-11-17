@@ -294,20 +294,17 @@
 .tag-grid button span, .tag-picker-choice span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #44283c; color: #fff3f9; }
 #lookbookTags .tag-grid {
-  gap: 4px;
+  display: flex; flex-wrap: wrap; gap: 4px;
 }
 #lookbookTags .tag-grid button {
-  justify-self: stretch;
-  min-height: 44px;
-  gap: 7px; padding: 3px 6px;
+  --tag-icon-size: 32px;
+  flex: 0 1 auto; max-width: 100%; min-height: 44px;
+  gap: 5px; padding: 3px 6px;
 }
 #lookbookTags .tag-grid button > span:last-child { min-width: 0; }
 .lookbook-assigned-tags button { min-height: 44px; }
 #lookbookTags .tag-grid button[aria-pressed=true] { border-color: #ee6dae; background: #322432; }
 .tag-grid button[hidden] { display: none; }
-@media (max-width: 600px) and (orientation: portrait) {
-  #lookbookTags .tag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 .tag-grid button[aria-pressed=true]::after {
   content: ""; width: 7px; height: 4px; flex: 0 0 7px; margin-inline-start: auto;
   border: solid #ffd4ec; border-width: 0 0 2px 2px; transform: rotate(-45deg);
