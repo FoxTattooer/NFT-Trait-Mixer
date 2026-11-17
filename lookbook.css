@@ -274,7 +274,7 @@
 #lookbookTagMoveGroups button { justify-content: space-between; gap: 6px; min-height: 44px; padding: 4px 7px; text-align: start; }
 #lookbookTagMoveGroups button span { overflow-wrap: anywhere; }
 #lookbookTagMoveGroups .icon { flex: none; width: 14px; height: 14px; }
-#lookbookTags .tag-filter-options { max-height: none; overflow: visible; gap: 8px; }
+#lookbookTags .tag-filter-options { max-height: none; overflow: visible; gap: 8px; padding-inline: 4px; }
 #lookbookTags .tag-filter-group + .tag-filter-group {
   border-top: 1px solid var(--scheme-stroke, #48414d); padding-top: 4px;
 }
@@ -290,7 +290,17 @@
 }
 .tag-grid button span, .tag-picker-choice span, .lookbook-assigned-tags button span { overflow-wrap: anywhere; }
 .tag-grid button[aria-pressed=true] { border-color: #cb83aa; background: #44283c; color: #fff3f9; }
-#lookbookTags .tag-grid button, .lookbook-assigned-tags button { min-height: 44px; }
+#lookbookTags .tag-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 146px), 1fr));
+  gap: 4px;
+}
+#lookbookTags .tag-grid button {
+  --tag-icon-size: clamp(40px, 12vw, 48px);
+  min-height: calc(var(--tag-icon-size) + 4px);
+  gap: 6px; padding: 1px 5px 1px 1px;
+}
+#lookbookTags .tag-grid button > span:last-child { min-width: 0; }
+.lookbook-assigned-tags button { min-height: 44px; }
 #lookbookTags .tag-grid button[aria-pressed=true] { border-color: #ee6dae; background: #322432; }
 .tag-grid button[hidden] { display: none; }
 @media (max-width: 600px) and (orientation: portrait) {
@@ -308,6 +318,7 @@
   background: #141317; color: #c9bccb;
 }
 .tag-swatch .icon { width: 11px; height: 11px; }
+#lookbookTags .tag-swatch .icon { width: 19px; height: 19px; }
 .tag-swatch-art {
   background: #030303 url('art/lookbook/tag-icons.webp') var(--tag-x) var(--tag-y) / 600% 500% no-repeat;
 }
