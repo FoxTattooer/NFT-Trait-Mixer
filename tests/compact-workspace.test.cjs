@@ -1497,7 +1497,7 @@ click('[data-action="close-category-export"]');
 click('#cats [data-action="open-layer-menu"][data-id="export-a"]');
 click('#layerContext summary[data-tone="mark"]');
 click('#layerContext [data-action="toggle-layer-status"][data-mark="fin"]');
-assert(find('#cats [data-category="export-a"] .layer-fin-mark'));
+assert(find('#cats [data-category="export-a"] .category-mark-icon[data-mark="fin"] use[href="#i-check"]'));
 click('#cats [data-action="select-category"][data-id="export-b"]');
 click('#layerTree [data-action="open-layer-menu"][data-id="export-hair"]');
 click('#layerContext summary[data-tone="mark"]');
