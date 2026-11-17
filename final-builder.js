@@ -248,6 +248,8 @@ function renderFinalBuilder() {
       <button type="button" class="subtle icon-button final-export-settings" data-final-draft="settings" aria-expanded="${finalDraftSettings}" aria-label="Nastavení složek" title="Nastavení složek">${icon('settings')}</button></div>` : ''}
     ${finalDraftSettings ? renderFinalDraftSettings() : `
       ${finalDraftSource === 'folders' ? `<div class="final-draft-root"><span>${draft.rootName ? `${esc(draft.rootName)} · ${draft.files.length} PNG` : 'Kořenová složka'}</span><button type="button" class="subtle" data-final-draft="pick-root">${draft.rootName ? 'Změnit složku' : 'Vybrat ze Souborů'}</button></div>` : ''}
+      ${(exporting || finalView === 'fin') && finalDraftSource === 'fin' && TraitFinal.finFolderPlan && sources.some(group => group.rows.some(row => row.mark === 'fin')) ?
+        `<button type="button" class="subtle final-fin-folders" data-final-draft="fin-flat-png">${icon('folder')} FIN do jedné složky <small>PNG</small></button>` : ''}
       ${renderFinalExportFilters(sources,scopes)}
       ${building ? renderFinalBuild(used) : ''}
       ${finalView === 'fin' ? '<button type="button" class="subtle final-fin-folders" data-final-action="show-marked">FIN složky a podrobnosti</button>' : ''}
@@ -344,7 +346,7 @@ function loadFinalPsdLibrary() {
 function exportPsdInWorker(groups, progress, size) {
   if (typeof Worker !== 'function') return null;
   let worker;
-  try { worker = new Worker('./psd-export.js?build=07187'); } catch { return null; }
+  try { worker = new Worker('./psd-export.js?build=07188'); } catch { return null; }
   return new Promise((resolve,reject) => {
     worker.onerror = () => { worker.terminate(); reject(new Error('Zpracování PSD se přerušilo. Zkus vybrat menší část projektu.')); };
     worker.onmessage = ({ data }) => {
@@ -354,7 +356,7 @@ function exportPsdInWorker(groups, progress, size) {
       else resolve(data.blob || null);
     };
     worker.onmessageerror = worker.onerror;
-    try { worker.postMessage({ groups, size }); } catch (error) { worker.terminate(); reject(error); }
+    try { worker.postMessage(size ? { groups, size } : groups); } catch (error) { worker.terminate(); reject(error); }
   });
 }
 async function encodeLayeredPsd(groups, progress, size) {
@@ -470,6 +472,11 @@ finalDialog.addEventListener('click', event => {
   const action = control.dataset.finalDraft;
   if (action === 'use-inventory' || action === 'folder-template') { void finalDraftFolderAction(action,control); return; }
   if (action === 'pick-root') { draftRootInput.click(); return; }
+  if (action === 'fin-flat-png') {
+    const plan = TraitFinal.finFolderPlan(M,state);
+    if (plan.entries.length) openFolderExport(plan, trait => TraitStorage.imageBlob(db,trait.data), { flat:true });
+    return;
+  }
   if (action === 'export') {
     if (finalExportFormat === 'psd') finalBuilderWork(prepareFinalDraftPsd,'Připravuji PSD…');
     else openFinalDraftFolder();

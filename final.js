@@ -380,6 +380,19 @@
       inScope(group,row) && (!marks.size || marks.has(row.mark || '')) && (!flags.size || flags.has(row.flag || '')) && matchesTags(row)) }));
   }
   const finCategories = (model,project) => filterExportGroups(model,projectCategories(model,project),{ marks:new Set(['fin']) });
+  function finFolderPlan(model, project) {
+    const names = new Set();
+    const entries = finCategories(model,project).flatMap(group => group.rows.map(({ trait }) => {
+      // Reserve room for suffixes on filesystems that limit filenames in UTF-8 bytes.
+      const base = Array.from(fileName(trait.name.replace(/\.png$/i,''))).slice(0,58).join('');
+      let name = base + '.png';
+      for (let suffix = 2; names.has(name.toLowerCase()); suffix++) name = `${base} (${suffix}).png`;
+      names.add(name.toLowerCase());
+      return { parts:[name], trait };
+    }));
+    const projectName = Array.from(fileName(project.name)).slice(0,58).join('');
+    return { name:projectName + ' – FIN', entries };
+  }
   function draftProject(model, title, categories, excluded) {
     const project = model.empty(), images = new Map();
     project.name = title;
@@ -422,7 +435,7 @@
   }
   const api = { open, snapshot, save, list, load, image, fileName, zipProject, loadWorkspace, saveWorkspace,
     parseLayout, directoryFiles, folderCategories, finCategories, projectCategories, exportScopes, filterExportGroups, draftProject,
-    projectFolderPlan, folderTemplatePlan, writeExportFolder };
+    projectFolderPlan, folderTemplatePlan, finFolderPlan, writeExportFolder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitFinal = api;
 })(globalThis);

@@ -1,10 +1,26 @@
 /* PNG export to a real directory, or to the platform's file sharing sheet. */
 'use strict';
 const folderExportDialog = $('folderExportDialog');
+const folderExportNext = $('folderExportNext');
 let folderExport, folderExportBusy = false, folderShareTicket = 0, shareFiles = [];
 
-function openFolderExport(plan, readImage) {
+function folderFileBatch(entries, start) {
+  const range = entries.length === 1 ? start + 1 : `${start + 1}–${start + entries.length}`;
+  return { label:`Soubory ${range}`, path:'', start, entries };
+}
+
+function renderFolderExportOptions(index = 0) {
+  const { options, files } = folderExport;
+  $('folderExportSelectRow').hidden = !files || options.length < 2;
+  const select = $('folderExportSelect');
+  select.innerHTML = options.map(({ label,entries },index) =>
+    `<option value="${index}">${esc(label)} · ${entries.length} PNG</option>`).join('');
+  select.value = String(index);
+}
+
+function openFolderExport(plan, readImage, { flat = false } = {}) {
   if (folderExportDialog.open) return;
+  const direct = typeof window.showDirectoryPicker === 'function';
   const groups = new Map(), files = [];
   for (const entry of plan.entries) {
     if (!entry.trait) continue;
@@ -23,22 +39,31 @@ function openFolderExport(plan, readImage) {
       options.push({ label,path,entries:entries.slice(offset,end) });
     }
   }
-  for (const [path,entries] of groups) addOptions(path,entries);
-  if (groups.size > 1) {
-    const digits = Math.max(2,String(files.length).length);
-    addOptions('Všechny PNG v jedné složce',files.map((file,index) =>
-      ({ ...file, name:`${String(index+1).padStart(digits,'0')} – ${file.name}` })));
+  if (flat) {
+    options.push({ label:'Všechny soubory', path:'', all:true, start:0, entries:files });
+    const fallbackSize = 64;
+    if (!direct && files.length > fallbackSize) {
+      for (let start = 0; start < files.length; start += fallbackSize) {
+        options.push(folderFileBatch(files.slice(start,start + fallbackSize),start));
+      }
+    }
+  } else {
+    for (const [path,entries] of groups) addOptions(path,entries);
+    if (groups.size > 1) {
+      const digits = Math.max(2,String(files.length).length);
+      addOptions('Všechny PNG v jedné složce',files.map((file,index) =>
+        ({ ...file, name:`${String(index+1).padStart(digits,'0')} – ${file.name}` })));
+    }
   }
-  folderExport = { plan,readImage,options,files:files.length };
-  $('folderExportTitle').textContent = files.length ? 'Uložit PNG' : 'Struktura složek';
+  folderExport = { plan,readImage,options,flat,files:files.length };
+  $('folderExportTitle').textContent = flat ? 'FIN do jedné složky' : files.length ? 'Uložit PNG' : 'Struktura složek';
   $('folderExportName').textContent = plan.name + (files.length ? ` · ${files.length} PNG` : '');
-  const direct = typeof window.showDirectoryPicker === 'function';
   $('folderExportWrite').hidden = !direct;
   $('folderExportWrite').textContent = files.length ? 'Uložit celou složku PNG' : 'Vytvořit složky';
-  $('folderExportSelectRow').hidden = !files.length || options.length < 2;
-  $('folderExportSelect').innerHTML = options.map(({ label,entries },index) =>
-    `<option value="${index}">${esc(label)} · ${entries.length} PNG</option>`).join('');
-  $('folderExportHelp').textContent = files.length
+  renderFolderExportOptions();
+  $('folderExportHelp').textContent = flat
+    ? direct ? 'Vyber umístění, ve kterém se vytvoří složka se všemi FIN PNG.' : 'Vyber Uložit do Souborů a zvol nebo vytvoř cílovou složku. U více dávek vybírej stejnou složku.'
+    : files.length
     ? direct ? 'Ulož celý strom, nebo vyber složku pro jednotlivé soubory.' : typeof navigator.share === 'function' ? 'Při sdílení vyber Uložit do Souborů a zvol cílovou složku.' : 'Vyber složku exportu a stáhni jednotlivá PNG.'
     : direct ? 'Ve vybraném umístění se vytvoří prázdný strom složek.' : 'Strom můžeš vytvořit přímo v aplikaci Soubory podle těchto cest.';
   $('folderExportStatus').textContent = '';
@@ -46,15 +71,32 @@ function openFolderExport(plan, readImage) {
   renderFolderExportGroup();
 }
 
-function renderFolderExportGroup() {
+function useSmallerFolderBatch(current, index) {
+  const { options } = current, group = options[index];
+  if (!current.flat || group.entries.length < 2) return false;
+  if (group.all && options.length > 1) index = 1;
+  else {
+    const half = Math.ceil(group.entries.length / 2);
+    options.splice(index,1,folderFileBatch(group.entries.slice(0,half),group.start),
+      folderFileBatch(group.entries.slice(half),group.start + half));
+  }
+  renderFolderExportOptions(index);
+  renderFolderExportGroup('Soubory ulož po dávkách do stejné složky.');
+  return true;
+}
+
+function renderFolderExportGroup(note = '') {
   const current = folderExport;
   if (!current) return;
   const ticket = ++folderShareTicket;
   shareFiles = [];
   const share = $('folderExportShare'), list = $('folderExportList'), entries = $('folderExportEntries');
+  const status = $('folderExportStatus');
   share.hidden = true;
   share.disabled = false;
-  const group = current.options[Number($('folderExportSelect').value)] || current.options[0];
+  if (folderExportNext) folderExportNext.hidden = true;
+  const index = Number($('folderExportSelect').value) || 0;
+  const group = current.options[index];
   const path = $('folderExportPath');
   path.hidden = !group || current.options.length > 1;
   path.textContent = group?.path || '';
@@ -70,7 +112,9 @@ function renderFolderExportGroup() {
   entries.innerHTML = group.entries.map((file,index) =>
     `<li><button type="button" class="subtle" data-folder-file="${index}">${icon('download')}<span>${esc(file.name)}</span></button></li>`).join('');
   list.open = typeof navigator.share !== 'function';
+  if (current.flat && typeof window.showDirectoryPicker === 'function') return;
   if (typeof navigator.share !== 'function' || typeof navigator.canShare !== 'function') { list.open = true; return; }
+  if (current.flat) status.textContent = 'Připravuji PNG pro uložení…';
   void (async () => {
     try {
       const ready = [];
@@ -78,20 +122,39 @@ function renderFolderExportGroup() {
         const blob = await current.readImage(file.trait);
         if (ticket !== folderShareTicket) return;
         ready.push(new File([blob],file.name,{ type:'image/png' }));
+        if (current.flat && ready.length % 16 === 0) {
+          status.textContent = `Připravuji PNG · ${ready.length} / ${group.entries.length}`;
+        }
       }
       if (ticket !== folderShareTicket) return;
-      if (!navigator.canShare({ files:ready })) { list.open = true; return; }
+      if (!navigator.canShare({ files:ready })) {
+        if (!useSmallerFolderBatch(current,index)) {
+          if (current.flat) status.textContent = 'Tento soubor můžeš stáhnout jednotlivě.';
+          list.open = true;
+        }
+        return;
+      }
       shareFiles = ready;
-      share.textContent = `Sdílet ${ready.length} PNG`;
+      share.textContent = current.flat ? `Uložit ${ready.length} PNG do Souborů` : `Sdílet ${ready.length} PNG`;
       share.hidden = false;
-    } catch {
-      if (ticket === folderShareTicket) list.open = true;
+      if (current.flat) status.textContent = note;
+    } catch (error) {
+      if (ticket !== folderShareTicket) return;
+      if (current.flat) status.textContent = error.message || 'Některý PNG soubor se nepodařilo načíst.';
+      list.open = true;
     }
   })();
 }
 
 $('folderExportSelect').addEventListener('change', () => {
   $('folderExportStatus').textContent = '';
+  renderFolderExportGroup();
+});
+folderExportNext?.addEventListener('click', () => {
+  if (folderExportBusy || !folderExport) return;
+  const select = $('folderExportSelect');
+  if (Number(select.value) + 1 >= folderExport.options.length) return;
+  select.value = String(Number(select.value) + 1);
   renderFolderExportGroup();
 });
 $('folderExportClose').addEventListener('click', () => { if (!folderExportBusy) folderExportDialog.close(); });
@@ -123,19 +186,29 @@ $('folderExportWrite').addEventListener('click', async () => {
   }
 });
 $('folderExportShare').addEventListener('click', async event => {
-  if (folderExportBusy || !shareFiles.length) return;
+  if (folderExportBusy || !folderExport || !shareFiles.length) return;
+  const current = folderExport, select = $('folderExportSelect'), status = $('folderExportStatus');
+  const index = Number(select.value) || 0, group = current.options[index];
   const button = event.currentTarget;
   folderExportBusy = true;
-  button.disabled = true;
-  try { await navigator.share({ files:shareFiles }); }
+  button.disabled = select.disabled = true;
+  try {
+    await navigator.share({ files:shareFiles });
+    if (current.flat) {
+      status.textContent = `Předáno ${group.entries.length} PNG.`;
+      if (folderExportNext) folderExportNext.hidden = group.all || index + 1 >= current.options.length;
+    }
+  }
   catch (error) {
     if (error.name !== 'AbortError') {
-      $('folderExportStatus').textContent = 'Sdílení této dávky se nezdařilo. PNG můžeš stáhnout jednotlivě.';
-      $('folderExportList').open = true;
+      if (!useSmallerFolderBatch(current,index)) {
+        status.textContent = 'Sdílení této dávky se nezdařilo. PNG můžeš stáhnout jednotlivě.';
+        $('folderExportList').open = true;
+      }
     }
   } finally {
     folderExportBusy = false;
-    button.disabled = false;
+    button.disabled = select.disabled = false;
   }
 });
 $('folderExportEntries').addEventListener('click', async event => {

@@ -3,6 +3,7 @@
   'use strict';
 
   async function encode(groups, { canvas, load, write, size, progress = () => {} }) {
+    if (!Array.isArray(groups)) throw new Error('Nepodařilo se načíst seznam vrstev pro export PSD.');
     let width = 0, height = 0, count = 0, done = 0;
     const dimensions = new Map();
     async function measure(items) {
@@ -83,8 +84,10 @@
       root.importScripts('./vendor/ag-psd.js');
       const canvas = (w,h) => new OffscreenCanvas(w,h);
       root.agPsd.initializeCanvas(canvas);
-      const blob = await encode(data.groups,{
-        canvas,load:asset => root.createImageBitmap(asset),write:root.agPsd.writePsd,size:data.size,
+      // An editor left open during an update may still send the original array.
+      const { groups, size } = Array.isArray(data) ? { groups: data } : (data ?? {});
+      const blob = await encode(groups,{
+        canvas,load:asset => root.createImageBitmap(asset),write:root.agPsd.writePsd,size,
         progress:(done,total) => root.postMessage({ done,total }),
       });
       root.postMessage({ blob });

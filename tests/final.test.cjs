@@ -1,6 +1,8 @@
 'use strict';
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { readFileSync } = require('node:fs');
+const { runInNewContext } = require('node:vm');
 const { IDBFactory, IDBObjectStore } = require('fake-indexeddb');
 const { createCanvas } = require('@napi-rs/canvas');
 const zip = require('../vendor/procreate-zip');
@@ -210,4 +212,51 @@ test('the empty folder scaffold writes the configured directories and keeps a pr
   assert.deepEqual(await Final.writeExportFolder(directory(),plan),{ name:'Finál (2)',count:0 });
   assert.deepEqual([...paths],['Finál','Finál/Starší','Finál (2)','Finál (2)/Hlava','Finál (2)/Hlava/Účesy',
     'Finál (2)/Hlava/Účesy/Afro','Finál (2)/Hlava/Účesy/Goku','Finál (2)/Oblečení']);
+});
+
+test('the PSD worker accepts 569 layers from an open legacy editor and preserves explicit project dimensions', async () => {
+  const frames = [];
+  const worker = {
+    Blob, OffscreenCanvas:createCanvas,
+    createImageBitmap:async blob => loadImage(Buffer.from(await blob.arrayBuffer())),
+    importScripts:() => { worker.agPsd = ag; },
+    postMessage:message => frames.push(message),
+  };
+  runInNewContext(readFileSync(require.resolve('../psd-export'),'utf8'),worker);
+  const canvas = createCanvas(1024,1024), ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#347eae';
+  ctx.fillRect(230,340,48,72);
+  const blob = new Blob([canvas.toBuffer('image/png')],{ type:'image/png' });
+  const groups = Array.from({ length:21 },(_,category) => ({
+    name:`Kategorie ${category + 1}`,
+    children:Array.from({ length:category === 20 ? 29 : 27 },(_,index) => ({
+      name:`Vrstva ${index + 1}`, visible:index === 0, blob,
+    })),
+  }));
+  await worker.onmessage({ data:structuredClone(groups) });
+  const answer = frames.pop();
+  assert(answer.blob,answer.error);
+  assert.equal(frames.at(-1).done,569);
+  const exported = ag.readPsd(await answer.blob.arrayBuffer(),{ skipLayerImageData:true, skipCompositeImageData:true });
+  assert.equal(exported.children.length,21);
+  assert.equal(exported.children.reduce((total,group) => total + group.children.length,0),569);
+  await worker.onmessage({ data:{ groups:[groups[0]], size:{ width:32, height:32 } } });
+  const resized = frames.pop();
+  assert(resized.blob,resized.error);
+  const document = ag.readPsd(await resized.blob.arrayBuffer(),{ skipLayerImageData:true, skipCompositeImageData:true });
+  assert.deepEqual([document.width,document.height],[32,32]);
+});
+
+test('the FIN folder plan flattens category and folder marks without replacing duplicate PNG filenames', () => {
+  const active = project(), [category] = active.cats;
+  active.organizer.heads.folders[0].fin = true;
+  category.traits[2].out = true;
+  category.traits[0].hidden = true;
+  active.cats.push({ id:'background', name:'Pozadí', visible:false, fin:true,
+    traits:[{ id:'d', name:'černé / A.png', data:inline },{ id:'e', name:'V rozpracování', data:inline, wip:true }] });
+  const plan = Final.finFolderPlan(M,active);
+  assert.equal(plan.name,'Záloha _ kachny – FIN');
+  assert.deepEqual(plan.entries.map(({ parts,trait }) => [parts,trait.id]),[
+    [['Černé _ A.png'],'a'], [['Černé _ A (2).png'],'b'], [['černé _ A (3).png'],'d'],
+  ]);
 });
