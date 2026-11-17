@@ -469,9 +469,11 @@ function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
   return `<span class="layer-flag" data-flag="${color}" ${label ? `role="img" aria-label="${M.FLAG_COLORS[color]} vlajka"` : 'aria-hidden="true"'}>${icon('flag')}</span>`;
 }
-function layerMarkBadges(item) {
+function layerMarkBadges(item, iconOnly = false) {
   return (item.hidden ? '<span class="layer-wip-mark">Skrytý</span>' : '') +
-    Object.entries(layerStatusLabels).map(([key, label]) => item[key] ? `<span class="layer-${key}-mark">${label}</span>` : '').join('') +
+    Object.entries(layerStatusLabels).filter(([key]) => item[key]).map(([key, label]) => iconOnly
+      ? `<span class="category-mark-icon" data-mark="${key}" role="img" aria-label="${label}" title="${label}">${icon(layerStatusIcons[key])}</span>`
+      : `<span class="layer-${key}-mark">${label}</span>`).join('') +
     (item.flag ? flagIcon(item.flag, true) : '');
 }
 function layerTagMarker(tags = []) {
@@ -1250,7 +1252,7 @@ function renderCategories(hidden, categories) {
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
         <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
-          <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c)}
+          <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
         ${button('toggle-category', '', c.id, c.visible === false ? 'eye-off' : 'eye', `class="icon-button subtle" aria-label="Viditelnost kategorie ${name}" aria-pressed="${c.visible !== false}"`)}
@@ -1313,7 +1315,7 @@ function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
   const selected = c && traits.find(t => t.id === state.selected[c.id]);
   $('manageCategoryBulkPick').innerHTML = c ? layerBulkPick(c) : '';
   $('catTitle').textContent = c ? c.name : 'Vyber kategorii';
-  $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c)}` : '';
+  $('traitCount').innerHTML = c ? `${counted(traits.length, 'trait', 'traity', 'traitů')}${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}` : '';
   const rename = $('manageRenameCategory');
   rename.disabled = !c || busy;
   rename.dataset.id = c?.id || '';
@@ -1673,7 +1675,7 @@ function renderSnapshotLayerLibrary() {
     if (canShow) shownTraits.set(c.id, traits);
     const cover = canShow && (traits.find(t => t.id === state.selected[c.id]) || traits[0]);
     return `<details class="library-category" data-category="${esc(c.id)}">
-      <summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${layerMarkBadges(c)}${cover ? layerThumbnail(c, cover, 'library-current') : ''}<span class="library-count">${traits.length} traitů</span></summary>
+      <summary><span class="layer-index">${String(i + 1).padStart(2, '0')}</span><span class="library-category-name">${esc(c.name)}</span>${layerMarkBadges(c, true)}${cover ? layerThumbnail(c, cover, 'library-current') : ''}<span class="library-count">${traits.length} traitů</span></summary>
       <button class="icon-button accent library-add-trait" data-action="add-library-trait" data-id="${esc(c.id)}" aria-label="Přidat PNG do ${esc(c.name)}">${icon('plus')}</button>
       <button class="icon-button subtle" type="button" data-action="open-layer-menu" data-kind="category" data-category="${esc(c.id)}" data-id="${esc(c.id)}" aria-label="Akce · ${esc(c.name)}" aria-expanded="false" aria-controls="layerContext">${icon('more')}</button>
       <div class="library-traits"></div>

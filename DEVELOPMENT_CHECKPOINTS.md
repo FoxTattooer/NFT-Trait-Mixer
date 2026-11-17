@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.171 | checkpoint/v0.7.171-editor-ke-krajum | Širší náhled, řádky a ovládání v editoru na výšku, stavové ikony kategorií a zvýrazněné šipky rozbalených složek. |
 | 0.7.170 | checkpoint/v0.7.170-hledani-v-editoru | Lupa místo výběru kategorie v editoru na výšku, hledání traitů v projektu a dvě vycentrované řady nástrojů. |
 | 0.7.169 | checkpoint/v0.7.169-vlastni-skupiny-stitku | Vlastní skupiny štítků přidávané plusem u filtru. Neutrální tlačítko aktualizace s verzí v editoru i Lookbooku. |
 | 0.7.168 | checkpoint/v0.7.168-skupiny-stitku | Aktualizace s verzí v Lookbooku, přejmenování skupin a přesun štítků dlouhým přidržením. |

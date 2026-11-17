@@ -514,7 +514,8 @@ body.compact-workspace[data-color-scheme] :is(
   .workspace-tools details[open]>summary
 ) {color:var(--workspace-accent-icon)!important}
 body.compact-workspace[data-color-scheme] :is(
-  #layersTab[data-back] .layer-tab-arrow, .layer-tree-main[aria-expanded=true] .icon:first-child,
+  #layersTab[data-back] .layer-tab-arrow,
+  :is(.category-pick,.layer-tree-main,.layer-bulk-expand)[aria-expanded=true] > .icon:first-child,
   .layer-tree-check, :is(.layer-tree-eye,[data-action=toggle-category])[aria-pressed=true] .icon,
   .quick-traits :is([data-action=quick-prev],[data-action=quick-next]):enabled
 ) {
@@ -522,7 +523,8 @@ body.compact-workspace[data-color-scheme] :is(
   filter:drop-shadow(0 0 calc(3px * var(--accent-glow-scale,0)) var(--workspace-accent-halo));
 }
 body.compact-workspace[data-accent-coverage=less] :is(
-  #layersTab[data-back] .layer-tab-arrow, .layer-tree-main[aria-expanded=true] .icon:first-child,
+  #layersTab[data-back] .layer-tab-arrow,
+  :is(.category-pick,.layer-tree-main,.layer-bulk-expand)[aria-expanded=true] > .icon:first-child,
   .layer-tree-check, :is(.layer-tree-eye,[data-action=toggle-category])[aria-pressed=true] .icon,
   .quick-traits :is([data-action=quick-prev],[data-action=quick-next]):enabled
 ) {filter:none}

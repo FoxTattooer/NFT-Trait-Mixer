@@ -79,11 +79,11 @@ body.compact-workspace .app-header {
 .category-status-filters:not([hidden]) { display:flex; flex-wrap:wrap; gap:4px; }
 .category-status-filters button { position:relative; min-width:44px; min-height:44px; padding:3px 5px; flex-direction:column; gap:2px; font-size:10px; line-height:1; }
 .category-status-filters .icon { width:16px; height:16px; color:var(--category-mark-color); }
-.category-status-filters [data-id=draw] { --category-mark-color:#dfb4ff; }
-.category-status-filters [data-id=fin] { --category-mark-color:#a9f4d5; }
-.category-status-filters [data-id=wip] { --category-mark-color:#ffcf91; }
-.category-status-filters [data-id=trash] { --category-mark-color:#ffb6b3; }
-.category-status-filters [data-id=out] { --category-mark-color:var(--layer-out-color); }
+:is(.category-status-filters [data-id=draw], .category-mark-icon[data-mark=draw]) { --category-mark-color:#dfb4ff; }
+:is(.category-status-filters [data-id=fin], .category-mark-icon[data-mark=fin]) { --category-mark-color:#a9f4d5; }
+:is(.category-status-filters [data-id=wip], .category-mark-icon[data-mark=wip]) { --category-mark-color:#ffcf91; }
+:is(.category-status-filters [data-id=trash], .category-mark-icon[data-mark=trash]) { --category-mark-color:#ffb6b3; }
+:is(.category-status-filters [data-id=out], .category-mark-icon[data-mark=out]) { --category-mark-color:var(--layer-out-color); }
 .category-status-filters button[data-filter-mode=include] { border-color:var(--category-mark-color)!important; color:var(--category-mark-color)!important; background:color-mix(in srgb,var(--scheme-control,#1e2026) 88%,var(--category-mark-color))!important; }
 .category-status-filters button[data-filter-mode=exclude] { border-color:var(--category-mark-color)!important; border-style:dashed; }
 .category-status-filters button[data-filter-mode=exclude] .icon { opacity:.65; }
@@ -280,7 +280,7 @@ body.compact-workspace #categoryOverview {padding:0 2px 2px}
 }
 .layer-tree-folder {background:linear-gradient(150deg,#241a27,#19141d)}
 .layer-tree-folder .layer-tree-main {color:#efc7e0}
-.layer-tree-folder .layer-tree-main[aria-expanded=true] .icon:first-child {transform:rotate(90deg)}
+.layer-tree-folder .layer-tree-main[aria-expanded=true] > .icon:first-child {transform:rotate(90deg)}
 .layer-tree-main .icon {width:16px;height:16px;flex:none}
 .layer-tree-check {margin-left:auto;color:#ff70b6}
 .layer-thumb,.snapshot-art {
@@ -498,13 +498,29 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
   }
 }
 @media (max-width:900px) and (orientation:portrait) {
-  .layer-panel-heading, #categoryOverview .category-filter-bar {justify-content:center}
+  body.compact-workspace #appLayout {
+    margin-left:max(2px,env(safe-area-inset-left));
+    margin-right:max(2px,env(safe-area-inset-right));
+  }
+  body.compact-workspace #appLayout > .stage {
+    padding:0!important;
+    border-width:0;
+  }
+  body.compact-workspace #catsPanel {padding:5px 3px 3px!important}
+  body.compact-workspace #categoryOverview {padding:0}
+  #layerPanelActions, #categoryStatusFilters {width:100%;justify-content:center}
   .layer-panel-heading #layerCategoryPicker {display:none}
   #layerPanelActions #layerTraitSearchToggle {display:inline-flex}
+  #layerPanelActions .icon-button, #categoryStatusFilters button {
+    flex:1 1 0px;width:auto;min-width:44px;height:44px;padding-inline:0;
+  }
+  #layerPanelActions > #layerPanelOverflow {flex:1 1 44px}
+  #layerPanelActions > #layerPanelOverflow > summary {width:100%}
   #layerPanelActions .icon {width:18px;height:18px}
   #layerPanelActions .category-export-tool .icon {transform:none}
-  #categoryStatusFilters {justify-content:center}
-  #categoryStatusFilters button {width:44px;height:44px;padding-inline:0}
+  body.compact-categories #cats[data-view="compact"] {margin-top:0!important}
+  body.compact-workspace #cats[data-view] .category-top {padding-inline:2px!important;gap:4px!important}
+  body.compact-workspace #cats[data-view] .category-pick {padding-inline-start:2px!important;gap:6px}
 }
 @container manage-toolbar (max-width:332px) {
   #managePanelOverflow {display:block}
@@ -721,6 +737,8 @@ body.compact-workspace .file-menu-project .project-source:not([hidden]) {
   display:inline-flex; flex:none; padding:2px 4px; border:1px solid var(--scheme-stroke);
   border-radius:5px; color:var(--workspace-accent-icon, #ff9bcd); font-size:10px; font-weight:700; line-height:1;
 }
+.category-mark-icon {display:inline-flex;flex:none;align-items:center;color:var(--category-mark-color);vertical-align:middle}
+.category-mark-icon > .icon {width:16px;height:16px}
 .layer-flag { display: inline-flex; color: var(--layer-flag-color); flex: none; vertical-align: middle; }
 [data-flag="red"] { --layer-flag-color: #ff858c; }
 [data-flag="yellow"] { --layer-flag-color: #f0ce88; }
