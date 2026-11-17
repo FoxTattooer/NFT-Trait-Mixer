@@ -1266,10 +1266,11 @@ function renderCategories(hidden, categories) {
     card.classList.toggle('is-active', current);
     card.classList.toggle('is-hidden', hidden.has(c.id));
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
+    const mark = Object.keys(layerStatusLabels).find(key => c[key]);
     const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
-        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView ? 'folder' : 'folder-tree')}
           <span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}
