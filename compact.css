@@ -84,6 +84,7 @@ body.compact-workspace .app-header {
 :is(.category-status-filters [data-id=wip], .category-mark-icon[data-mark=wip]) { --category-mark-color:#ffcf91; }
 :is(.category-status-filters [data-id=trash], .category-mark-icon[data-mark=trash]) { --category-mark-color:#ffb6b3; }
 :is(.category-status-filters [data-id=out], .category-mark-icon[data-mark=out]) { --category-mark-color:var(--layer-out-color); }
+#activeTraitFilter { --category-mark-color:var(--workspace-accent-icon,#e5b2fa); }
 .category-status-filters button[data-filter-mode=include] { border-color:var(--category-mark-color)!important; color:var(--category-mark-color)!important; background:color-mix(in srgb,var(--scheme-control,#1e2026) 88%,var(--category-mark-color))!important; }
 .category-status-filters button[data-filter-mode=exclude] { border-color:var(--category-mark-color)!important; border-style:dashed; }
 .category-status-filters button[data-filter-mode=exclude] .icon { opacity:.65; }

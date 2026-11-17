@@ -1348,6 +1348,25 @@ for (const [label,ids] of [
   assert.deepEqual(categoryIds(),ids);
 }
 assert.equal(JSON.stringify(w.inspectState()),beforeFilters,'filtering leaves the project and composition unchanged');
+const activeFilterProject = M.clone(filterProject);
+activeFilterProject.selected = { 'export-a':'export-hat', 'export-b':'export-hair', 'export-c':'export-bg' };
+activeFilterProject.selectedExtras['export-c'] = ['filter-clean', 'filter-out'];
+activeFilterProject.cats[2].traits.find(trait => trait.id === 'filter-out').hidden = true;
+activeFilterProject.cats.push({ id:'rules-hidden', name:'Skryto pravidlem', visible:true,
+  traits:[{ id:'rules-hidden-trait', name:'Skrytý trait', data:pngA }] });
+activeFilterProject.selected['rules-hidden'] = 'rules-hidden-trait';
+activeFilterProject.rules.push({ id:'active-hide', source:'export-hair', action:'hide', targetCat:'rules-hidden' });
+w.useTestProject(activeFilterProject);
+const beforeActiveFilter = JSON.stringify(w.inspectState());
+click('#activeTraitFilter');
+assert.equal(get('activeTraitFilter').getAttribute('aria-pressed'),'true');
+assert.deepEqual(categoryIds(),['export-b','export-c']);
+assert.deepEqual(shownFilterTraits(),['export-bg','filter-clean'],'active filter opens the folder and includes extra visible traits');
+click('#activeTraitFilter');
+assert.equal(get('activeTraitFilter').getAttribute('aria-pressed'),'false');
+assert.deepEqual(categoryIds(),['export-a','export-b','export-c','rules-hidden']);
+assert.equal(JSON.stringify(w.inspectState()),beforeActiveFilter);
+w.useTestProject(filterProject);
 click(categoryBadge('fin'));
 click('#openLookbook');
 const bookStatus = mark => `#lookbookStatusFilters [data-id="${mark}"]`;

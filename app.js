@@ -326,7 +326,7 @@ function scrollWorkspaceTo({ x, y }) {
 function captureLayerView(source) {
   const list = source?.closest('#cats, #layerReviewPanel, .trait-search-results') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
-    panel: mobilePanel, active, layerLimit, categoryFilter, statusFilters: new Map(categoryStatusFilters),
+    panel: mobilePanel, active, layerLimit, categoryFilter, onlyActiveTraits, statusFilters: new Map(categoryStatusFilters),
     layerSearchOpen: !$('layerTraitSearchField').hidden,
     categories: new Map(openLayerCategories),
     expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
@@ -344,6 +344,8 @@ function returnToLayerView() {
   setLayerTraitSearchOpen(view.layerSearchOpen);
   layerLimit = view.layerLimit;
   categoryFilter = view.categoryFilter;
+  onlyActiveTraits = view.onlyActiveTraits;
+  visibleTraitIds = null;
   categoryStatusFilters = view.statusFilters;
   filteredLayerIds.clear();
   openLayerCategories = view.categories;
@@ -379,6 +381,7 @@ const categoryViewModes = [
   { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
 let categoryFilter = 'all', categoryStatusFilters = new Map();
+let onlyActiveTraits = false, visibleTraitIds = null;
 const filteredLayerIds = new Map();
 let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', layerReviewLimit = PAGE_SIZE;
 let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
@@ -386,11 +389,13 @@ let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
 function resetCategoryFilters() {
   categoryFilter = 'all';
+  onlyActiveTraits = false;
+  visibleTraitIds = null;
   categoryStatusFilters.clear();
   filteredLayerIds.clear();
 }
-function matchingStatusLayerIds(category, view, statusFilters) {
-  if (!statusFilters.size && view !== 'unmarked') return null;
+function matchingStatusLayerIds(category, view, statusFilters, visibleIds = null) {
+  if (!statusFilters.size && view !== 'unmarked' && !visibleIds) return null;
   const included = [], excluded = [];
   for (const [mark, mode] of statusFilters) (mode === 'include' ? included : excluded).push(mark);
   if (view === 'unmarked') excluded.push(...Object.keys(layerStatusLabels));
@@ -399,7 +404,7 @@ function matchingStatusLayerIds(category, view, statusFilters) {
   function visit(item, inherited, parentId) {
     if (excluded.some(mark => item[mark])) return false;
     const matched = inherited || included.some(mark => item[mark]);
-    let hasMatch = !included.length || matched;
+    let hasMatch = (!included.length || matched) && (!visibleIds || visibleIds.has(item.id));
     if (parentId !== undefined) {
       for (const { kind, item: child } of children(parentId)) {
         if (visit(child, matched, kind === 'folders' ? child.id : undefined)) hasMatch = true;
@@ -412,9 +417,10 @@ function matchingStatusLayerIds(category, view, statusFilters) {
   return ids;
 }
 function matchingLayerIds(category) {
-  if (!categoryStatusFilters.size && categoryFilter !== 'unmarked') return null;
+  if (!categoryStatusFilters.size && categoryFilter !== 'unmarked' && !onlyActiveTraits) return null;
   if (!filteredLayerIds.has(category.id)) {
-    filteredLayerIds.set(category.id, matchingStatusLayerIds(category, categoryFilter, categoryStatusFilters));
+    const visibleIds = onlyActiveTraits ? (visibleTraitIds ??= new Set(visibleLayers(state).map(trait => trait.id))) : null;
+    filteredLayerIds.set(category.id, matchingStatusLayerIds(category, categoryFilter, categoryStatusFilters, visibleIds));
   }
   return filteredLayerIds.get(category.id);
 }
@@ -446,7 +452,7 @@ function renderLayerFilterControls(eye, badges, announcement, view, statusFilter
   eye.setAttribute('aria-label', `${eye.title}. Přepnout na ${nextCategoryView(view, statusFilters).label}`);
   eye.toggleAttribute('data-filtered', mode.id !== 'all');
   const summaries = [];
-  for (const control of badges.querySelectorAll('button')) {
+  for (const control of badges.querySelectorAll('button[data-id]')) {
     const mark = control.dataset.id;
     const status = statusFilters.get(mark) || 'off';
     const label = layerStatusLabels[mark];
@@ -461,9 +467,13 @@ function renderLayerFilterControls(eye, badges, announcement, view, statusFilter
   announcement.textContent = summaries.join(' · ') || eye.title;
 }
 function renderCategoryFilters() {
-  const badges = $('categoryStatusFilters');
+  const badges = $('categoryStatusFilters'), announcement = $('categoryFilterStatus');
   badges.hidden = !state.cats.length;
-  renderLayerFilterControls($('layerReviewFilter'), badges, $('categoryFilterStatus'), categoryFilter, categoryStatusFilters);
+  renderLayerFilterControls($('layerReviewFilter'), badges, announcement, categoryFilter, categoryStatusFilters);
+  const control = $('activeTraitFilter');
+  control.setAttribute('aria-pressed', String(onlyActiveTraits));
+  control.dataset.filterMode = onlyActiveTraits ? 'include' : 'off';
+  if (onlyActiveTraits) announcement.textContent += ' · Jen traity viditelné v náhledu';
 }
 function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
@@ -1326,7 +1336,7 @@ function renderTraits(categories = state.cats.filter(categoryPassesFilter)) {
   $('categoryNext').disabled = categories.length < 2 || busy;
   $('addTrait').disabled = !c || busy;
   $('manageEmpty').hidden = !!c;
-  $('manageEmpty').textContent = (categoryFilter !== 'all' || categoryStatusFilters.size) && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
+  $('manageEmpty').textContent = (categoryFilter !== 'all' || categoryStatusFilters.size || onlyActiveTraits) && state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Nejdřív si vytvoř kategorii ve Vrstvách.';
   const addFolder = $('manageAddFolder');
   addFolder.disabled = !c || busy;
   addFolder.dataset.category = c?.id || '';
@@ -1599,7 +1609,7 @@ function renderTraitSearch(search, enabled) {
   let markup = '';
   if (searching) {
     const prefix = [], other = [];
-    const wholeProject = search === layerTraitSearch;
+    const wholeProject = search === layerTraitSearch && !onlyActiveTraits;
     const categories = wholeProject ? state.cats : state.cats.filter(categoryPassesFilter);
     for (const cat of categories) for (const trait of wholeProject ? cat.traits : listedTraits(cat)) {
       const name = foldTraitName(trait.name);
@@ -1855,8 +1865,7 @@ function pumpThumbnails() {
     });
   }
 }
-function visibleLayers(project) {
-  const { hidden } = M.conflicts(project);
+function visibleLayers(project, hidden = M.conflicts(project).hidden) {
   const layers = [];
   for (const c of [...project.cats].reverse()) {
     if (hidden.has(c.id)) continue;
@@ -1989,7 +1998,8 @@ async function draw() {
 function render(keepPreview = false) {
   filteredLayerIds.clear();
   if (!M.category(state, active)) active = state.cats[0]?.id || null;
-  const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state);
+  const { hidden, warnings } = M.conflicts(state), layers = visibleLayers(state, hidden);
+  visibleTraitIds = onlyActiveTraits ? new Set(layers.map(trait => trait.id)) : null;
   $('projectNameText').textContent = state.name;
   $('projectName').setAttribute('aria-label', `Přejmenovat projekt ${state.name}`);
   $('importPsd').disabled = busy;
@@ -2595,8 +2605,24 @@ async function handleAction(action, id, element) {
       layerLimit = LAYER_BATCH;
       render(true);
       break;
+    case 'filter-active-traits':
+      onlyActiveTraits = !onlyActiveTraits;
+      if (onlyActiveTraits) {
+        if (categoryFilter === 'hidden') categoryFilter = 'all';
+        filteredLayerIds.clear();
+        for (const category of state.cats.filter(categoryPassesFilter)) {
+          const ids = matchingLayerIds(category);
+          openLayerCategories.set(category.id, Math.max(ids.size, openLayerCategories.get(category.id) || LAYER_BATCH));
+          const expanded = organizerExpanded[category.id] ||= new Set();
+          for (const folder of organizerFolders(category.id).folders) if (ids.has(folder.id)) expanded.add(folder.id);
+        }
+      }
+      layerLimit = LAYER_BATCH;
+      render(true);
+      break;
     case 'cycle-category-view':
       categoryFilter = nextCategoryView(categoryFilter, categoryStatusFilters).id;
+      onlyActiveTraits = false;
       categoryStatusFilters.clear();
       layerLimit = LAYER_BATCH;
       render(true);
