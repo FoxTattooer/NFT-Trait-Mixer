@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.168 | checkpoint/v0.7.168-skupiny-stitku | Aktualizace s verzí v Lookbooku, přejmenování skupin a přesun štítků dlouhým přidržením. |
 | 0.7.167 | checkpoint/v0.7.167-schvalene-stitky | K přiřazení se nabízejí schválené štítky a názvy uložené v projektu. |
 | 0.7.166 | checkpoint/v0.7.166-kompaktni-lookbook | Hledání pod lupou, zarovnaný editor traitu a kompaktní výběr štítků s většími ikonami. |
 | 0.7.165 | checkpoint/v0.7.165-nazev-traitu | Pole v úpravě vrstvy přímo přejmenovává trait v projektu i v Lookbooku. |

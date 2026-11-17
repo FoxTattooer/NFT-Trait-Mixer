@@ -18,6 +18,28 @@
 .lookbook-head h2 { margin: 0; font-size: 24px; letter-spacing: -.045em; }
 .lookbook-head button { min-height: 44px; }
 .lookbook-head button .icon { width: 14px; height: 14px; }
+.lookbook-head-actions { display: flex; align-items: center; gap: 5px; }
+#lookbookExit { padding-inline: 7px; font-size: 12px; }
+#lookbookRefreshApp {
+  gap: 5px; padding: 3px 6px; border-color: var(--workspace-accent-border, #a25182);
+  background: var(--workspace-accent-wash, #33242e); color: var(--workspace-accent-icon, #ffd6e7);
+}
+#lookbookRefreshApp .icon { width: 17px; height: 17px; flex: none; }
+#lookbookRefreshApp .refresh-copy { display: grid; gap: 2px; text-align: start; line-height: 1.05; white-space: nowrap; }
+#lookbookRefreshApp strong { font-size: 10px; }
+#lookbookRefreshApp .app-version { font-size: 10px; font-variant-numeric: tabular-nums; }
+#lookbookRefreshApp[data-update-state=available] { background: var(--workspace-open-surface, #572c46); }
+#lookbookUpdateStatus { margin: 0; font-size: 11px; color: var(--scheme-muted, #d6c9d3); }
+#lookbookUpdateStatus:not(:empty) { padding: 4px 12px; border-bottom: 1px solid var(--scheme-stroke, #474147); }
+#lookbookUpdateStatus.is-error { color: var(--danger, #ffb1ad); }
+@media (prefers-reduced-motion: no-preference) {
+  #lookbookRefreshApp:is([data-update-state=checking], [data-update-state=applying]) .icon { animation: refresh-turn 1.3s linear infinite; }
+}
+@media (max-width: 360px) {
+  #lookbookRefreshApp { flex-direction: column; gap: 1px; }
+  #lookbookRefreshApp strong { display: none; }
+  #lookbookRefreshApp[data-update-state=available] { box-shadow: inset 0 -2px var(--workspace-accent-border, #f78ac5); }
+}
 .lookbook-scroll { min-height: 0; overflow: auto; padding: 9px 10px 11px; overscroll-behavior: contain; }
 .lookbook-segments { display: inline-flex; gap: 2px; margin-bottom: 8px; padding: 3px; border: 1px solid #454047; border-radius: 11px; background: #1c1c20; }
 .lookbook-segments button {
@@ -230,6 +252,15 @@
   display: flex; align-items: center; justify-content: space-between;
   gap: 6px; margin-bottom: 4px; min-height: 27px;
 }
+#lookbookGroupStatus { margin: 0; color: var(--danger, #ffb1ad); font-size: 12px; }
+#lookbookGroupStatus:not(:empty) { padding: 0 8px 7px; }
+#lookbookTags .tag-group-head { justify-content: flex-start; gap: 4px; }
+#lookbookTags .tag-group-more { margin-inline-start: auto; }
+.tag-group-head .tag-group-rename {
+  flex: 0 0 34px; width: 34px; min-height: 34px; padding: 0; border: 0;
+  background: transparent; color: var(--scheme-muted, #d3c3d1); box-shadow: none;
+}
+.tag-group-rename .icon { width: 14px; height: 14px; }
 .tag-group-head p { margin: 0; overflow-wrap: anywhere; }
 .tag-group-head .tag-group-more {
   min-height: 30px; padding: 3px 5px; border: 0; border-radius: 5px;
@@ -238,6 +269,16 @@
 @media (pointer: coarse) {
   .tag-group-head .tag-group-more { min-height: 44px; }
 }
+#lookbookTags .tag-grid button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+#lookbookTagMoveDialog { width: min(360px, calc(100% - 24px)); padding: 10px; }
+.lookbook-tag-move-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.lookbook-tag-move-head h2 { margin: 0; font-size: 18px; }
+.lookbook-tag-move-head button { min-height: 44px; }
+#lookbookTagMoveName { display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; overflow-wrap: anywhere; }
+#lookbookTagMoveGroups { display: grid; gap: 3px; max-height: min(45dvh, 290px); overflow: auto; }
+#lookbookTagMoveGroups button { justify-content: space-between; gap: 6px; min-height: 44px; padding: 4px 7px; text-align: start; }
+#lookbookTagMoveGroups button span { overflow-wrap: anywhere; }
+#lookbookTagMoveGroups .icon { flex: none; width: 14px; height: 14px; }
 #lookbookTags .tag-filter-options { max-height: none; overflow: visible; gap: 8px; }
 #lookbookTags .tag-filter-group + .tag-filter-group {
   border-top: 1px solid var(--scheme-stroke, #48414d); padding-top: 4px;

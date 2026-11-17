@@ -178,7 +178,7 @@
         field(group(':tag:' + tag, 'Štítek', tag), 'Skupina štítku', groupsBefore[tag], groupsAfter[tag]);
       }
     }
-    for (const [key, defaultTitle] of [['materials', 'Materiály'], ['other', 'Ostatní štítky']]) {
+    for (const [key, defaultTitle] of Object.entries(M.LOOKBOOK_TAG_GROUP_TITLES)) {
       if (titlesBefore[key] !== titlesAfter[key]) {
         field(group(':group:' + key, 'Skupina štítků', titlesAfter[key] || defaultTitle),
           'Název skupiny', titlesBefore[key] || defaultTitle, titlesAfter[key] || defaultTitle);

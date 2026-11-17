@@ -94,6 +94,7 @@
   const MAX_RARITY_WEIGHT = 1000;
   const normalizeLookbookText = (value, limit) => typeof value === 'string' ? value.trim().slice(0, limit).trimEnd() : '';
   const LOOKBOOK_TAG_LIMIT = 48;
+  const LOOKBOOK_TAG_GROUP_TITLES = Object.freeze({ materials:'Materiály', headwear:'Headwear', other:'Ostatní štítky' });
   const lookbookTagKey = tag => tag.toLocaleLowerCase('cs').normalize('NFC');
   function normalizeLookbookTags(values) {
     if (!Array.isArray(values)) return [];
@@ -300,7 +301,7 @@
     const p = { ...empty(), name: name(raw.name, 'Můj NFT projekt'), rulesEnabled: raw.rulesEnabled !== false };
     const tagGroups = normalizeLookbookTagGroups(raw.lookbookTagGroups);
     if (Object.keys(tagGroups).length) p.lookbookTagGroups = tagGroups;
-    const groupTitles = Object.fromEntries(['materials', 'other'].flatMap(key => {
+    const groupTitles = Object.fromEntries(Object.keys(LOOKBOOK_TAG_GROUP_TITLES).flatMap(key => {
       const [title] = normalizeLookbookTags([raw.lookbookTagGroupTitles?.[key]]);
       return title ? [[key, title]] : [];
     }));
@@ -573,7 +574,7 @@
     }
     return merge;
   }
-  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
+  const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, LOOKBOOK_TAG_GROUP_TITLES, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
     layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     LAYER_STATUS_LABELS, LAYER_STATUS_ICONS,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,

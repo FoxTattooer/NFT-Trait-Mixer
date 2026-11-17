@@ -670,6 +670,8 @@
     if (!ready || busy || dialog.open) return;
     origin = { workspace: workspaceScrollPosition(), panes: layerScrollPanes.map(pane => pane.scrollTop) };
     menu.open = false;
+    $('lookbookUpdateStatus').textContent = '';
+    $('lookbookGroupStatus').textContent = '';
     view = 'traits';
     resetTraitSearch();
     renderFilters();
@@ -690,6 +692,10 @@
     dialog.close();
   }
   $('lookbookExit').addEventListener('click', close);
+  $('lookbookRefreshApp').addEventListener('click', () => {
+    saveCard();
+    void refreshApp();
+  });
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   dialog.addEventListener('close', () => {
     detailArea.replaceChildren();
@@ -731,7 +737,123 @@
     }
     refreshResults(layerFilterBar);
   });
+  const tagMoveDialog = $('lookbookTagMoveDialog');
+  const tagMoveGroups = $('lookbookTagMoveGroups');
+  const tagFilterButton = 'button[data-tag-filter]:not([value=""])';
+  let tagMove, tagPress, heldTagButton;
+
+  function cancelTagPress() {
+    if (tagPress) clearTimeout(tagPress.timer);
+    tagPress = null;
+  }
+  function openTagMove(button) {
+    if (busy || !dialog.open || tagMoveDialog.open || !button.isConnected) return;
+    saveCard();
+    const title = button.lastElementChild.textContent;
+    const current = M.lookbookTagKey(button.closest('.tag-filter-group').getAttribute('aria-label'));
+    const groups = new Map(M.lookbookTagGroupOptions([
+      ...Object.values(tagDefaultGroupTitles()), ...Object.values(state.lookbookTagGroups || {}),
+    ]));
+    tagMove = { key:button.value, groups };
+    $('lookbookTagMoveName').innerHTML = `${tagSample(title)}<span>${esc(title)}</span>`;
+    tagMoveGroups.innerHTML = [...groups].map(([groupKey, name]) =>
+      `<button type="button" value="${esc(groupKey)}" ${groupKey === current ? 'aria-current="true" disabled' : ''}>
+        <span>${esc(name)}</span>${groupKey === current ? icon('check') : ''}</button>`
+    ).join('');
+    tagMoveDialog.showModal();
+    return true;
+  }
+  filterRoot.addEventListener('pointerdown', event => {
+    cancelTagPress();
+    heldTagButton = null;
+    const button = event.target.closest(tagFilterButton);
+    if (!button || event.button !== 0 || event.isPrimary === false || busy) return;
+    const { pointerId, clientX, clientY } = event;
+    tagPress = { pointerId, clientX, clientY, timer:setTimeout(() => {
+      tagPress = null;
+      if (openTagMove(button)) heldTagButton = button;
+    }, 500) };
+  });
+  document.addEventListener('pointermove', event => {
+    if (tagPress && tagPress.pointerId === event.pointerId &&
+        Math.hypot(tagPress.clientX - event.clientX, tagPress.clientY - event.clientY) > 8) cancelTagPress();
+  });
+  for (const type of ['pointerup','pointercancel']) document.addEventListener(type, event => {
+    if (tagPress?.pointerId === event.pointerId) cancelTagPress();
+  });
+  window.addEventListener('blur', cancelTagPress);
+  dialog.addEventListener('close', () => { cancelTagPress(); heldTagButton = null; });
+  filterRoot.addEventListener('click', event => {
+    if (!event.detail || !heldTagButton?.contains(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    heldTagButton = null;
+  }, true);
+  function tagMoveShortcut(event) {
+    const button = event.target.closest(tagFilterButton);
+    if (!button) return;
+    event.preventDefault();
+    const holding = tagPress !== null || event.pointerType === 'touch';
+    cancelTagPress();
+    if (openTagMove(button) && holding) heldTagButton = button;
+  }
+  filterRoot.addEventListener('contextmenu', tagMoveShortcut);
+  filterRoot.addEventListener('keydown', event => {
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) tagMoveShortcut(event);
+  });
+  $('lookbookTagMoveClose').addEventListener('click', () => tagMoveDialog.close());
+  tagMoveGroups.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    const title = button && !button.disabled && tagMove?.groups.get(button.value);
+    if (!title || busy) return;
+    const { key } = tagMove;
+    change(() => {
+      state.lookbookTagGroups = { ...state.lookbookTagGroups, [key]:title };
+    }, 'Štítek přesunut do skupiny', true);
+    expandedLookbookTagGroups.add(button.value);
+    renderFilters();
+    tagMoveDialog.close();
+  });
+  tagMoveDialog.addEventListener('close', () => {
+    if (tagMoveDialog.open) return;
+    const key = tagMove?.key;
+    tagMove = null;
+    const target = [...filterRoot.querySelectorAll(tagFilterButton)].find(button => button.value === key && !button.hidden);
+    (target || filterRoot.querySelector('summary')).focus({ preventScroll:true });
+  });
+
+  async function renameTagGroup(control) {
+    if (busy) return;
+    const title = control.closest('.tag-filter-group').getAttribute('aria-label');
+    const key = control.value;
+    const status = $('lookbookGroupStatus');
+    status.textContent = '';
+    saveCard();
+    const value = await ask({ title:'Přejmenovat skupinu štítků', value:title, maxLength:M.LOOKBOOK_TAG_LIMIT });
+    const [name] = M.normalizeLookbookTags([value]);
+    if (!name || name === title || !dialog.open) return;
+    const newKey = M.lookbookTagKey(name);
+    const defaults = Object.entries(tagDefaultGroupTitles());
+    const assignments = Object.entries(state.lookbookTagGroups || {});
+    if (newKey !== key && [...defaults, ...assignments].some(([, old]) => M.lookbookTagKey(old) === newKey)) {
+      status.textContent = 'Skupina s tímto názvem už existuje.';
+      return;
+    }
+    change(() => {
+      const renamedDefaults = defaults.filter(([, old]) => M.lookbookTagKey(old) === key).map(([id]) => [id, name]);
+      if (renamedDefaults.length) state.lookbookTagGroupTitles = { ...state.lookbookTagGroupTitles, ...Object.fromEntries(renamedDefaults) };
+      for (const [tag, old] of assignments) {
+        if (M.lookbookTagKey(old) === key) state.lookbookTagGroups[tag] = name;
+      }
+    }, 'Skupina štítků přejmenována', true);
+    if (expandedLookbookTagGroups.delete(key)) expandedLookbookTagGroups.add(newKey);
+    renderFilters();
+    [...filterRoot.querySelectorAll('[data-tag-group-rename]')].find(button => button.value === newKey)?.focus({ preventScroll:true });
+  }
   $('lookbookFilterBar').addEventListener('click', event => {
+    const rename = event.target.closest('[data-tag-group-rename]');
+    if (rename) { void renameTagGroup(rename); return; }
+    $('lookbookGroupStatus').textContent = '';
     const toggle = event.target.closest('[data-tag-group-toggle]');
     if (toggle) {
       toggleTagFilter(expandedLookbookTagGroups, toggle.value);

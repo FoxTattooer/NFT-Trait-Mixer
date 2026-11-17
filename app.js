@@ -1378,19 +1378,19 @@ function tagSample(label) {
 const expandedLookbookTagGroups = new Set();
 const LOOKBOOK_TAG_GROUP_PREVIEW = 4;
 function tagDefaultGroupTitles() {
-  return { materials: 'Materiály', other: 'Ostatní štítky', ...state.lookbookTagGroupTitles };
+  return { ...M.LOOKBOOK_TAG_GROUP_TITLES, ...state.lookbookTagGroupTitles };
 }
 function tagGroupTitle(key, name) {
   const groups = state.lookbookTagGroups || {};
   if (Object.hasOwn(groups, key)) return groups[key];
-  if (key === '5panel') return 'Headwear';
   const titles = tagDefaultGroupTitles();
+  if (key === '5panel') return titles.headwear;
   return (window.TraitShowroom?.materialId(name) || window.TraitShowroom?.colorHex(name)) ? titles.materials : titles.other;
 }
 function renderTagFilter(root, options, selected, label) {
   for (const key of selected) if (!options.has(key)) selected.delete(key);
   const list = root.querySelector('.tag-filter-options');
-  const focused = list.contains(document.activeElement) ? document.activeElement.value : undefined;
+  const focused = list.contains(document.activeElement) ? document.activeElement : null;
   const scrollTop = list.scrollTop;
   root.hidden = !options.size;
   root.querySelector('summary').textContent = selected.size ? `${label} · ${selected.size}` : label;
@@ -1412,14 +1412,17 @@ function renderTagFilter(root, options, selected, label) {
     const groupId = `${root.id}-group-${groupIndex}`;
     return `<div class="tag-filter-group" role="group" aria-label="${esc(title)}">
       ${compactGroups || sorted.length > 1 ? `<div class="tag-group-head"><p>${esc(title)}</p>
+        ${compactGroups ? `<button type="button" class="subtle tag-group-rename" data-tag-group-rename value="${esc(key)}" aria-haspopup="dialog" aria-label="Přejmenovat skupinu ${esc(title)}" title="Přejmenovat skupinu">${icon('edit')}</button>` : ''}
         ${expandable ? `<button type="button" class="tag-group-more" data-tag-group-toggle value="${esc(key)}" aria-controls="${groupId}" aria-expanded="${expanded}">${expanded ? 'Méně' : `Všechny (${items.length})`}</button>` : ''}</div>` : ''}
       <div class="tag-grid" id="${groupId}">${items.map(([tagKey, name], index) =>
-        `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}" ${expandable && !expanded && index >= LOOKBOOK_TAG_GROUP_PREVIEW && !selected.has(tagKey) ? 'hidden' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
+        `<button type="button" data-tag-filter value="${esc(tagKey)}" aria-pressed="${selected.has(tagKey)}" ${compactGroups ? 'aria-keyshortcuts="Shift+F10"' : ''} ${expandable && !expanded && index >= LOOKBOOK_TAG_GROUP_PREVIEW && !selected.has(tagKey) ? 'hidden' : ''}>${tagSample(name)}<span>${esc(name)}</span></button>`
       ).join('')}</div></div>`;
   }).join('') + (selected.size ? '<button type="button" class="tag-clear" data-tag-filter value="">Vymazat filtr</button>' : '');
   list.scrollTop = scrollTop;
-  if (focused !== undefined) {
-    const next = [...list.querySelectorAll('button')].find(button => button.value === focused && !button.hidden);
+  if (focused) {
+    const action = focused.matches('[data-tag-group-rename]') ? '[data-tag-group-rename]'
+      : focused.matches('[data-tag-group-toggle]') ? '[data-tag-group-toggle]' : '[data-tag-filter]';
+    const next = [...list.querySelectorAll(action)].find(button => button.value === focused.value && !button.hidden);
     (next || root.querySelector('summary')).focus({ preventScroll: true });
   }
 }
@@ -2146,13 +2149,30 @@ const updateStates = {
   applying: ['Načítám…', 'Načítám aktualizaci aplikace'],
   failed: ['Zkus znovu', 'Aktualizaci se nepodařilo ověřit. Zkusit znovu']
 };
+const updateControls = document.querySelectorAll('[data-app-update]');
 function setUpdateState(status) {
-  const control = $('refreshApp'), [label, description] = updateStates[status];
-  control.dataset.updateState = status;
-  control.title = description;
-  control.setAttribute('aria-label', `${description} · ${$('appVersion').textContent}`);
-  $('refreshLabel').textContent = label;
+  const [label, description] = updateStates[status];
+  const version = $('appVersion').textContent;
+  for (const control of updateControls) {
+    control.dataset.updateState = status;
+    control.title = description;
+    control.setAttribute('aria-label', `${description} · ${version}`);
+    control.querySelector('.refresh-copy strong').textContent = label;
+    control.querySelector('.app-version').textContent = version;
+  }
   $('updateNotice').hidden = status !== 'available';
+}
+function disableUpdateControls(disabled) {
+  for (const control of updateControls) control.disabled = disabled;
+}
+function announceAppUpdate(message, error = false) {
+  if (!$('lookbookDialog').open) {
+    toast(message,error);
+    return;
+  }
+  const status = $('lookbookUpdateStatus');
+  status.textContent = message;
+  status.classList.toggle('is-error',error);
 }
 function checkAppUpdate(registration) {
   if (updateCheck) return updateCheck;
@@ -2187,9 +2207,9 @@ function checkAppUpdate(registration) {
   return updateCheck;
 }
 async function readyForAppReload() {
-  if (busy) { toast('Aktualizuj až po dokončení probíhající operace.'); return false; }
+  if (busy) { announceAppUpdate('Aktualizuj až po dokončení probíhající operace.'); return false; }
   if (revision === persistedRevision || (await flushSave() && revision === persistedRevision)) return true;
-  toast('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
+  announceAppUpdate('Nejdřív si stáhni zálohu projektu. Změny zatím nejsou uložené.', true);
   return false;
 }
 async function finishAppUpdate() {
@@ -2198,13 +2218,13 @@ async function finishAppUpdate() {
   // A user may have edited the project between asking to update and activation.
   if (await readyForAppReload()) { location.reload(); return; }
   reloadRequested = false;
-  $('refreshApp').disabled = false;
+  disableUpdateControls(false);
   setUpdateState('idle');
 }
 async function refreshApp() {
-  const control = $('refreshApp');
-  if (control.disabled || reloadRequested) return;
-  control.disabled = true;
+  if ($('refreshApp').disabled || reloadRequested) return;
+  disableUpdateControls(true);
+  $('lookbookUpdateStatus').textContent = '';
   setUpdateState('checking');
   try {
     const registration = workerRegistration || await navigator.serviceWorker?.getRegistration();
@@ -2224,19 +2244,19 @@ async function refreshApp() {
       worker.postMessage({ type: 'SKIP_WAITING' });
       if (reloadRequested) updateTimer = setTimeout(() => {
         reloadRequested = false;
-        control.disabled = false;
+        disableUpdateControls(false);
         setUpdateState(registration.waiting ? 'available' : 'idle');
-        toast('Aktualizace se ještě nedokončila. Zkus tlačítko znovu.', true);
+        announceAppUpdate('Aktualizace se ještě nedokončila. Zkus tlačítko znovu.', true);
       }, 15000);
       return;
     }
     setUpdateState(result);
-    toast(result === 'current' ? `Aplikace má aktuální verzi · ${$('appVersion').textContent}` : 'Nová verze se ještě načítá. Zkus aktualizaci za chvíli.');
+    announceAppUpdate(result === 'current' ? `Aplikace má aktuální verzi · ${$('appVersion').textContent}` : 'Nová verze se ještě načítá. Zkus aktualizaci za chvíli.');
   } catch {
     reloadRequested = false;
     setUpdateState('failed');
-    toast('Aktualizaci se nepodařilo ověřit. Zkontroluj připojení a zkus to znovu.', true);
-  } finally { control.disabled = reloadRequested; }
+    announceAppUpdate('Aktualizaci se nepodařilo ověřit. Zkontroluj připojení a zkus to znovu.', true);
+  } finally { disableUpdateControls(reloadRequested); }
 }
 
 function toggleTraitInPreview(category, id, keepQuickScroll = false) {
