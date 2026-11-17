@@ -151,7 +151,7 @@ function clearFinalDownload() {
   link.hidden = true;
 }
 
-const markedTraits = category => category.fin ? category.traits : category.traits.filter(trait => trait.fin);
+const markedTraits = category => category.traits.filter(trait => !trait.out && (category.fin || trait.fin));
 const markedFolders = category => organizerFolders(category.id).folders.filter(folder => folder.fin);
 const markedItems = category => [...markedFolders(category), ...markedTraits(category)];
 const isMarkedCategory = category => category.fin || markedItems(category).length;

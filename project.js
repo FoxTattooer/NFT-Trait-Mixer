@@ -283,11 +283,11 @@
     }
     return { folders: markedFolders, traits, paths };
   }
+  const LAYER_STATUS_ICONS = Object.freeze({ wip: 'clock', fin: 'check', trash: 'trash', draw: 'brush', out: 'out' });
+  const layerStatusKeys = Object.keys(LAYER_STATUS_ICONS);
+  const LAYER_STATUS_LABELS = Object.freeze(Object.fromEntries(layerStatusKeys.map(key => [key, key.toUpperCase()])));
   const layerMarks = item => ({
-    ...(item.wip === true ? { wip: true } : {}),
-    ...(item.draw === true ? { draw: true } : {}),
-    ...(item.fin === true ? { fin: true } : {}),
-    ...(item.trash === true ? { trash: true } : {}),
+    ...Object.fromEntries(layerStatusKeys.filter(key => item[key] === true).map(key => [key, true])),
     ...(['keep', 'todo', 'skip'].includes(item.decision) ? { decision: item.decision } : {}),
     ...(isFlagColor(item.flag) ? { flag: item.flag } : {}),
   });
@@ -575,6 +575,7 @@
   }
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
     layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
+    LAYER_STATUS_LABELS, LAYER_STATUS_ICONS,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

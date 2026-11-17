@@ -1,8 +1,7 @@
 (() => {
   'use strict';
-  const marks = { wip: 'WIP', fin: 'FIN', trash: 'TRASH', draw: 'DRAW' };
+  const { LAYER_STATUS_LABELS: marks, LAYER_STATUS_ICONS: markIcons } = window.TraitProject;
   const glyph = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-  const markIcons = { wip:'clock', fin:'check', trash:'trash', draw:'brush' };
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const flatten = nodes => nodes.flatMap(node => [node, ...flatten(node.children || [])]);
   const countText = (count, singular, plural, many) => `${count} ${count === 1 ? singular : count < 5 ? plural : many}`;
@@ -19,7 +18,7 @@
         <button type="button" class="inv-expand-all" data-inv="expand-all"></button>
         <button type="button" class="inv-mode" data-inv="mode" aria-pressed="false" aria-label="Vybrat položky" title="Vybrat položky">${glyph('select-items')}</button>
         <details class="inv-filter-menu"><summary aria-label="Filtry" title="Filtry">${glyph('sliders')}</summary><div>
-        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Vrstvy</option>${showPlans ? '<option value="plan">Plán</option><option value="option">Volby</option>' : ''}<option value="wip">WIP</option><option value="fin">FIN</option><option value="trash">TRASH</option><option value="draw">DRAW</option></select></label>
+        <label class="inv-filter"><span>Obsah</span><select><option value="">Vše</option><option value="seen">Vrstvy</option>${showPlans ? '<option value="plan">Plán</option><option value="option">Volby</option>' : ''}${Object.entries(marks).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label>
         ${manage ? `<label class="inv-decisions"><span>Rozhodnutí</span><select><option value="">Všechna</option><option value="keep">Ponechat</option><option value="todo">Dodělat</option><option value="skip">Není třeba</option><option value="undecided">Nerozhodnuto</option></select></label>` : ''}
         </div></details></div>
       <div class="inv-bulk" aria-label="Akce pro vybrané položky" hidden></div><div class="inv-tree"></div>`;

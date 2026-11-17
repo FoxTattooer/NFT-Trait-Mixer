@@ -121,7 +121,7 @@ test('Final remembers approved category and item paths and prepares an ordered P
   await reader.close(); db.close();
 });
 
-test('FIN source follows category and folder marks while omitting WIP, DRAW and TRASH', () => {
+test('FIN source follows category and folder marks while omitting WIP, DRAW, TRASH and OUT', () => {
   const active=project();
   active.organizer.heads.folders[1].fin=true;
   active.cats[0].traits[1].draw=true;
@@ -130,6 +130,12 @@ test('FIN source follows category and folder marks while omitting WIP, DRAW and 
   assert.deepEqual(groups[0].rows.map(row=>row.id),['a','c']);
   assert.deepEqual(groups[0].rows[0].folders.map(folder=>folder.name),['Dready','Tmavé']);
   active.cats[0].traits[0].trash=true;
+  assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
+  active.cats[0].traits[0].trash=false;
+  active.cats[0].traits[0].out=true;
+  assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
+  active.cats[0].traits[0].out=false;
+  active.organizer.heads.folders[1].out=true;
   assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
 });
 

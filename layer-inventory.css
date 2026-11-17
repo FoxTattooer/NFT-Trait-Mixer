@@ -34,7 +34,9 @@
 .inv-mark[data-mark=wip], .inv-mark-palette [data-mark=wip] { color: #ffcf91; }
 .inv-mark[data-mark=fin], .inv-mark-palette [data-mark=fin] { color: #a9f4d5; }
 .inv-mark[data-mark=trash], .inv-mark-palette [data-mark=trash], .layer-trash-mark { color: #ffb6b3; }
-.layer-draw-mark, .layer-trash-mark { display: inline-flex; background: #24262c; border-radius: 5px; padding: 2px 5px; font-size: 10px; font-weight: 700; }
+:root { --layer-out-color: #b8cdf4; }
+.inv-mark[data-mark=out], .inv-mark-palette [data-mark=out], .layer-out-mark { color: var(--layer-out-color); }
+.layer-draw-mark, .layer-trash-mark, .layer-out-mark { display: inline-flex; background: #24262c; border-radius: 5px; padding: 2px 5px; font-size: 10px; font-weight: 700; }
 .inv-controls { display:grid; grid-template-columns:minmax(0,1fr) auto 40px 40px; align-items:center; gap:5px; }
 .inv-controls .inv-search { position:relative; display:block; }
 .inv-search > .icon { position:absolute; top:50%; left:9px; width:15px; height:15px; transform:translateY(-50%); pointer-events:none; color:var(--inv-muted); }

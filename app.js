@@ -545,10 +545,8 @@ function flagIcon(color, label = false) {
 }
 function layerMarkBadges(item) {
   return (item.hidden ? '<span class="layer-wip-mark">Skrytý</span>' : '') +
-    (item.wip ? '<span class="layer-wip-mark">WIP</span>' : '') +
-    (item.fin ? '<span class="layer-fin-mark">FIN</span>' : '') +
-    (item.trash ? '<span class="layer-trash-mark">TRASH</span>' : '') +
-    (item.draw ? '<span class="layer-draw-mark">DRAW</span>' : '') + (item.flag ? flagIcon(item.flag, true) : '');
+    Object.entries(layerStatusLabels).map(([key, label]) => item[key] ? `<span class="layer-${key}-mark">${label}</span>` : '').join('') +
+    (item.flag ? flagIcon(item.flag, true) : '');
 }
 function layerTagMarker(tags = []) {
   const count = tags.length;
@@ -796,8 +794,7 @@ function positionLayerContext(trigger) {
 const layerBulkSelection = new Set();
 let layerBulkMode = false;
 const isLayerBulkActive = () => layerBulkMode || layerBulkSelection.size > 0;
-const layerStatusLabels = Object.freeze({ wip: 'WIP', fin: 'FIN', trash: 'TRASH', draw: 'DRAW' });
-const layerStatusIcons = Object.freeze({ wip: 'clock', fin: 'check', trash: 'trash', draw: 'brush' });
+const { LAYER_STATUS_LABELS: layerStatusLabels, LAYER_STATUS_ICONS: layerStatusIcons } = M;
 const layerSelectionLabel = id => layerBulkSelection.has(id) ? 'Odebrat z výběru' : isLayerBulkActive() ? 'Přidat do výběru' : 'Vybrat položky';
 let layerInventoryView, layerInventoryReturn;
 
@@ -2062,7 +2059,7 @@ function render(keepPreview = false) {
     active = categories[0].id;
     layerLimit = LAYER_BATCH;
   }
-  fillSelect($('layerCategory'), categories.map(c => [c.id, c.name + (c.wip ? ' · WIP' : '') + (c.fin ? ' · FIN' : '')]), state.cats.length ? 'Žádné kategorie' : 'Vyber kategorii');
+  fillSelect($('layerCategory'), categories.map(c => [c.id, [c.name, ...Object.entries(layerStatusLabels).filter(([key]) => c[key]).map(([, label]) => label)].join(' · ')]), state.cats.length ? 'Žádné kategorie' : 'Vyber kategorii');
   if (categories.length) $('layerCategory').value = active;
   renderCategories(hidden, categories); renderTraits(categories); renderRules(); renderSnapshots(); showPanel(mobilePanel);
   renderLayerBulk();

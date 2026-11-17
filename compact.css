@@ -84,6 +84,7 @@ body.compact-workspace .app-header {
 .category-status-filters [data-id=fin] { --category-mark-color:#a9f4d5; }
 .category-status-filters [data-id=wip] { --category-mark-color:#ffcf91; }
 .category-status-filters [data-id=trash] { --category-mark-color:#ffb6b3; }
+.category-status-filters [data-id=out] { --category-mark-color:var(--layer-out-color); }
 .category-status-filters button[data-filter-mode=include] { border-color:var(--category-mark-color)!important; color:var(--category-mark-color)!important; background:color-mix(in srgb,var(--scheme-control,#1e2026) 88%,var(--category-mark-color))!important; }
 .category-status-filters button[data-filter-mode=exclude] { border-color:var(--category-mark-color)!important; border-style:dashed; }
 .category-status-filters button[data-filter-mode=exclude] .icon { opacity:.65; }
@@ -339,6 +340,7 @@ body #layerContext .layer-menu-icon .icon {width:16px;height:16px;color:inherit!
 #layerContext [data-mark="wip"] {--layer-menu-glyph:#dbc3a5}
 #layerContext [data-mark="fin"] {--layer-menu-glyph:#b5cbbb}
 #layerContext :is([data-tone="delete"],[data-mark="trash"]) {--layer-menu-glyph:#d2aeb4}
+#layerContext [data-mark="out"] {--layer-menu-glyph:var(--layer-out-color)}
 .layer-menu-title {display:flex;align-items:center;gap:8px;padding:2px 6px 5px;min-width:0;font-size:13px}
 .layer-menu-title strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer-menu-section {display:grid;gap:4px;min-width:0}
@@ -371,8 +373,7 @@ body #layerContext .layer-menu-icon .icon {width:16px;height:16px;color:inherit!
   color:var(--scheme-text,#f0edf2); background:var(--layer-menu-border);
   font-size:10px; font-weight:750; line-height:1;
 }
-.layer-menu-palette {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:4px}
-.layer-menu-palette.layer-flag-palette {grid-template-columns:repeat(5,minmax(0,1fr))}
+.layer-menu-palette {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-top:4px}
 #layerContext .layer-menu-palette button {
   display:grid; justify-items:center; align-content:center; gap:4px;
   min-width:0; min-height:58px; padding:4px 1px; border-radius:9px;

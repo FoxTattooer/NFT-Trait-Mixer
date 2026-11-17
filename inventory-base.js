@@ -1,7 +1,8 @@
 (function (root) {
   'use strict';
   const format = 'trait-layer-inventory';
-  const statuses = ['wip','fin','trash','draw'];
+  const model = typeof module !== 'undefined' && module.exports ? require('./project.js') : root.TraitProject;
+  const statuses = Object.keys(model.LAYER_STATUS_LABELS);
   const decisions = ['keep','todo','skip'];
   const kinds = ['category','folder','group','layer','plan','option'];
   const isBranch = node => ['category','folder','group'].includes(node.kind);
@@ -291,8 +292,9 @@
   }
   function projectTree(model, project, { includeData = false } = {}) {
     function node(item,kind,categoryId) {
-      const { id,name,note,wip,fin,trash,draw,decision } = item;
-      return { id,name,note,wip,fin,trash,draw,decision,kind,evidence:'seen',categoryId,
+      const { id,name,note,decision } = item;
+      const marks = Object.fromEntries(statuses.map(key => [key, item[key]]));
+      return { id,name,note,...marks,decision,kind,evidence:'seen',categoryId,
         ...(includeData ? { sources:[`project:${id}`], ...(kind === 'layer' ? { data:item.data } : {}) } : {}) };
     }
     return project.cats.map(category => {

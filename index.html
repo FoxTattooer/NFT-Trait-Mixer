@@ -15,30 +15,30 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07158">
-  <link rel="stylesheet" href="compact.css?build=07159">
+  <link rel="stylesheet" href="compact.css?build=07160">
   <link rel="stylesheet" href="schemes.css?build=07158">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
   <link rel="stylesheet" href="trait-comparison.css?build=07158">
   <link rel="stylesheet" href="lookbook.css?build=07159">
-  <script src="project.js?build=07159" defer></script>
+  <script src="project.js?build=07160" defer></script>
   <script src="storage.js?build=07109" defer></script>
-  <script src="final.js?build=07112" defer></script>
-  <script src="diagnostics.js?build=07159" defer></script>
+  <script src="final.js?build=07160" defer></script>
+  <script src="diagnostics.js?build=07160" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
   <script src="recent.js?build=0789" defer></script>
-  <link rel="stylesheet" href="layer-inventory.css?build=07158">
-  <script src="layer-inventory.js?build=07129" defer></script>
-  <script src="inventory-base.js?build=07131" defer></script>
-  <script src="step-history.js?build=07159" defer></script>
-  <script src="app.js?build=07159" defer></script>
+  <link rel="stylesheet" href="layer-inventory.css?build=07160">
+  <script src="layer-inventory.js?build=07160" defer></script>
+  <script src="inventory-base.js?build=07160" defer></script>
+  <script src="step-history.js?build=07160" defer></script>
+  <script src="app.js?build=07160" defer></script>
   <script src="trait-comparison.js?build=07157" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07159" defer></script>
-  <script src="final-ui.js?build=07118" defer></script>
+  <script src="final-ui.js?build=07160" defer></script>
   <script src="final-builder.js?build=07112" defer></script>
   <script src="inventory-preview.js?build=07112" defer></script>
   <script src="inventory-review.js?build=07113" defer></script>
@@ -78,6 +78,7 @@
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 0 0-13.6-4.7L3 8.5m0-5v5h5m-4 5.5a8 8 0 0 0 13.6 4.7l3.4-3.2m-5 0h5v5"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l2-7L17 2l5 5L11 18l-7 2Z"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M12 4H5v16h7M9 12h12m-4-4 4 4-4 4"/></symbol>
     <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16m-6-6 6 6 6-6"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
@@ -135,8 +136,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.159" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.159</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" class="header-refresh" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.160" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.160</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -214,6 +215,7 @@
           <button type="button" class="subtle" data-action="filter-category-mark" data-id="fin" aria-label="Jen kategorie FIN" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>FIN</button>
           <button type="button" class="subtle" data-action="filter-category-mark" data-id="wip" aria-label="Jen kategorie WIP" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>WIP</button>
           <button type="button" class="subtle" data-action="filter-category-mark" data-id="trash" aria-label="Jen kategorie TRASH" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>TRASH</button>
+          <button type="button" class="subtle" data-action="filter-category-mark" data-id="out" aria-label="Jen kategorie OUT" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-out"/></svg>OUT</button>
         </div>
         <span id="categoryFilterStatus" class="sr-only" role="status"></span>
       </div>
@@ -363,6 +365,7 @@
           <button type="button" class="subtle" data-id="fin" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>FIN</button>
           <button type="button" class="subtle" data-id="wip" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>WIP</button>
           <button type="button" class="subtle" data-id="trash" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>TRASH</button>
+          <button type="button" class="subtle" data-id="out" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-out"/></svg>OUT</button>
         </div>
         <button id="lookbookFolderTags" type="button" class="subtle lookbook-folder-tags" data-lookbook-scope="folder" aria-haspopup="dialog" aria-label="Štítky složky" title="Štítky složky" hidden><svg class="icon" aria-hidden="true"><use href="#i-tag"/></svg>Složka</button>
         <span id="lookbookLayerFilterStatus" class="sr-only" role="status"></span>
@@ -597,6 +600,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.160-oznaceni-out" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.160 – Označení OUT</strong><small>OUT přibylo do nabídek označení, hromadných akcí, filtrů a historie kroků.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.159-prejmenovani-a-stitky-slozek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.159 – Přejmenování a štítky složek</strong><small>Klepnutí na název přejmenovává. Zděděné štítky lze odebrat ve zvolené složce.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.158-pritmeni-rozhrani" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.158 – Jemně tmavší rozhraní</strong><small>Tmavší pozadí, lišty a panely. Lehce tlumený papír v Lookbooku.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.157-nahled-duplicit" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.157 – Náhled vrstvy v duplicitách</strong><small>Každá karta v porovnání duplicit má vlastní tlačítko Náhled vrstvy.</small></span><span class="version-tag">Uloženo</span></a>

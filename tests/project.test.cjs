@@ -16,6 +16,17 @@ test('legacy projects acquire visibility, version, and stable snapshot identifie
   assert.equal(p.snapshots[0].visibility.b, true); assert.ok(p.snapshots[0].id);
   assert.deepEqual(M.normalize(p), p);
 });
+test('OUT persists on categories, folders and traits in portable project backups', () => {
+  const p = project();
+  p.cats[0].out = true;
+  p.cats[0].traits[0].out = true;
+  p.organizer.a = { folders: [{ id: 'outside', name: 'Vyřazené', parentId: null, out: true }], assignments: { red: 'outside' } };
+  const copy = M.normalize(JSON.parse(JSON.stringify(p)));
+  assert.equal(copy.cats[0].out, true);
+  assert.equal(copy.cats[0].traits[0].out, true);
+  assert.equal(copy.organizer.a.folders[0].out, true);
+  assert.equal(copy.selected.a, 'red', 'a status does not change the editor composition');
+});
 test('category and nested folder tags are inherited and survive saving, undo copies, and moves', () => {
   const p = project();
   p.cats[0].lookbookTags = ['Skin'];

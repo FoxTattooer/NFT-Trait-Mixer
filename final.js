@@ -292,16 +292,18 @@
     });
   }
   function finCategories(model, project) {
+    const exclusionMarks = Object.keys(model.LAYER_STATUS_LABELS).filter(key => key !== 'fin');
+    const canExport = item => !exclusionMarks.some(key => item[key]);
     return project.cats.map(category => {
       const children = model.layerChildren(project,category), rows = [];
       function visit(parent, inherited, folders) {
         for (const { item, kind } of children(parent)) {
-          const fin = !item.trash && !item.wip && !item.draw && (inherited || item.fin);
+          const fin = canExport(item) && (inherited || item.fin);
           if (kind === 'folders') visit(item.id,fin,[...folders,{ key:item.id,name:item.name }]);
           else if (fin) rows.push({ id:item.id, name:item.name, folders, trait:item, category, path:folders.map(folder => folder.name).join(' / ') });
         }
       }
-      visit(null,category.fin && !category.trash && !category.wip && !category.draw,[]);
+      visit(null,category.fin && canExport(category),[]);
       return { id:category.id,name:category.name,rows };
     });
   }

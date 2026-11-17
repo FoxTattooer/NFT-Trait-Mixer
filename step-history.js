@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const M = window.TraitProject;
-  const marks = ['draw', 'fin', 'wip', 'trash'];
+  const marks = Object.keys(M.LAYER_STATUS_LABELS);
   const categories = new Intl.ListFormat('cs', { style: 'short' });
   const visibility = value => value === false ? 'Skrytá' : 'Viditelná';
   const enabled = value => value === false ? 'Vypnuto' : 'Zapnuto';

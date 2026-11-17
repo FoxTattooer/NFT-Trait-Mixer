@@ -527,7 +527,7 @@ assert.equal(find('#layerContext .layer-menu-title').textContent,'Přejmenovaná
 assert.equal(find('#layerContext summary[data-tone="mark"] span:not(.layer-menu-icon)').textContent,'Označit jako…');
 assert.equal(find('#layerContext [data-action="toggle-layer-bulk-item"]').textContent,'Vybrat položky');
 assert.deepEqual([...get('layerContext').querySelectorAll('[data-action="toggle-layer-status"] use')].map(node => node.getAttribute('href')),
-  ['#i-clock','#i-check','#i-trash','#i-brush']);
+  ['#i-clock','#i-check','#i-trash','#i-brush','#i-out']);
 click('#layerContext summary[data-tone="mark"]');
 await waitFor(() => find('#layerContext summary[data-tone="mark"]').parentElement.open);
 click('#layerContext summary[data-tone="flag"]');
@@ -553,7 +553,14 @@ assert(find('#cats .category-card'));
 assert.equal(find(categoryBadge('wip')).getAttribute('aria-pressed'),'false');
 click(categoryMenu);
 click('#layerContext summary[data-tone="mark"]');
-click('#layerContext [data-action="toggle-layer-status"][data-mark="wip"]');
+click('#layerContext [data-action="toggle-layer-status"][data-mark="out"]');
+assert(find('#cats .layer-out-mark'));
+assert.equal(w.inspectState().cats[0].wip, undefined, 'OUT replaces an existing status');
+assert.match(get('layerCategory').selectedOptions[0].textContent, / · OUT$/);
+click(categoryMenu);
+click('#layerContext summary[data-tone="mark"]');
+click('#layerContext [data-action="toggle-layer-status"][data-mark="out"]');
+assert(!find('#cats .layer-out-mark'));
 click(categoryMenu);
 click('#layerContext summary[data-tone="flag"]');
 click('#layerContext [data-action="set-layer-flag"][data-flag=""]');
@@ -1175,9 +1182,10 @@ filterProject.cats[1].fin = true;
 filterProject.cats[2].traits[0].draw = true;
 filterProject.cats[2].traits[0].lookbookTags = ['Cowboy'];
 filterProject.cats[2].traits.push({ id:'filter-clean',name:'Bez označení',data:pngA });
+filterProject.cats[2].traits.push({ id:'filter-out',name:'Vyřazená vrstva',data:pngB,out:true });
 filterProject.organizer['export-c'] = {
   folders:[{ id:'filter-folder',name:'Podsložka filtru',parentId:null }],
-  assignments:{ 'export-bg':'filter-folder', 'filter-clean':'filter-folder' },
+  assignments:{ 'export-bg':'filter-folder', 'filter-clean':'filter-folder', 'filter-out':'filter-folder' },
 };
 w.useTestProject(filterProject);
 click('#layersTab');
@@ -1195,14 +1203,19 @@ assert.deepEqual(categoryIds(),['export-a','export-b','export-c'],'included badg
 click(categoryBadge('draw'));
 assert.deepEqual(categoryIds(),['export-b'],'excluding DRAW preserves the FIN inclusion');
 click(categoryBadge('fin'));
-for (const mark of ['wip','trash']) { click(categoryBadge(mark)); click(categoryBadge(mark)); }
-assert.deepEqual(categoryIds(),['export-c'],'four excluded badges leave unmarked entries');
+for (const mark of ['wip','trash','out']) { click(categoryBadge(mark)); click(categoryBadge(mark)); }
+assert.deepEqual(categoryIds(),['export-c'],'excluding every badge leaves unmarked entries');
 assert.deepEqual(shownFilterTraits(),['filter-clean']);
 click(categoryBadge('draw'));
 assert.equal(find(categoryBadge('draw')).dataset.filterMode,'off','the third tap clears only that badge');
 assert.deepEqual(categoryIds(),['export-a','export-c']);
 click('#layerReviewFilter');
 assert.deepEqual(categoryIds(),['export-a','export-b','export-c']);
+click(categoryBadge('out'));
+assert.deepEqual(categoryIds(),['export-c']);
+assert.deepEqual(shownFilterTraits(),['filter-out']);
+assert(find('#layer-branch-export-c .layer-out-mark'));
+click('#layerReviewFilter');
 for (const [label,ids] of [
   ['Zapnuté',['export-b','export-c']],
   ['Skryté',['export-a']],
@@ -1227,6 +1240,14 @@ assert(get('layerTagsDialog').open);
 assert.equal(get('layerTagsPath').textContent, 'Pozadí / Podsložka filtru');
 click('#layerTagsCancel');
 await waitFor(() => !get('layerTagsDialog').open);
+click(bookStatus('out'));
+assert.deepEqual(bookCategories(), ['export-c']);
+assert.deepEqual(bookTraitIds(), ['filter-out']);
+click(bookStatus('out'));
+assert.equal(find(bookStatus('out')).dataset.filterMode, 'exclude');
+assert(!bookTraitIds().includes('filter-out'));
+click(bookStatus('out'));
+assert.equal(find(bookStatus('out')).dataset.filterMode, 'off');
 click(bookStatus('draw'));
 assert.equal(find(bookStatus('draw')).dataset.filterMode, 'include');
 assert.deepEqual(bookCategories(), ['export-a', 'export-c']);
@@ -1524,13 +1545,16 @@ click('#layerInventory [data-inv-id="export-a"]');
 assert(find('#layerInventory [data-inv-id="export-a"]').checked);
 click('#layerInventory [data-inv-id="export-hair"]');
 assert.match(find('#layerInventory .inv-bulk-main').textContent,/Vybráno 2/);
-find('#layerInventory [data-inv-bulk]').value='draw:add';
+find('#layerInventory [data-inv-bulk]').value='out:add';
 click('#layerInventory [data-inv="apply"]');
-assert.equal(M.category(w.inspectState(),'export-a').draw,true);
-assert.equal(M.locate(w.inspectState(),'export-hair').trait.draw,true);
+assert.equal(M.category(w.inspectState(),'export-a').out,true);
+assert.equal(M.locate(w.inspectState(),'export-hair').trait.out,true);
+assert(find('#layerInventory .inv-mark[data-mark="out"]'));
+assert(find('#layerInventory .inv-filter option[value="out"]'));
 assert.equal(M.locate(w.inspectState(),'export-hair').trait.fin,undefined);
 find('#layerInventory [data-inv-bulk]').value='fin:add';
 click('#layerInventory [data-inv="apply"]');
+assert.equal(M.locate(w.inspectState(),'export-hair').trait.out,undefined);
 click('#layerInventory [data-inv="clear"]');
 get('layerInventoryDialog').close();
 finalEntry.click();
