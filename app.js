@@ -482,19 +482,20 @@ function matchingStatusLayerIds(category, view, statusFilters, visibleIds = null
   if (view === 'unmarked') excluded.push(...Object.keys(layerStatusLabels));
   const ids = new Set();
   const children = M.layerChildren(state, category);
-  function visit(item, inherited, parentId) {
-    if (excluded.some(mark => item[mark])) return false;
-    const matched = inherited || included.some(mark => item[mark]);
-    let hasMatch = (!included.length || matched) && (!visibleIds || visibleIds.has(item.id));
+  const statusSource = M.layerStatusSource(state, category);
+  function visit(item, kind, parentId) {
+    const source = statusSource(item, kind);
+    let hasMatch = !excluded.some(mark => source[mark]) &&
+      (!included.length || included.some(mark => source[mark])) && (!visibleIds || visibleIds.has(item.id));
     if (parentId !== undefined) {
       for (const { kind, item: child } of children(parentId)) {
-        if (visit(child, matched, kind === 'folders' ? child.id : undefined)) hasMatch = true;
+        if (kind === 'folders' ? visit(child, 'folder', child.id) : visit(child, 'trait')) hasMatch = true;
       }
     }
     if (hasMatch) ids.add(item.id);
     return hasMatch;
   }
-  visit(category, false, null);
+  visit(category, 'category', null);
   return ids;
 }
 function matchingLayerIds(category) {
@@ -560,11 +561,17 @@ function flagIcon(color, label = false) {
   if (!M.isFlagColor(color)) return icon('flag');
   return `<span class="layer-flag" data-flag="${color}" ${label ? `role="img" aria-label="${M.FLAG_COLORS[color]} vlajka"` : 'aria-hidden="true"'}>${icon('flag')}</span>`;
 }
-function layerMarkBadges(item, iconOnly = false) {
+function layerStatusBadges(item, iconOnly, source) {
+  return Object.entries(layerStatusLabels).filter(([key]) => source[key]).map(([key, label]) => {
+    const title = source === item ? label : esc(`${label} · Ze složky ${source.name}`);
+    return iconOnly
+      ? `<span class="category-mark-icon" data-mark="${key}" role="img" aria-label="${title}" title="${title}">${icon(layerStatusIcons[key])}</span>`
+      : `<span class="layer-${key}-mark"${source === item ? '' : ` title="${title}" data-inherited-mark`}>${label}</span>`;
+  }).join('');
+}
+function layerMarkBadges(item, iconOnly = false, source = item) {
   return (item.hidden ? '<span class="layer-wip-mark">Skrytý</span>' : '') +
-    Object.entries(layerStatusLabels).filter(([key]) => item[key]).map(([key, label]) => iconOnly
-      ? `<span class="category-mark-icon" data-mark="${key}" role="img" aria-label="${label}" title="${label}">${icon(layerStatusIcons[key])}</span>`
-      : `<span class="layer-${key}-mark">${label}</span>`).join('') +
+    layerStatusBadges(item, iconOnly, source) +
     (item.flag ? flagIcon(item.flag, true) : '');
 }
 function layerTagMarker(tags = []) {
@@ -743,20 +750,22 @@ function renderLayerTree() {
 function renderLayerBranch(tree, c, limit, visible, manage = false) {
   const rows = mixedLayerRows(c);
   tree.setAttribute('aria-label', `Vrstvy · ${c.name}`);
-  const { assignments } = organizerFolders(c.id);
+  const { folders, assignments } = organizerFolders(c.id);
+  const statusSource = M.layerStatusSource(state, c);
   const entries = rows.slice(0, limit).map(({ item, kind, depth }) => {
     const id = esc(item.id), folder = kind === 'folders';
     const expanded = folder && !!organizerExpanded[c.id]?.has(item.id);
     const indent = Math.min(7, depth);
     const image = folder || safeMode ? '' : layerThumbnail(c, item, manage ? '' : 'layer-cropped-thumbnail');
     const tags = M.effectiveLayerTags(state, c, item, folder ? 'folder' : 'trait');
-    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${item.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
+    const source = statusSource(item, folder ? 'folder' : 'trait');
+    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${source.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${layerBulkPick(item)}
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}" ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
         ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
-        <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
+        <span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, false, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
       <button type="button" class="layer-tree-more" data-action="open-layer-menu" data-kind="${folder ? 'folder' : 'trait'}" data-id="${id}" data-category="${esc(c.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${esc(item.name)}">${icon('more')}</button>
@@ -776,6 +785,19 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
   syncLayerBulkPicks(tree);
   const selected = new Set(M.selectedIds(state, c.id));
   const hiddenTraits = new Set(c.traits.filter(trait => trait.hidden).map(trait => trait.id));
+  const visibleFolders = new Set();
+  if (visible && folders.length) {
+    const parents = new Map(folders.map(folder => [folder.id, folder.parentId]));
+    for (const traitId of selected) {
+      if (hiddenTraits.has(traitId)) continue;
+      for (let folderId = assignments[traitId]; folderId && !visibleFolders.has(folderId); folderId = parents.get(folderId)) {
+        visibleFolders.add(folderId);
+      }
+    }
+  }
+  for (const folder of tree.querySelectorAll('.layer-tree-folder')) {
+    folder.classList.toggle('has-visible-traits', visibleFolders.has(folder.dataset.dropId));
+  }
   for (const row of tree.querySelectorAll('[data-action="choose-trait"]')) {
     const picked = selected.has(row.dataset.id);
     const enabled = picked && !hiddenTraits.has(row.dataset.id);
@@ -1090,9 +1112,10 @@ function layerMenuButton(action, label, id, glyph, tone, attributes = '', danger
 function layerMenuDisclosure(label, graphic, tone, palette, actions) {
   return `<details class="layer-menu-disclosure"><summary class="layer-menu-row" data-tone="${tone}">${graphic}${label}${icon('chevron')}</summary>${palette}${actions || ''}</details>`;
 }
-function layerMarkActions(item, attributes) {
-  const activeMark = Object.keys(layerStatusLabels).find(key => item[key]);
-  const statusLabel = `<span>Označit jako…</span>${activeMark ? `<small class="layer-menu-current" data-mark="${activeMark}">${layerStatusLabels[activeMark]}</small>` : ''}`;
+function layerMarkActions(item, attributes, source) {
+  const activeMark = M.layerStatus(source);
+  const inherited = source !== item && activeMark;
+  const statusLabel = `<span>Označit jako…</span>${activeMark ? `<small class="layer-menu-current" data-mark="${activeMark}"${inherited ? ` title="${esc(source.name)}"` : ''}>${layerStatusLabels[activeMark]}${inherited ? ' ze složky' : ''}</small>` : ''}`;
   const statuses = Object.entries(layerStatusLabels).map(([key, label]) =>
     button('toggle-layer-status', `${layerMenuIcon(layerStatusIcons[key])}<span>${label}</span>`, item.id, '',
       `type="button" ${attributes} data-mark="${key}" aria-pressed="${!!item[key]}"`)).join('');
@@ -1171,7 +1194,7 @@ function openLayerContext(trigger, id) {
   menu.innerHTML = `<div class="layer-menu-title" data-tone="item" title="${esc(item.name)}">${layerMenuIcon(kind === 'trait' ? 'layers' : 'folder')}<strong>${esc(item.name)}</strong></div>` +
     (kind === 'trait' ? layerMenuButton('open-trait-preview', 'Náhled', id, 'search', 'visibility', 'aria-haspopup="dialog"') : '') +
     layerMenuButton('open-layer-tags', 'Štítky', id, 'tag', 'edit', `${markAttributes} aria-haspopup="dialog"`) +
-    layerMarkActions(item, markAttributes) + `<section class="layer-menu-section" aria-label="Úpravy a přesuny">${edits}</section>` +
+    layerMarkActions(item, markAttributes, M.layerStatusSource(state, c)(item, kind)) + `<section class="layer-menu-section" aria-label="Úpravy a přesuny">${edits}</section>` +
     (other ? `<section class="layer-menu-section" aria-label="Další akce">${other}</section>` : '');
   layerContextTrigger = trigger;
   trigger.setAttribute('aria-expanded', 'true');
@@ -1209,7 +1232,7 @@ function categoryTraitDetails(category, trait, categoryHidden, picked) {
   }
   const visibility = enabled ? 'Skrýt v náhledu' : 'Zobrazit v náhledu';
   const name = esc(trait.name);
-  return `<div class="category-trait-copy"><strong title="${name}"><span>${name}</span>${layerTagMarker(M.effectiveLayerTags(state, category, trait))}</strong><small>${status}</small></div>
+  return `<div class="category-trait-copy"><strong title="${name}"><span>${name}</span>${layerTagMarker(M.effectiveLayerTags(state, category, trait))}${layerStatusBadges(trait, true, M.layerStatusSource(state, category)(trait))}</strong><small>${status}</small></div>
     ${button('toggle-trait-visibility', '', trait.id, shown ? 'eye' : 'eye-off', `type="button" class="icon-button subtle category-trait-eye" aria-pressed="${shown}" aria-label="${visibility} · ${name}" title="${visibility}"`)}
     ${tool('rename-trait', `Přejmenovat ${trait.name}`, trait.id, 'edit')}
     ${button('open-layer-menu', '', trait.id, 'more', `type="button" class="icon-button subtle" data-kind="trait" data-category="${esc(category.id)}" aria-expanded="false" aria-controls="layerContext" aria-label="Akce · ${name}" title="Další akce"`)}`;

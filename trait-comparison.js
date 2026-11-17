@@ -18,7 +18,7 @@
         <button type="button" class="compare-info" data-compare-action="info" data-id="${esc(trait.id)}"
           aria-haspopup="dialog" aria-label="Info o vrstvě ${esc(trait.name)}">${icon('info')}</button>
       </div>
-      <div class="compare-trait-info"><h4>${esc(trait.name)}</h4><div class="compare-trait-marks">${layerMarkBadges(trait)}</div></div>
+      <div class="compare-trait-info"><h4>${esc(trait.name)}</h4><div class="compare-trait-marks">${layerMarkBadges(trait, false, M.layerStatusSource(state, cat)(trait))}</div></div>
       <div class="compare-trait-actions">
         ${button('open-trait-preview', 'Náhled vrstvy', trait.id, 'search', 'type="button" aria-haspopup="dialog"')}
         ${button('rename-trait', 'Přejmenovat', trait.id, 'edit', 'type="button"')}

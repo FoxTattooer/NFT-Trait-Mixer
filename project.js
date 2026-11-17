@@ -288,6 +288,23 @@
   const LAYER_STATUS_ICONS = Object.freeze({ wip: 'clock', fin: 'check', trash: 'trash', draw: 'brush', out: 'out' });
   const layerStatusKeys = Object.keys(LAYER_STATUS_ICONS);
   const LAYER_STATUS_LABELS = Object.freeze(Object.fromEntries(layerStatusKeys.map(key => [key, key.toUpperCase()])));
+  // For older records with several marks, FIN applies only without a competing status.
+  const layerStatusPriority = layerStatusKeys.filter(key => key !== 'fin').concat('fin');
+  const layerStatus = item => layerStatusPriority.find(key => item[key] === true) || '';
+  function layerStatusSource(project, category) {
+    const organizer = project.organizer?.[category.id];
+    const folders = new Map((organizer?.folders || []).map(folder => [folder.id, folder]));
+    const resolved = new Map();
+    function sourceFor(item, kind = 'trait') {
+      if (item === category || layerStatus(item)) return item;
+      const folderId = kind === 'folder' ? item.parentId : organizer?.assignments[item.id];
+      const folder = folders.get(folderId);
+      if (!folder) return category;
+      if (!resolved.has(folderId)) resolved.set(folderId, sourceFor(folder, 'folder'));
+      return resolved.get(folderId);
+    }
+    return sourceFor;
+  }
   const layerMarks = item => ({
     ...Object.fromEntries(layerStatusKeys.filter(key => item[key] === true).map(key => [key, true])),
     ...(['keep', 'todo', 'skip'].includes(item.decision) ? { decision: item.decision } : {}),
@@ -579,7 +596,7 @@
   }
   const api = { layerChildren, TRAIT_NOTE_LIMIT, normalizeTraitNote, LOOKBOOK_NAME_LIMIT, LOOKBOOK_STORY_LIMIT, normalizeLookbookText, LOOKBOOK_TAG_LIMIT, LOOKBOOK_TAG_GROUP_TITLES, lookbookTagKey, normalizeLookbookTags, lookbookTagOptions, lookbookTagGroupOptions, normalizeLookbookTagGroups, matchesLookbookTags, inheritedLayerTags, effectiveLayerTags, layerTagOptions,
     layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
-    LAYER_STATUS_LABELS, LAYER_STATUS_ICONS,
+    LAYER_STATUS_LABELS, LAYER_STATUS_ICONS, layerStatus, layerStatusSource,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
     empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

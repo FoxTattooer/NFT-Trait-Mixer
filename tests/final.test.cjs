@@ -132,6 +132,11 @@ test('FIN source follows category and folder marks while omitting WIP, DRAW, TRA
   const groups=Final.finCategories(M,active);
   assert.deepEqual(groups[0].rows.map(row=>row.id),['a','c']);
   assert.deepEqual(groups[0].rows[0].folders.map(folder=>folder.name),['Dready','Tmavé']);
+  const assignments = active.organizer.heads.assignments;
+  const originalFolder = assignments.a;
+  delete assignments.a;
+  assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
+  assignments.a = originalFolder;
   active.cats[0].traits[0].trash=true;
   assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
   active.cats[0].traits[0].trash=false;

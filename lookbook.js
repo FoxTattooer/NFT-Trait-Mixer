@@ -484,6 +484,7 @@
     const { folders, assignments } = organizerFolders(cat.id);
     const folderId = assignments[trait.id];
     const path = [cat.name, organizerPath(folders, folderId)].filter(Boolean).join(' / ');
+    const statusSource = M.layerStatusSource(state, cat);
     const cards = traits.map(item => `<button type="button" class="lookbook-card" data-lookbook-trait="${esc(item.id)}" aria-pressed="${item.id === traitId}" ${item.hidden ? 'data-hidden-trait' : ''}>
       <span class="lookbook-art">${safeMode ? '' : layerThumbnail(cat, item, 'lookbook-thumbnail')}${item.flag ? flagIcon(item.flag, true) : ''}</span>
       <span class="lookbook-card-caption"><span class="lookbook-tag" data-lookbook-card-name>${esc(label(item))}</span>${traitTagPreview(cat, item)}</span>
@@ -495,7 +496,7 @@
     </div>` : '';
     folderTagButton.hidden = !folderId;
     folderTagButton.dataset.id = folderId || '';
-    detailArea.innerHTML = detail(trait, path, true);
+    detailArea.innerHTML = detail(trait, path, true, layerStatusBadges(trait, true, statusSource(trait)));
     traitEdit.hidden = false;
     traitEdit.innerHTML = editor(trait, true);
     sheetArea.innerHTML = `<section class="lookbook-sheet">

@@ -297,10 +297,10 @@ body.compact-workspace #categoryOverview {padding:0 2px 2px}
 #layerTree .layer-category {min-width:0}
 #layerTree .category-pick > .icon:first-child {width:12px;height:12px;flex:none;color:var(--scheme-muted,var(--muted))}
 #layerTree .category-pick[aria-expanded=true] > .icon:first-child {transform:rotate(90deg)}
-#cats .category-copy {margin-inline-start:10px}
+#cats .category-copy {margin-inline-start:15px}
 body.compact-workspace #cats .category-name {font-size:18px!important;font-weight:650;line-height:1.2!important;color:var(--scheme-text,#f4eff6)}
 body.compact-workspace #cats[data-view=expanded] .category-name {font-size:19px!important}
-body.compact-workspace #cats .category-card.is-hidden .category-name {color:var(--scheme-muted,#b8b4bf);opacity:1;font-weight:550}
+body.compact-workspace #cats .category-card.is-hidden .category-name {color:var(--scheme-muted,#b8b4bf);opacity:.76;font-weight:550}
 #layerTree :is(.category-name,.layer-tree-label) {text-shadow:0 1px 2px #0009}
 #layerTree .category-branch[hidden] {display:none}
 #layerTree .category-branch {
@@ -316,6 +316,9 @@ body.compact-workspace #cats .category-card.is-hidden .category-name {color:var(
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
   white-space:normal;overflow-wrap:anywhere;font-size:16px;line-height:1.18;
 }
+#layerTree .layer-tree-folder .layer-tree-label {margin-inline-start:5px}
+#layerTree .layer-tree-folder:not(.has-visible-traits) .layer-tree-label {color:var(--scheme-muted,#b8b4bf);opacity:.8}
+#layerTree .layer-tree-folder.has-visible-traits .layer-tree-label {color:var(--scheme-text,#f4eff6);font-weight:650}
 #layerTree .category-branch .layer-thumb {flex:0 0 54px;height:44px}
 body.compact-workspace[data-color-scheme] #layerTree .category-branch .layer-thumb,
 #layerTree .category-branch .layer-thumb {background:none}

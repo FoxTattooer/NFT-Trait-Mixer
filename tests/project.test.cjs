@@ -204,6 +204,31 @@ test('review marks round-trip with the project and folder WIP reaches nested tra
   delete markedCategory.cats[0].wip;
   assert.deepEqual(M.workInProgress(markedCategory, markedCategory.cats[0]).traits, membership.traits);
 });
+test('moving a trait changes only inherited marks', () => {
+  const p = project();
+  const [source, destination] = p.cats;
+  const [trait] = source.traits;
+  p.organizer.a = {
+    folders: [
+      { id: 'parent', name: 'Hotové', parentId: null, fin: true },
+      { id: 'nested', name: 'Varianty', parentId: 'parent' },
+    ],
+    assignments: { [trait.id]: 'nested' },
+  };
+  destination.wip = true;
+  const markOf = category => M.layerStatus(M.layerStatusSource(p, category)(trait));
+  assert.equal(markOf(source), 'fin');
+  delete p.organizer.a.folders[0].fin;
+  assert.equal(markOf(source), '');
+  p.organizer.a.folders[0].fin = true;
+  M.moveTrait(p, trait.id, destination.id);
+  assert.equal(markOf(destination), 'wip');
+  assert.equal(trait.fin, undefined);
+  trait.fin = true;
+  M.moveTrait(p, trait.id, source.id);
+  assert.equal(markOf(source), 'fin');
+  assert.equal(trait.fin, true);
+});
 test('trait deletion removes selection, both kinds of rule references and snapshot selections', () => {
   const p = project();
   p.rules.push({ id: 'hide', source: 'blue', action: 'hide', targetCat: 'a', targetTrait: null });

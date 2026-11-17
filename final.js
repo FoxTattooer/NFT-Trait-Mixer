@@ -332,22 +332,22 @@
     });
   }
   function projectCategories(model, project) {
-    const marks = Object.keys(model.LAYER_STATUS_LABELS).filter(key => key !== 'fin').concat('fin');
-    const markFor = (item, inherited) => marks.find(key => item[key]) || inherited;
     return project.cats.map(category => {
       const children = model.layerChildren(project,category), rows = [];
-      function visit(parent, inheritedMark, inheritedFlag, folders) {
+      const statusSource = model.layerStatusSource(project,category);
+      function visit(parent, inheritedFlag, folders) {
         for (const { item, kind } of children(parent)) {
-          const mark = markFor(item, inheritedMark), flag = item.flag || inheritedFlag;
+          const flag = item.flag || inheritedFlag;
           if (kind === 'folders') {
-            visit(item.id,mark,flag,[...folders,{ key:item.id,name:item.name,psdSource:item.psdSource }]);
+            visit(item.id,flag,[...folders,{ key:item.id,name:item.name,psdSource:item.psdSource }]);
           } else {
+            const mark = model.layerStatus(statusSource(item));
             rows.push({ id:item.id, name:item.name, folders, trait:item, category, mark, flag,
               tags:model.effectiveLayerTags(project,category,item), path:folders.map(folder => folder.name).join(' / ') });
           }
         }
       }
-      visit(null,markFor(category,''),category.flag || '',[]);
+      visit(null,category.flag || '',[]);
       return { id:category.id,name:category.name,rows };
     });
   }

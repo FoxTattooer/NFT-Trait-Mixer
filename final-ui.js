@@ -10,8 +10,11 @@ function finalDatabase() {
   return finalConnection;
 }
 
-const markedTraits = category => category.traits.filter(trait => !trait.out && (category.fin || trait.fin));
-const markedFolders = category => organizerFolders(category.id).folders.filter(folder => folder.fin);
+const markedTraits = category => {
+  const statusSource = M.layerStatusSource(state, category);
+  return category.traits.filter(trait => M.layerStatus(statusSource(trait)) === 'fin');
+};
+const markedFolders = category => organizerFolders(category.id).folders.filter(folder => M.layerStatus(folder) === 'fin');
 const markedItems = category => [...markedFolders(category), ...markedTraits(category)];
 const isMarkedCategory = category => category.fin || markedItems(category).length;
 function markedCategory() {
@@ -20,10 +23,12 @@ function markedCategory() {
 }
 function renderMarkedEdit(category, item) {
   const isTrait = category.traits.includes(item);
+  const source = M.layerStatusSource(state, category)(item, isTrait ? 'trait' : 'folder');
   return `<form id="finalMarkedForm" class="final-marked-form">
     <label>Název<input name="name" value="${esc(item.name)}" type="text" maxlength="120" required></label>
     ${isTrait ? `<label>Poznámka<textarea name="note" maxlength="${M.TRAIT_NOTE_LIMIT}" rows="3">${esc(item.note || '')}</textarea></label>` : ''}
-    <label class="final-marked-check"><input type="checkbox" name="fin" ${item.fin ? 'checked' : ''}> Označeno FIN</label>
+    <label class="final-marked-check"><input type="checkbox" name="fin" ${item.fin ? 'checked' : ''}> ${source === item ? 'Označeno FIN' : 'Přidat vlastní FIN'}</label>
+    ${source === item ? '' : `<small>FIN ze složky ${esc(source.name)}</small>`}
     <button type="submit" class="primary">Uložit úpravy</button>
   </form>`;
 }
@@ -51,7 +56,7 @@ function renderFinalMarked(category, edit) {
     const path = organizerPath(folders, isTrait ? assignments[item.id] : item.parentId);
     return `<div class="final-row final-marked-row">
       <span class="layer-thumb">${!isTrait ? icon('folder') : safeMode ? icon('image') : layerThumbnail(category, item)}</span>
-      <span><strong>${esc(item.name)}</strong> ${item.fin ? '<span class="layer-fin-mark">FIN</span>' : ''}
+      <span><strong>${esc(item.name)}</strong> <span class="layer-fin-mark">FIN</span>
       ${path ? `<small>${esc(path)}</small>` : ''}${item.note ? `<small>${esc(item.note)}</small>` : ''}</span>${editButton(item)}
     </div>`;
   }).join('') + (!items.length ? `<p class="helper">${category ? 'Kategorie je prázdná.' : 'Ve Vrstvách otevři nabídku položky a v nabídce „Označit jako…“ vyber FIN.'}</p>` : '');
