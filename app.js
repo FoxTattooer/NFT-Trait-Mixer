@@ -2468,6 +2468,8 @@ const appearanceFont = $('appearanceFont');
 const controlAppearanceKey = 'nft-control-appearance';
 const controlAppearanceRanges = [...$('controlAppearanceSettings').querySelectorAll('input[type="range"]')];
 const controlActiveText = $('controlActiveText'), controlActiveColor = $('controlActiveColor');
+const controlIconGlow = $('controlIconGlow');
+const controlCustomIconGlow = $('controlCustomIconGlow'), controlIconGlowColor = $('controlIconGlowColor');
 const quietControlMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const controlAccents = new Set([
   'auto', 'custom', 'me', 'me-blue', 'me-new', 'quiet', 'yellow', 'red', 'ice',
@@ -2594,15 +2596,27 @@ function previewControlAppearance() {
   document.body.toggleAttribute('data-custom-active-ink', controlActiveText.checked);
   document.body.style.setProperty('--ui-control-active-ink', controlActiveColor.value);
   controlActiveColor.disabled = !controlActiveText.checked;
+  document.body.toggleAttribute('data-icon-glow', Number(controlIconGlow.value) > 0);
+  document.body.style.setProperty('--ui-control-icon-glow-color', controlCustomIconGlow.checked ? controlIconGlowColor.value : 'currentColor');
+  controlIconGlowColor.disabled = !controlCustomIconGlow.checked;
+}
+function savedControlColor(value, input) {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : input.defaultValue;
 }
 function restoreControlAppearance(saved = savedAppearance(controlAppearanceKey)) {
   fillAppearanceRanges(controlAppearanceRanges, savedAppearanceRanges(controlAppearanceRanges, saved));
   controlActiveText.checked = saved.customActiveInk === true;
-  controlActiveColor.value = typeof saved.activeInk === 'string' && /^#[0-9a-f]{6}$/i.test(saved.activeInk) ? saved.activeInk : controlActiveColor.defaultValue;
+  controlActiveColor.value = savedControlColor(saved.activeInk, controlActiveColor);
+  controlCustomIconGlow.checked = saved.customIconGlow === true;
+  controlIconGlowColor.value = savedControlColor(saved.iconGlowColor, controlIconGlowColor);
   previewControlAppearance();
 }
 function saveControlAppearance() {
-  const settings = { ...readAppearanceRanges(controlAppearanceRanges), customActiveInk: controlActiveText.checked, activeInk: controlActiveColor.value };
+  const settings = {
+    ...readAppearanceRanges(controlAppearanceRanges),
+    customActiveInk: controlActiveText.checked, activeInk: controlActiveColor.value,
+    customIconGlow: controlCustomIconGlow.checked, iconGlowColor: controlIconGlowColor.value,
+  };
   saveAppearancePreference(controlAppearanceKey, JSON.stringify(settings), $('controlAppearanceStatus'));
 }
 function pulseControl(event) {
@@ -2806,7 +2820,7 @@ for (const control of [appearanceFont, ...textAppearanceControls]) {
   control.addEventListener('input', previewTextAppearance);
   control.addEventListener('change', () => { previewTextAppearance(); saveTextAppearance(); });
 }
-for (const control of [...controlAppearanceRanges, controlActiveText, controlActiveColor]) {
+for (const control of [...controlAppearanceRanges, controlActiveText, controlActiveColor, controlCustomIconGlow, controlIconGlowColor]) {
   control.addEventListener('input', previewControlAppearance);
   control.addEventListener('change', () => { previewControlAppearance(); saveControlAppearance(); });
 }

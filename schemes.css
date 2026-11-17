@@ -926,3 +926,9 @@ body.compact-workspace[data-custom-active-ink] :is(.app-header,#appLayout,#lookb
   .layer-title-surface .layer-tag-fallback {display:none}
   .layer-title-surface .layer-tag-fallback + .layer-tag-previews {display:inline-flex}
 }
+
+body.compact-workspace[data-icon-glow] :is(.app-header,#appLayout,#workspaceTabs,#lookbookDialog,#settingsDialog) :is(button,summary) > .icon,
+body.compact-workspace[data-icon-glow] .layer-title-surface :is(.category-mark-icon,.layer-flag,.tag-swatch,.layer-tag-fallback) > .icon {
+  filter:drop-shadow(0 0 calc(1px + var(--ui-control-icon-glow-spread,.45) * 8px)
+    color-mix(in srgb,var(--ui-control-icon-glow-color,currentColor) calc(var(--ui-control-icon-glow,0) * 100%),transparent))!important;
+}

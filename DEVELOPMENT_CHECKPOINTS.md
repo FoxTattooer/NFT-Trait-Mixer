@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.184 | checkpoint/v0.7.184-zare-ikon | Nastavení intenzity, rozptylu a barvy záře ikon s náhledem. |
 | 0.7.183 | checkpoint/v0.7.183-podklad-a-znacky | Nastavitelný podklad názvů, jednotné značky, barva obsahu aktivních tlačítek a nápověda. |
 | 0.7.182 | checkpoint/v0.7.182-tlacitka-a-lookbook | Vzhled tlačítek a polí, plynulejší ovládání, hledání kategorií a složek a otevřené štítky Lookbooku. |
 | 0.7.181 | checkpoint/v0.7.181-akcenty-a-pismo | Samostatná schémata, Custom Accent se svítivostí, volby písma a barvy stavů i v OLED. |
