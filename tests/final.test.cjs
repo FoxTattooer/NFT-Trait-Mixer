@@ -6,6 +6,9 @@ const { createCanvas } = require('@napi-rs/canvas');
 const zip = require('../vendor/procreate-zip');
 const M = require('../project');
 const Final = require('../final');
+const PsdExport = require('../psd-export');
+const ag = require('ag-psd');
+const { loadImage } = require('@napi-rs/canvas');
 
 const png = createCanvas(1, 1).toBuffer('image/png');
 const inline = 'data:image/png;base64,' + png.toString('base64');
@@ -137,6 +140,55 @@ test('FIN source follows category and folder marks while omitting WIP, DRAW, TRA
   active.cats[0].traits[0].out=false;
   active.organizer.heads.folders[1].out=true;
   assert.deepEqual(Final.finCategories(M,active)[0].rows.map(row=>row.id),['c']);
+});
+
+test('export intersects folder, inherited status, flags and effective tags', () => {
+  const active = project(), cat = active.cats[0], org = active.organizer.heads;
+  cat.flag = 'red';
+  cat.lookbookTags = ['Hair'];
+  org.folders[0].out = true;
+  cat.traits[0].lookbookTags = ['Gold'];
+  cat.traits[1].lookbookTags = ['Gold'];
+  cat.traits[1].flag = 'blue';
+  cat.traits[2].out = true;
+  cat.traits[2].lookbookTags = ['Gold'];
+  cat.traits[2].excludedLookbookTags = ['Hair'];
+  const groups = Final.projectCategories(M,active);
+  assert.deepEqual(Final.exportScopes(groups).map(scope=>[scope.name,scope.count]),[['Hlavy',3],['Dready',2],['Tmavé',2],['Mimo',1]]);
+  const criteria = { scopes:new Set([Final.exportScopes(groups)[1].key]), marks:new Set(['out']), flags:new Set(['red']), tags:new Set(['hair','gold']) };
+  assert.deepEqual(Final.filterExportGroups(M,groups,criteria)[0].rows.map(row=>row.id),['a']);
+  assert.deepEqual(Final.filterExportGroups(M,groups,{...criteria,scopes:new Set(),anyTag:true})[0].rows.map(row=>row.id),['a','c']);
+  assert.deepEqual(Final.filterExportGroups(M,groups,{...criteria,marks:new Set(['fin'])})[0].rows,[]);
+});
+
+test('layered PSD retains PNG pixels, original coordinates, nested groups and chosen visibility', async () => {
+  const layer = (name, color, x, visible) => {
+    const canvas = createCanvas(3,2), ctx = canvas.getContext('2d');
+    ctx.fillStyle = color; ctx.fillRect(x,0,1,1);
+    return { name,visible,blob:new Blob([canvas.toBuffer('image/png')]) };
+  };
+  ag.initializeCanvas(createCanvas,(width,height)=>({ width,height,data:new Uint8ClampedArray(width*height*4) }));
+  const groups = [{ name:'Čepice',children:[
+    { name:'Klobouky',children:[layer('Kovbojka','#ff0000',1,true),layer('Buřinka','#ffff00',0,false)] },
+  ] },{ name:'Pozadí',children:[layer('Modrá','#0000ff',1,true)] }];
+  const progress = [];
+  const file = await PsdExport.encode(groups,{
+    canvas:createCanvas,load:async png=>loadImage(Buffer.from(await png.arrayBuffer())),write:ag.writePsd,
+    progress:(done,total)=>progress.push([done,total]),
+  });
+  const restored = ag.readPsd(await file.arrayBuffer(),{ useImageData:true });
+  assert.equal(file.type,'image/vnd.adobe.photoshop');
+  assert.deepEqual([restored.width,restored.height],[3,2]);
+  assert.deepEqual(restored.children.map(node=>node.name),['Pozadí','Čepice']);
+  const [hidden,visible] = restored.children[1].children[0].children;
+  assert.equal(hidden.name,'Buřinka');
+  assert.equal(hidden.hidden,true);
+  assert.equal(visible.name,'Kovbojka');
+  assert.equal(visible.hidden,false);
+  assert.deepEqual([visible.left,visible.top,visible.right,visible.bottom],[1,0,2,1]);
+  assert.deepEqual([...visible.imageData.data],[255,0,0,255]);
+  assert.deepEqual([...restored.imageData.data.slice(4,8)],[255,0,0,255],'the document preview agrees with the top visible layer');
+  assert.deepEqual(progress,[[1,3],[2,3],[3,3]]);
 });
 
 test('the empty ZIP scaffold creates the exact hierarchy for configured folder paths', async () => {

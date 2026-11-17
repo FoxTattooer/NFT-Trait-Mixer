@@ -202,6 +202,7 @@ function renderFinalMarked(category, edit) {
 
 function renderFinal() {
   const compose = finalView === 'compose' && !finalArchive;
+  $('finalExportBar').hidden = !compose;
   const rarities = finalView === 'rarities' && !finalArchive;
   for (const tab of $('finalViews').querySelectorAll('button')) {
     tab.setAttribute('aria-pressed', String(!finalArchive && tab.dataset.finalAction === 'show-' + finalView));

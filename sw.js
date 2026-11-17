@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.160';
+const CACHE = PREFIX + 'v0.7.161';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SKIN_ART = ['cup', 'emerald', 'gold', 'lime', 'mosaic', 'orange', 'purple', 'rainbow', 'red', 'silver', 'water']
@@ -13,18 +13,18 @@ const PDF_DOCUMENTS = new Set([
   './docs/NFT-Trait-Mixer-mobilni-design.pdf',
 ].map(path => new URL(path, self.registration.scope).pathname));
 const SHELL = [
-  './layer-inventory.css?build=07160', './layer-inventory.js?build=07160',
+  './layer-inventory.css?build=07161', './layer-inventory.js?build=07160',
   './inventory-base.js?build=07160', './inventory-base-ui.js?build=07131', './inventory-preview.js?build=07112', './inventory-review.js?build=07113', './inventory-dripd.json?build=07111',
   './pdf-info.css?build=07158', './pdf-info.js?build=07101',
   './trait-comparison.css?build=07158', './trait-comparison.js?build=07157',
   './lookbook.css?build=07159', './lookbook-cards.js?build=07148', './lookbook.js?build=07159',
-  './', './index.html', ROADMAP, './styles.css?build=07158', './design.css?build=07158', './compact.css?build=07160',
-  './schemes.css?build=07158', './drag.js?build=07135', './project.js?build=07160', './diagnostics.js?build=07160',
+  './', './index.html', ROADMAP, './styles.css?build=07158', './design.css?build=07161', './compact.css?build=07161',
+  './schemes.css?build=07161', './drag.js?build=07135', './project.js?build=07160', './diagnostics.js?build=07161',
   './showroom-mint.css?build=07158', './showroom-mint.js?build=07156',
   './showroom.css?build=07158', './showroom.js?build=07156', SHOWROOM_ART, LOOKBOOK_ART, ...SKIN_ART, './art/fox-credit-drop.png',
-  './step-history.js?build=07160', './app.js?build=07160', './recent.js?build=0789', './storage.js?build=07109', './final.js?build=07160', './final-ui.js?build=07160', './final-builder.js?build=07112',
+  './step-history.js?build=07160', './app.js?build=07161', './recent.js?build=0789', './storage.js?build=07109', './final.js?build=07161', './final-ui.js?build=07161', './final-builder.js?build=07161',
   './psd-core.js?build=0786', './psd-core.js',
-  './psd-file.js', './psd-ui.js?build=07153', './psd-worker.js', './vendor/ag-psd.js',
+  './psd-export.js?build=07161', './psd-export.js', './psd-file.js', './psd-ui.js?build=07153', './psd-worker.js', './vendor/ag-psd.js',
   './procreate-worker.js?build=0789', './procreate-file.js?build=0789', './procreate-plist.js', './procreate-tiles.js',
   './vendor/procreate-zip.js', './vendor/procreate-lzo.js', './manifest.webmanifest', './icons/icon-192-v073.png',
   './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png',

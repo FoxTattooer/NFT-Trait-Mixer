@@ -147,83 +147,6 @@ function pruneCache() {
   const ids = new Set(state.cats.flatMap(c => c.traits.map(t => t.id)));
   for (const key of imageCache.keys()) if (!ids.has(key)) imageCache.delete(key);
 }
-function renderCategorySort() {
-  const list = $('categorySortList');
-  if (!list) return;
-  $('sortCategoryCount').textContent = state.cats.length;
-  list.replaceChildren();
-  const fragment = document.createDocumentFragment();
-  state.cats.forEach((cat, index) => {
-    const row = document.createElement('div');
-    row.className = 'category-sort-row';
-    row.dataset.categoryId = cat.id;
-    const handle = document.createElement('span');
-    handle.className = 'category-sort-handle';
-    handle.textContent = '⠿';
-    handle.setAttribute('aria-label', 'Přetáhnout kategorii ' + cat.name);
-    const label = document.createElement('span');
-    label.className = 'category-sort-name';
-    label.textContent = cat.name;
-    const count = document.createElement('span');
-    count.className = 'category-sort-traits';
-    count.textContent = cat.traits.length + ' traitů';
-    row.append(handle, label, count);
-    fragment.append(row);
-  });
-  list.append(fragment);
-}
-function commitCategorySort(ids) {
-  if (busy || ids.length !== state.cats.length) return;
-  const byId = new Map(state.cats.map(cat => [cat.id, cat]));
-  if (ids.some(id => !byId.has(id)) || new Set(ids).size !== ids.length) return;
-  if (ids.every((id, index) => id === state.cats[index].id)) return;
-  change(() => { state.cats = ids.map(id => byId.get(id)); }, 'Pořadí kategorií změněno');
-  renderCategorySort();
-}
-function setupCategorySortDrag() {
-  const list = $('categorySortList');
-  let drag = null;
-  const cleanup = () => {
-    if (!drag) return;
-    drag.row.classList.remove('is-sorting');
-    list.querySelectorAll('.sort-target').forEach(el => el.classList.remove('sort-target'));
-    drag = null;
-  };
-  list.addEventListener('pointerdown', e => {
-    const handle = e.target.closest('.category-sort-handle');
-    const row = handle?.closest('.category-sort-row');
-    if (!row || busy) return;
-    e.preventDefault();
-    drag = { row, pointerId: e.pointerId, startY: e.clientY, moved: false };
-    row.classList.add('is-sorting');
-    handle.setPointerCapture(e.pointerId);
-  });
-  list.addEventListener('pointermove', e => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    e.preventDefault();
-    if (Math.abs(e.clientY - drag.startY) > 5) drag.moved = true;
-    const bounds = list.getBoundingClientRect();
-    if (e.clientY > bounds.bottom - 35) list.scrollTop += 13;
-    else if (e.clientY < bounds.top + 35) list.scrollTop -= 13;
-    const rows = [...list.querySelectorAll('.category-sort-row')];
-    let target = rows.find(row => e.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2);
-    if (!target) target = rows[rows.length - 1];
-    if (target && target !== drag.row) {
-      const before = e.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
-      list.insertBefore(drag.row, before ? target : target.nextSibling);
-    }
-  });
-  list.addEventListener('pointerup', e => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    const moved = drag.moved;
-    const ids = [...list.querySelectorAll('.category-sort-row')].map(row => row.dataset.categoryId);
-    cleanup();
-    if (moved) commitCategorySort(ids);
-  });
-  list.addEventListener('pointercancel', cleanup);
-  $('categorySortDialog').addEventListener('close', cleanup);
-}
-setupCategorySortDrag();
 const stepTime = new Intl.DateTimeFormat('cs-CZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const stepDate = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'medium' });
 function historyEntries() {
@@ -1293,8 +1216,8 @@ function renderCategories(hidden, categories) {
   document.body.classList.toggle('compact-categories', compactView);
   list.dataset.view = compactView ? 'compact' : 'expanded';
   document.body.classList.toggle('expanded-categories', !compactView);
-  $('catCountLabel').textContent = state.cats.length;
-  $('catCount').setAttribute('aria-label', `Rychlé seřazení kategorií · celkem ${state.cats.length}`);
+  $('categoryExportBadge').textContent = state.cats.length;
+  $('openCategoryExport').setAttribute('aria-label', `Export kategorií · ${counted(state.cats.length, 'kategorie', 'kategorie', 'kategorií')}`);
   if (!categories.length) {
     list.innerHTML = `<p class="empty-list">${state.cats.length ? 'Tomuto filtru neodpovídají žádné kategorie.' : 'Zatím žádné kategorie.<br>Začni třeba pozadím, tělem nebo doplňky.'}</p>`;
     return;
@@ -3004,8 +2927,6 @@ async function handleAction(action, id, element) {
       compactView = !compactView; localStorage.setItem('nft-compact-categories', String(compactView)); render(true); break;
     case 'quick-prev': scrollQuickTraits(-1); break;
     case 'quick-next': scrollQuickTraits(1); break;
-    case 'open-category-sort': renderCategorySort(); $('categorySortDialog').showModal(); break;
-    case 'close-category-sort': $('categorySortDialog').close(); break;
     case 'open-settings':
       $('colorSchemes').open = false;
       $('settingsDialog').showModal();

@@ -291,22 +291,55 @@
       return { id, name, path, rows, unresolved };
     });
   }
-  function finCategories(model, project) {
-    const exclusionMarks = Object.keys(model.LAYER_STATUS_LABELS).filter(key => key !== 'fin');
-    const canExport = item => !exclusionMarks.some(key => item[key]);
+  function projectCategories(model, project) {
+    const marks = Object.keys(model.LAYER_STATUS_LABELS).filter(key => key !== 'fin').concat('fin');
+    const markFor = (item, inherited) => marks.find(key => item[key]) || inherited;
     return project.cats.map(category => {
       const children = model.layerChildren(project,category), rows = [];
-      function visit(parent, inherited, folders) {
+      function visit(parent, inheritedMark, inheritedFlag, folders) {
         for (const { item, kind } of children(parent)) {
-          const fin = canExport(item) && (inherited || item.fin);
-          if (kind === 'folders') visit(item.id,fin,[...folders,{ key:item.id,name:item.name }]);
-          else if (fin) rows.push({ id:item.id, name:item.name, folders, trait:item, category, path:folders.map(folder => folder.name).join(' / ') });
+          const mark = markFor(item, inheritedMark), flag = item.flag || inheritedFlag;
+          if (kind === 'folders') {
+            visit(item.id,mark,flag,[...folders,{ key:item.id,name:item.name,psdSource:item.psdSource }]);
+          } else {
+            rows.push({ id:item.id, name:item.name, folders, trait:item, category, mark, flag,
+              tags:model.effectiveLayerTags(project,category,item), path:folders.map(folder => folder.name).join(' / ') });
+          }
         }
       }
-      visit(null,category.fin && canExport(category),[]);
+      visit(null,markFor(category,''),category.flag || '',[]);
       return { id:category.id,name:category.name,rows };
     });
   }
+  const scopeKey = (group, folder = null) => JSON.stringify([group.id,folder]);
+  function exportScopes(groups) {
+    const scopes = new Map();
+    for (const group of groups) {
+      const root = scopeKey(group);
+      scopes.set(root,{ key:root, name:group.name, depth:0, path:group.name, count:group.rows.length });
+      for (const row of group.rows) {
+        const path = [group.name];
+        for (const [index,folder] of row.folders.entries()) {
+          path.push(folder.name);
+          const key = scopeKey(group,folder.key);
+          if (!scopes.has(key)) scopes.set(key,{ key, name:folder.name, depth:index+1, path:path.join(' / '), count:0 });
+          scopes.get(key).count++;
+        }
+      }
+    }
+    return [...scopes.values()];
+  }
+  function filterExportGroups(model, groups, { scopes = new Set(), marks = new Set(), flags = new Set(), tags = new Set(), anyTag = false } = {}) {
+    const inScope = (group,row) => !scopes.size || scopes.has(scopeKey(group)) || row.folders.some(folder => scopes.has(scopeKey(group,folder.key)));
+    const matchesTags = row => {
+      if (!tags.size) return true;
+      const keys = new Set((row.tags || []).map(model.lookbookTagKey));
+      return anyTag ? [...tags].some(key => keys.has(key)) : [...tags].every(key => keys.has(key));
+    };
+    return groups.map(group => ({ ...group, rows:group.rows.filter(row =>
+      inScope(group,row) && (!marks.size || marks.has(row.mark || '')) && (!flags.size || flags.has(row.flag || '')) && matchesTags(row)) }));
+  }
+  const finCategories = (model,project) => filterExportGroups(model,projectCategories(model,project),{ marks:new Set(['fin']) });
   function draftProject(model, title, categories, excluded) {
     const project = model.empty(), images = new Map();
     project.name = title;
@@ -324,11 +357,11 @@
           if (!folderId) {
             folderId = `${id}-folder-${folders.length+1}`;
             folderIds.set(folder.key,folderId);
-            folders.push({ id:folderId,name:folder.name,parentId });
+            folders.push({ id:folderId,name:folder.name,parentId,psdSource:folder.psdSource });
           }
           parentId = folderId;
         }
-        traits.push({ id:traitId,name:row.name });
+        traits.push({ id:traitId,name:row.name,psdSource:row.trait?.psdSource });
         if (parentId) assignments[traitId] = parentId;
         images.set(traitId,row);
       }
@@ -349,7 +382,7 @@
   }
 
   const api = { open, snapshot, save, list, load, image, fileName, zipProject, loadWorkspace, saveWorkspace,
-    parseLayout, directoryFiles, folderCategories, finCategories, draftProject, zipFolderTemplate };
+    parseLayout, directoryFiles, folderCategories, finCategories, projectCategories, exportScopes, filterExportGroups, draftProject, zipFolderTemplate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitFinal = api;
 })(globalThis);

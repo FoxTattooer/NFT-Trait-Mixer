@@ -1,1 +1,1 @@
-export { readPsd, initializeCanvas, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from 'ag-psd';
+export { readPsd, writePsd, initializeCanvas, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from 'ag-psd';
