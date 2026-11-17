@@ -470,6 +470,7 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
 .layer-panel-heading #layerCategory {
   width:100%;min-width:0;min-height:44px;margin:0;padding:5px 7px;font-size:16px;text-overflow:ellipsis;
 }
+#layerPanelActions #layerTraitSearchToggle {display:none}
 .workspace-tool-overflow {display:none}
 .category-export-tool {position:relative;flex:0 0 44px;width:44px;min-height:44px;padding:0}
 .category-export-tool .icon {width:19px;height:19px;transform:translate(-3px,-2px)}
@@ -486,9 +487,24 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
   display:flex;position:absolute;z-index:10;inset-inline-end:0;top:calc(100% + 3px);gap:4px;padding:5px;
   border:1px solid var(--scheme-stroke);border-radius:12px;background:var(--scheme-panel);box-shadow:0 8px 22px #0008;
 }
-@container layer-toolbar (max-width:318px) {
+@container layer-toolbar (width < 284px) {
   #layerPanelOverflow {display:block}
   #layerPanelOverflow:not([open]) + .layer-panel-utility {display:none}
+}
+@media (orientation:landscape), (min-width:901px) {
+  @container layer-toolbar (min-width:284px) and (max-width:318px) {
+    #layerPanelOverflow {display:block}
+    #layerPanelOverflow:not([open]) + .layer-panel-utility {display:none}
+  }
+}
+@media (max-width:900px) and (orientation:portrait) {
+  .layer-panel-heading, #categoryOverview .category-filter-bar {justify-content:center}
+  .layer-panel-heading #layerCategoryPicker {display:none}
+  #layerPanelActions #layerTraitSearchToggle {display:inline-flex}
+  #layerPanelActions .icon {width:18px;height:18px}
+  #layerPanelActions .category-export-tool .icon {transform:none}
+  #categoryStatusFilters {justify-content:center}
+  #categoryStatusFilters button {width:44px;height:44px;padding-inline:0}
 }
 @container manage-toolbar (max-width:332px) {
   #managePanelOverflow {display:block}
@@ -830,7 +846,7 @@ body.compact-workspace :is(#traitsPanel,#snapshotsPanel) {padding:9px!important}
 }
 .trait-search-field > .icon {width:17px;height:17px;flex:none}
 .trait-search-field:focus-within { border-color: var(--control-accent, var(--scheme-accent)); }
-#traitSearch {
+.trait-search-field > input {
   flex: 1 1 0;
   min-width: 0;
   min-height: 44px;
@@ -844,6 +860,8 @@ body.compact-workspace :is(#traitsPanel,#snapshotsPanel) {padding:9px!important}
   font: inherit;
   font-size: 16px;
 }
+#layerTraitSearchField { margin-bottom: 6px; }
+#layerTraitSearchResults:not([hidden]) ~ :is(#layerTree, [data-action="add-category"]) {display:none}
 .trait-search-results {
   display: grid;
   gap: 5px;

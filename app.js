@@ -12,7 +12,8 @@ const libraryOpen = new Set(), libraryPages = {};
 let libraryHeaderMarkup = '';
 const libraryBodyMarkup = new WeakMap();
 const PAGE_SIZE = 24;
-let traitSearchLimit = PAGE_SIZE, traitSearchMarkup = '';
+const layerTraitSearch = { input: $('layerTraitSearch'), results: $('layerTraitSearchResults'), limit: PAGE_SIZE, markup: '' };
+const snapshotTraitSearch = { input: $('traitSearch'), results: $('traitSearchResults'), limit: PAGE_SIZE, markup: '' };
 let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, dialogResolve;
 let recentProject;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
@@ -309,7 +310,7 @@ const LAYER_BATCH = 48;
 let layerLimit = LAYER_BATCH;
 let openLayerCategories = new Map();
 const layerBrowseHistory = [];
-const layerScrollPanes = [$('catsPanel'), $('traitsPanel').closest('.inspector'), $('traitSearchResults')];
+const layerScrollPanes = [$('catsPanel'), $('traitsPanel').closest('.inspector'), layerTraitSearch.results, snapshotTraitSearch.results];
 const workspaceScroll = $('workspaceScroll');
 
 function workspaceScrollPosition() {
@@ -323,9 +324,10 @@ function scrollWorkspaceTo({ x, y }) {
 }
 
 function captureLayerView(source) {
-  const list = source?.closest('#cats, #layerReviewPanel, #traitSearchResults') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
+  const list = source?.closest('#cats, #layerReviewPanel, .trait-search-results') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
     panel: mobilePanel, active, layerLimit, categoryFilter, statusFilters: new Map(categoryStatusFilters),
+    layerSearchOpen: !$('layerTraitSearchField').hidden,
     categories: new Map(openLayerCategories),
     expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
     tabSelected: workspaceTabSelected, portrait: portraitWorkspace.matches,
@@ -339,6 +341,7 @@ function returnToLayerView() {
   const view = layerBrowseHistory.pop();
   if (!view) return;
   active = view.active;
+  setLayerTraitSearchOpen(view.layerSearchOpen);
   layerLimit = view.layerLimit;
   categoryFilter = view.categoryFilter;
   categoryStatusFilters = view.statusFilters;
@@ -627,6 +630,7 @@ function renderLayerTree() {
   grid.setAttribute('aria-pressed', String(compactView));
   syncWorkspaceTabs();
   if (busy) return;
+  renderLayerTraitSearch();
   const { hidden } = M.conflicts(state);
   const manageTree = $('traits');
   if (manage && c) renderLayerBranch(manageTree, c, layerLimit, !hidden.has(c.id), true);
@@ -1585,39 +1589,50 @@ function renderSnapshotCategoryTraits(c, traits) {
     '</div>';
 }
 const foldTraitName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-function renderTraitSearch() {
-  const terms = foldTraitName($('traitSearch').value).trim().split(/\s+/).filter(Boolean);
-  const searching = mobilePanel === 'snapshots' && terms.length > 0;
-  const results = $('traitSearchResults');
+function renderTraitSearch(search, enabled) {
+  const { input, results, limit } = search;
+  const terms = enabled ? foldTraitName(input.value).trim().split(/\s+/).filter(Boolean) : [];
+  const searching = terms.length > 0;
   results.hidden = !searching;
-  $('snapshotLayerLibrary').hidden = searching;
   let markup = '';
   if (searching) {
     const prefix = [], other = [];
-    for (const cat of state.cats.filter(categoryPassesFilter)) for (const trait of listedTraits(cat)) {
+    const wholeProject = search === layerTraitSearch;
+    const categories = wholeProject ? state.cats : state.cats.filter(categoryPassesFilter);
+    for (const cat of categories) for (const trait of wholeProject ? cat.traits : listedTraits(cat)) {
       const name = foldTraitName(trait.name);
       if (terms.every(term => name.includes(term))) {
         (name.startsWith(terms[0]) ? prefix : other).push({ cat, trait });
       }
     }
     const matches = [...prefix, ...other];
-    markup = matches.length ? matches.slice(0, traitSearchLimit).map(({ cat, trait }) =>
+    markup = matches.length ? matches.slice(0, limit).map(({ cat, trait }) =>
       button('reveal-trait', `<span class="layer-thumb">${safeMode ? '' : layerThumbnail(cat, trait)}</span>
         <span class="trait-search-copy"><strong>${esc(trait.name)}</strong><small>${esc(cat.name)}</small></span>${icon('chevron')}`,
         trait.id, '', 'type="button" class="trait-search-result"')).join('') :
       '<p class="empty-list" role="status">Žádné traity neodpovídají hledání.</p>';
-    if (matches.length > traitSearchLimit) {
+    if (matches.length > limit) {
       markup += button('more-trait-results', 'Zobrazit další shody', '', 'down', 'type="button" class="subtle trait-search-more"');
     }
   }
-  if (traitSearchMarkup !== markup) {
+  if (search.markup !== markup) {
     results.innerHTML = markup;
-    traitSearchMarkup = markup;
+    search.markup = markup;
   }
   return searching;
 }
+function setLayerTraitSearchOpen(open) {
+  $('layerTraitSearchField').hidden = !open;
+  $('layerTraitSearchToggle').setAttribute('aria-expanded', String(open));
+}
+function renderLayerTraitSearch() {
+  const field = $('layerTraitSearchField');
+  if (!state.cats.length || !portraitWorkspace.matches) setLayerTraitSearchOpen(false);
+  renderTraitSearch(layerTraitSearch, mobilePanel === 'layers' && !field.hidden);
+}
 function revealTrait({ cat, trait }, source) {
   const view = captureLayerView(source);
+  setLayerTraitSearchOpen(false);
   if (!categoryPassesFilter(cat) || matchingLayerIds(cat)?.has(trait.id) === false) resetCategoryFilters();
   revealLayerRow(cat, 'traits', trait.id, organizerFolders(cat.id).assignments[trait.id], view);
 }
@@ -1629,7 +1644,8 @@ function revealLayerRow(cat, kind, id, parentId, view) {
   const index = mixedLayerRows(cat).findIndex(row => row.kind === kind && row.item.id === id);
   if (index < 0) return;
   layerBrowseHistory.push(view);
-  $('traitSearch').blur();
+  snapshotTraitSearch.input.blur();
+  layerTraitSearch.input.blur();
   active = cat.id;
   openLayerCategories.set(cat.id, Math.max(openLayerCategories.get(cat.id) || 0, Math.ceil((index + 1) / LAYER_BATCH) * LAYER_BATCH));
   selectWorkspaceTab(true);
@@ -1647,7 +1663,8 @@ function revealLayerRow(cat, kind, id, parentId, view) {
 }
 function renderSnapshotLayerLibrary() {
   const container = $('snapshotLayerLibrary');
-  const searching = renderTraitSearch();
+  const searching = renderTraitSearch(snapshotTraitSearch, mobilePanel === 'snapshots');
+  container.hidden = searching;
   const canShow = !safeMode && !searching && mobilePanel === 'snapshots';
   const shownTraits = new Map();
   const categories = state.cats.filter(categoryPassesFilter);
@@ -2456,6 +2473,7 @@ workspaceScroll.addEventListener('scroll', () => {
 }, { passive: true });
 portraitWorkspace.addEventListener('change', () => {
   workspaceTabsCompactFromScroll = false;
+  renderLayerTraitSearch();
   setWorkspaceTabsCollapsed(false, document.activeElement === $('workspaceTabsHandle'));
 });
 landscapeWorkspace.addEventListener('change', syncWorkspaceTabs);
@@ -2560,6 +2578,14 @@ async function handleAction(action, id, element) {
       renderLayerReview();
       mountThumbnails();
       break;
+    case 'toggle-layer-trait-search': {
+      const open = $('layerTraitSearchField').hidden;
+      closeWorkspaceToolMenus();
+      setLayerTraitSearchOpen(open);
+      if (open) layerTraitSearch.input.focus();
+      refreshTraitSearch(layerTraitSearch);
+      break;
+    }
     case 'filter-category-mark':
       if (!Object.hasOwn(layerStatusLabels, id)) break;
       categoryFilter = 'all';
@@ -2618,7 +2644,7 @@ async function handleAction(action, id, element) {
       resetLayerBulk();
       renderLayerBulk();
       const control = mobilePanel === 'traits' ? $('traitsPanel').querySelector('[data-action="start-layer-bulk"]')
-        : $(`layer-branch-${active}`)?.previousElementSibling.querySelector('.category-pick') || $('layerCategory');
+        : $(`layer-branch-${active}`)?.previousElementSibling.querySelector('.category-pick') || $(portraitWorkspace.matches ? 'layerTraitSearchToggle' : 'layerCategory');
       control?.focus({ preventScroll: true });
       break;
     }
@@ -2658,10 +2684,11 @@ async function handleAction(action, id, element) {
       break;
     }
     case 'more-trait-results': {
-      const offset = traitSearchLimit;
-      traitSearchLimit += PAGE_SIZE;
-      renderSnapshotLayerLibrary();
-      $('traitSearchResults').querySelectorAll('.trait-search-result')[offset]?.focus();
+      const search = layerTraitSearch.results.contains(element) ? layerTraitSearch : snapshotTraitSearch;
+      const offset = search.limit;
+      search.limit += PAGE_SIZE;
+      refreshTraitSearch(search);
+      search.results.querySelectorAll('.trait-search-result')[offset]?.focus();
       break;
     }
     case 'open-layer-menu': openLayerContext(element, id); break;
@@ -3241,23 +3268,37 @@ for (const id of ['layerReviewCategory', 'layerReviewFolder', 'layerReviewOrder'
   renderLayerReview();
   mountThumbnails();
 });
-$('traitSearch').addEventListener('input', () => {
-  traitSearchLimit = PAGE_SIZE;
-  renderSnapshotLayerLibrary();
-  $('traitSearchResults').scrollTop = 0;
-});
-$('traitSearch').addEventListener('keydown', event => {
-  if (event.isComposing) return;
-  if (event.key === 'Enter') {
-    const first = $('traitSearchResults').querySelector('.trait-search-result');
-    if (first) { event.preventDefault(); first.click(); }
-  } else if (event.key === 'Escape' && event.currentTarget.value) {
-    event.preventDefault();
-    event.currentTarget.value = '';
-    traitSearchLimit = PAGE_SIZE;
-    renderSnapshotLayerLibrary();
+function refreshTraitSearch(search) {
+  if (search === snapshotTraitSearch) renderSnapshotLayerLibrary();
+  else {
+    renderLayerTraitSearch();
+    mountThumbnails();
   }
-});
+}
+for (const search of [layerTraitSearch, snapshotTraitSearch]) {
+  const { input, results } = search;
+  const updateResults = () => {
+    search.limit = PAGE_SIZE;
+    refreshTraitSearch(search);
+    results.scrollTop = 0;
+  };
+  input.addEventListener('input', updateResults);
+  input.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    if (event.key === 'Enter') {
+      const first = results.querySelector('.trait-search-result');
+      if (first) { event.preventDefault(); first.click(); }
+    } else if (event.key === 'Escape' && input.value) {
+      event.preventDefault();
+      input.value = '';
+      updateResults();
+    } else if (event.key === 'Escape' && search === layerTraitSearch) {
+      event.preventDefault();
+      $('layerTraitSearchToggle').click();
+      $('layerTraitSearchToggle').focus({ preventScroll: true });
+    }
+  });
+}
 function openTraitFiles(categoryId) {
   const input = $('traitFiles');
   input.dataset.category = categoryId;

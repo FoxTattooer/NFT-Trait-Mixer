@@ -383,7 +383,7 @@ click('#layersTab');
 assert.equal(get('appLayout').dataset.mobilePanel,'layers');
 assert.equal(header.firstElementChild.id,'layerCategoryPicker');
 assert.deepEqual([...header.querySelectorAll('.layer-panel-actions button')].map(button=>button.id),
-  ['compactToggle','addCat','openCategoryExport','layerReviewToggle','layerReviewFilter']);
+  ['layerTraitSearchToggle','compactToggle','addCat','openCategoryExport','layerReviewToggle','layerReviewFilter']);
 assert.equal(get('layerReviewTools').parentElement, get('layerPanelActions'), 'review tools share the Layers toolbar');
 assert.equal(get('categoryExportBadge').textContent,'1');
 assert(header.contains(get('layerCategory')) && header.contains(get('compactToggle')) && header.contains(get('addCat')));
@@ -687,6 +687,21 @@ searchProject.organizer['search-cat'] = {
   assignments: Object.fromEntries(searchTraits.map(trait => [trait.id, 'search-child'])),
 };
 const beforeSearch = JSON.stringify(searchProject);
+click('#layerTraitSearchToggle');
+assert.equal(w.document.activeElement, get('layerTraitSearch'));
+assert(!get('layerTraitSearchField').hidden && get('layerTraitSearchResults').hidden);
+get('layerTraitSearch').value = 'goku aqua';
+get('layerTraitSearch').dispatchEvent(new w.Event('input', { bubbles:true }));
+assert(find('#layerTraitSearchResults [data-id="search-61"]'));
+get('layerTraitSearch').dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+assert(get('layerTraitSearchField').hidden);
+assert.equal(w.document.activeElement.dataset.id, 'search-61');
+click('#layersTab');
+assert(!get('layerTraitSearchField').hidden && !get('layerTraitSearchResults').hidden);
+assert.equal(w.document.activeElement.dataset.id, 'search-61');
+click('#layerTraitSearchToggle');
+assert(get('layerTraitSearchField').hidden && get('layerTraitSearchResults').hidden);
+assert.equal(JSON.stringify(w.inspectState()), beforeSearch);
 const search = value => {
   get('traitSearch').value = value;
   get('traitSearch').dispatchEvent(new w.Event('input', { bubbles:true }));
