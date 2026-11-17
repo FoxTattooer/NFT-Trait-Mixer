@@ -326,7 +326,7 @@ function scrollWorkspaceTo({ x, y }) {
 function captureLayerView(source) {
   const list = source?.closest('#cats, #layerReviewPanel, .trait-search-results') || (source === $('layerCategory') ? $('layerPanelHeading') : null);
   return {
-    panel: mobilePanel, active, layerLimit, categoryFilter, onlyActiveTraits, statusFilters: new Map(categoryStatusFilters),
+    panel: mobilePanel, active, layerLimit, categoryFilter, onlyActiveTraits, activeFilterOpened, statusFilters: new Map(categoryStatusFilters),
     layerSearchOpen: !$('layerTraitSearchField').hidden,
     categories: new Map(openLayerCategories),
     expanded: Object.fromEntries(Object.entries(organizerExpanded).map(([id, folders]) => [id, new Set(folders)])),
@@ -345,6 +345,7 @@ function returnToLayerView() {
   layerLimit = view.layerLimit;
   categoryFilter = view.categoryFilter;
   onlyActiveTraits = view.onlyActiveTraits;
+  activeFilterOpened = view.activeFilterOpened;
   visibleTraitIds = null;
   categoryStatusFilters = view.statusFilters;
   filteredLayerIds.clear();
@@ -381,7 +382,7 @@ const categoryViewModes = [
   { id: 'unmarked', label: 'Bez označení', icon: 'tag' },
 ];
 let categoryFilter = 'all', categoryStatusFilters = new Map();
-let onlyActiveTraits = false, visibleTraitIds = null;
+let onlyActiveTraits = false, visibleTraitIds = null, activeFilterOpened = null;
 const filteredLayerIds = new Map();
 let layerReviewOpen = false, layerReviewSection = '', layerReviewMarkup = '', layerReviewLimit = PAGE_SIZE;
 let openReviewMatch = '', layerReviewCopiesLimit = PAGE_SIZE;
@@ -389,10 +390,17 @@ let matchCategory = '', matchFolder = '', matchOrder = 'tree';
 
 function resetCategoryFilters() {
   categoryFilter = 'all';
-  onlyActiveTraits = false;
-  visibleTraitIds = null;
+  clearActiveTraitFilter();
   categoryStatusFilters.clear();
   filteredLayerIds.clear();
+}
+function clearActiveTraitFilter() {
+  onlyActiveTraits = false;
+  visibleTraitIds = null;
+  if (!activeFilterOpened) return;
+  for (const id of activeFilterOpened.categories) openLayerCategories.delete(id);
+  for (const [categoryId, folderId] of activeFilterOpened.folders) organizerExpanded[categoryId]?.delete(folderId);
+  activeFilterOpened = null;
 }
 function matchingStatusLayerIds(category, view, statusFilters, visibleIds = null) {
   if (!statusFilters.size && view !== 'unmarked' && !visibleIds) return null;
@@ -2606,15 +2614,24 @@ async function handleAction(action, id, element) {
       render(true);
       break;
     case 'filter-active-traits':
-      onlyActiveTraits = !onlyActiveTraits;
-      if (onlyActiveTraits) {
+      if (onlyActiveTraits) clearActiveTraitFilter();
+      else {
+        onlyActiveTraits = true;
+        activeFilterOpened = { categories: [], folders: [] };
         if (categoryFilter === 'hidden') categoryFilter = 'all';
         filteredLayerIds.clear();
         for (const category of state.cats.filter(categoryPassesFilter)) {
           const ids = matchingLayerIds(category);
-          openLayerCategories.set(category.id, Math.max(ids.size, openLayerCategories.get(category.id) || LAYER_BATCH));
-          const expanded = organizerExpanded[category.id] ||= new Set();
-          for (const folder of organizerFolders(category.id).folders) if (ids.has(folder.id)) expanded.add(folder.id);
+          if (!openLayerCategories.has(category.id)) {
+            openLayerCategories.set(category.id, Math.max(ids.size, LAYER_BATCH));
+            activeFilterOpened.categories.push(category.id);
+          }
+          const folders = organizerExpanded[category.id] ||= new Set();
+          for (const { id } of organizerFolders(category.id).folders) {
+            if (!ids.has(id) || folders.has(id)) continue;
+            folders.add(id);
+            activeFilterOpened.folders.push([category.id, id]);
+          }
         }
       }
       layerLimit = LAYER_BATCH;
@@ -2622,7 +2639,7 @@ async function handleAction(action, id, element) {
       break;
     case 'cycle-category-view':
       categoryFilter = nextCategoryView(categoryFilter, categoryStatusFilters).id;
-      onlyActiveTraits = false;
+      clearActiveTraitFilter();
       categoryStatusFilters.clear();
       layerLimit = LAYER_BATCH;
       render(true);
