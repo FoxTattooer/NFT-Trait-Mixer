@@ -450,6 +450,41 @@
     });
     return p;
   }
+  // Copy a complete project into another, remapping every ID and reference, even for a copy of itself.
+  function merge(base, incoming) {
+    const next = clone(base), added = clone(incoming), ids = new Map();
+    const remap = id => id == null ? id : ids.get(id) || id;
+    const records = [...added.cats.flatMap(c => [c, ...c.traits]),
+      ...Object.values(added.organizer).flatMap(org => org.folders), ...added.rules, ...added.snapshots,
+      ...added.lookbookCards.flatMap(card => [card, ...card.variants])];
+    for (const record of records) ids.set(record.id, uid());
+    for (const record of records) record.id = remap(record.id);
+    const selectionMap = values => Object.fromEntries(Object.entries(values || {}).map(([cat, trait]) => [remap(cat), remap(trait)]));
+    const extrasMap = values => Object.fromEntries(Object.entries(values || {}).map(([cat, traits]) => [remap(cat), traits.map(remap)]));
+    for (const rule of added.rules) { rule.source = remap(rule.source); rule.targetCat = remap(rule.targetCat); rule.targetTrait = remap(rule.targetTrait); }
+    for (const snapshot of added.snapshots) {
+      snapshot.selected = selectionMap(snapshot.selected);
+      snapshot.selectedExtras = extrasMap(snapshot.selectedExtras);
+      snapshot.visibility = Object.fromEntries(Object.entries(snapshot.visibility || {}).map(([cat, visible]) => [remap(cat), visible]));
+    }
+    for (const card of added.lookbookCards) for (const item of [card, ...card.variants]) item.layers = item.layers.map(remap);
+    for (const [cat, org] of Object.entries(added.organizer)) {
+      for (const folder of org.folders) folder.parentId = remap(folder.parentId);
+      next.organizer[remap(cat)] = { folders: org.folders, assignments: selectionMap(org.assignments) };
+    }
+    next.cats.push(...added.cats);
+    Object.assign(next.selected, selectionMap(added.selected));
+    Object.assign(next.selectedExtras, extrasMap(added.selectedExtras));
+    next.rules.push(...added.rules); next.snapshots.push(...added.snapshots); next.lookbookCards.push(...added.lookbookCards);
+    for (const [source, entry] of Object.entries(added.psdImports || {})) {
+      next.psdImports ||= {};
+      next.psdImports[source] ||= { ...entry, targetId: remap(entry.targetId) };
+    }
+    next.lookbookTagGroups = { ...added.lookbookTagGroups, ...next.lookbookTagGroups };
+    next.lookbookTagGroupTitles = { ...added.lookbookTagGroupTitles, ...next.lookbookTagGroupTitles };
+    next.lookbookCustomTagGroups = normalizeLookbookTags([...(next.lookbookCustomTagGroups || []), ...(added.lookbookCustomTagGroups || [])]);
+    return normalize(next, { allowStoredAssets: true });
+  }
   function conflicts(p) {
     const hidden = new Set(p.cats.filter(c => c.visible === false).map(c => c.id)), warnings = [];
     if (!p.rulesEnabled) return { hidden, warnings };
@@ -647,10 +682,11 @@
     layerTagInheritance, layerTagDescendants, setLayerTags, editLayerTags, DEFAULT_RARITY_WEIGHT, MAX_RARITY_WEIGHT, validRarityWeight, rarityWeight, rarityTotal, distributeRarity, applyRarityShares, exactMatches, FLAG_COLORS, isFlagColor, workInProgress,
     LAYER_STATUS_LABELS, LAYER_STATUS_ICONS, layerStatus, layerStatusSource,
     moveCategory, moveCategoryIntoFolder, moveFolder, reorderTrait, traitSiblings, traitBelow, duplicateTrait, mergeTraitsDown, selectedIds, choosePrimary, isSelected, toggleTrait, normalizeExtras, cloneExtras, uid,
-    empty, hasContent, clone, category, locate, selection, normalize, conflicts, removeTrait, moveTrait, removeCategory, randomize };
+    empty, hasContent, clone, category, locate, selection, normalize, merge, conflicts, removeTrait, moveTrait, removeCategory, randomize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraitProject = Object.freeze(api);
 })(globalThis);
+
 
 
 

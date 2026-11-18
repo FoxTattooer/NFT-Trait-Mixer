@@ -4,6 +4,18 @@
   'use strict';
   const contexts = new WeakMap(), pins = new WeakMap();
   const recoveryKey = 'last-work';
+  const workspaceKey = id => 'open-project:' + id;
+  const workspaceCatalog = 'workspace:projects', workspaceActive = 'workspace:active';
+  const validWorkspaceId = id => typeof id === 'string' && /^[\w-]{1,100}$/.test(id);
+  const workspaceId = () => root.crypto?.randomUUID?.() || 'project-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  const catalog = async db => (await request(db, workspaceCatalog)) || [];
+  async function workspaceReferences(db) {
+    const keep = new Set();
+    for (const entry of await catalog(db)) {
+      for (const key of references((await request(db, workspaceKey(entry.id)))?.project)) keep.add(key);
+    }
+    return keep;
+  }
   const isAsset = data => typeof data === "string" && /^asset:image:[a-f0-9]{64}$/.test(data);
   const context = db => { if (!contexts.has(db)) contexts.set(db,new Map()); return contexts.get(db); };
   function request(db,key) {
@@ -131,6 +143,16 @@
       }
       // Publish only after every image is durable. On failure the previous project survives.
       const keep=references(manifest);
+      // Inactive documents share immutable PNG records; saving one must never collect another's images.
+      for (const key of await workspaceReferences(db)) keep.add(key);
+      let workspaces;
+      if (validWorkspaceId(workspace?.projectId)) {
+        const previous = await catalog(db);
+        const old = previous.find(entry => entry.id === workspace.projectId);
+        const thumb = typeof workspace.thumb === 'string' && /^data:image\/(png|webp|jpeg);base64,/.test(workspace.thumb) && workspace.thumb.length < 40000 ? workspace.thumb : old?.thumb || '';
+        const entry = { id: workspace.projectId, name: manifest.name, thumb, savedAt: Date.now(), layers: manifest.cats.reduce((n, c) => n + c.traits.length, 0) };
+        workspaces = [entry, ...previous.filter(item => item.id !== entry.id)];
+      }
       let checkpoint = hasContent(manifest) ? { savedAt: Date.now(), project: manifest } : null;
       if (!checkpoint) {
         const previous = await request(db, recoveryKey);
@@ -142,6 +164,11 @@
       await transaction(db,store=>{
         for(const key of existingKeys)if(typeof key==='string' && key.startsWith('image:') && !keep.has(key) && !pins.get(db)?.has(key))store.delete(key);
         store.put(manifest,'current');
+        if (workspaces) {
+          store.put({ project: manifest, savedAt: workspaces[0].savedAt }, workspaceKey(workspace.projectId));
+          store.put(workspaces, workspaceCatalog);
+          store.put(workspace.projectId, workspaceActive);
+        }
         if (checkpoint) store.put(checkpoint, recoveryKey);
       });
       contexts.set(db,nextCache);
@@ -150,13 +177,18 @@
       if (written.size) try {
         const keep = references(await request(db, 'current'));
         for (const key of references((await request(db, recoveryKey))?.project)) keep.add(key);
+        for (const key of await workspaceReferences(db)) keep.add(key);
         await transaction(db, store => { for (const key of written) if (!keep.has(key)) store.delete(key); });
       } catch {}
       throw error;
     }
   }
+  let localQueue = Promise.resolve();
   function locked(fn) {
-    return root.navigator?.locks?.request ? root.navigator.locks.request('nft-trait-storage',fn) : fn();
+    if (root.navigator?.locks?.request) return root.navigator.locks.request('nft-trait-storage',fn);
+    const task = localQueue.then(fn, fn);
+    localQueue = task.catch(() => {});
+    return task;
   }
   const read = (db,progress,options) => locked(async () => readProject(db, await request(db,'current'), progress, options));
   const save = (db,project,progress,stagedImages,workspace) => locked(()=>saveUnlocked(db,project,progress,stagedImages,workspace));
@@ -227,6 +259,32 @@
   }
   const readPreference = (db, key) => request(db, 'preference:' + key);
   const savePreference = (db, key, value) => transaction(db, store => store.put(value, 'preference:' + key));
-  const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng,readPreference,savePreference};
+  const listWorkspaces = db => locked(() => catalog(db));
+  const saveWorkspaceThumbnail = (db, id, thumb) => locked(async () => {
+    if (!validWorkspaceId(id) || typeof thumb !== 'string' || !/^data:image\/(png|webp|jpeg);base64,/.test(thumb) || thumb.length >= 40000) return;
+    const entries = await catalog(db), entry = entries.find(item => item.id === id);
+    if (!entry || entry.thumb === thumb) return;
+    entry.thumb = thumb;
+    await transaction(db, store => store.put(entries, workspaceCatalog));
+  });
+  const readWorkspace = (db, id) => locked(async () => {
+    if (!validWorkspaceId(id)) throw new Error('Neplatný projekt.');
+    const record = await request(db, workspaceKey(id));
+    if (!record?.project) throw new Error('Projekt není v tomto zařízení dostupný.');
+    return readProject(db, record.project, undefined, { lazy: true });
+  });
+  const initializeWorkspace = db => locked(async () => {
+    const id = await request(db, workspaceActive);
+    if (validWorkspaceId(id) && (await request(db, workspaceKey(id)))?.project) return id;
+    const current = await request(db, 'current');
+    const nextId = workspaceId();
+    if (current) {
+      const project = await readProject(db, current, undefined, { lazy: true });
+      await saveUnlocked(db, project, undefined, undefined, { projectId: nextId, categoryId: current.workspaceCategoryId });
+    }
+    return nextId;
+  });
+  const api={open,read,save,seedRecovery,readRecovery,isAsset,imageBlob,backup,retain,compact,stagePng,readPreference,savePreference,listWorkspaces,readWorkspace,initializeWorkspace,workspaceId,saveWorkspaceThumbnail};
   if(typeof module!=='undefined' && module.exports)module.exports=api;else root.TraitStorage=api;
 })(globalThis);
+

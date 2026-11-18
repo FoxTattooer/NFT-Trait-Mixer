@@ -15,17 +15,18 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07193">
+  <link rel="stylesheet" href="compact.css?build=07195">
   <link rel="stylesheet" href="schemes.css?build=07194">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
   <link rel="stylesheet" href="trait-comparison.css?build=07158">
   <link rel="stylesheet" href="lookbook.css?build=07182">
-  <script src="project.js?build=07185" defer></script>
-  <script src="storage.js?build=07178" defer></script>
+  <link rel="stylesheet" href="environment.css?build=07195">
+  <script src="project.js?build=07195" defer></script>
+  <script src="storage.js?build=07195" defer></script>
   <script src="final.js?build=07190" defer></script>
-  <script src="diagnostics.js?build=07194" defer></script>
+  <script src="diagnostics.js?build=07195" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -35,7 +36,7 @@
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
   <script src="trait-transform.js?build=07189" defer></script>
-  <script src="app.js?build=07194" defer></script>
+  <script src="app.js?build=07195" defer></script>
   <script src="trait-eraser.js?build=07193" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
@@ -50,7 +51,8 @@
   <script src="drag.js?build=07135" defer></script>
   <script src="psd-core.js?build=0786" defer></script>
   <script src="psd-file.js" defer></script>
-  <script src="psd-ui.js?build=07187" defer></script>
+  <script src="psd-ui.js?build=07195" defer></script>
+  <script src="environment.js?build=07195" defer></script>
 </head>
 <body class="compact-workspace" data-color-scheme="pink" data-control-accent="auto">
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -102,6 +104,7 @@
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M9 15v6"/></symbol>
     <symbol id="i-transform" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M3 8V3h5m8 0h5v5m0 8v5h-5m-8 0H3v-5"/></symbol>
     <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m14 3 7 7-10 11H7l-5-5L14 3Zm-7 8 7 7m-3 3h11"/></symbol>
+    <symbol id="i-projects" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
   </svg>
 
   <div id="workspaceScroll">
@@ -114,6 +117,7 @@
           <span id="projectSource" class="project-source" hidden></span>
         </div>
         <button data-action="new-project"><svg class="icon"><use href="#i-plus"/></svg>Nový projekt</button>
+        <button type="button" data-action="open-projects"><svg class="icon"><use href="#i-projects"/></svg>Otevřené projekty</button>
         <button id="load" data-action="open-project"><svg class="icon"><use href="#i-folder"/></svg>Otevřít projekt…</button>
         <button id="restoreProjectMenu" type="button" data-action="restore-last-project" hidden><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg>Obnovit poslední projekt</button>
         <button id="save" data-action="save-project"><svg class="icon"><use href="#i-download"/></svg>Záloha JSON</button>
@@ -122,9 +126,10 @@
         <button id="importProcreate" type="button"><svg class="icon" aria-hidden="true"><use href="#i-procreate-import"/></svg>Import z Procreate</button>
       </div>
     </details>
+    <button id="openProjectsButton" type="button" class="icon-button subtle project-switcher" data-action="open-projects" aria-label="Otevřené projekty" aria-haspopup="dialog" title="Otevřené projekty"><svg class="icon" aria-hidden="true"><use href="#i-projects"/></svg><span id="openProjectCount" class="open-project-count">1</span></button>
     <input id="psdFile" type="file" accept=".psd,.psb,image/vnd.adobe.photoshop" hidden>
     <input id="procreateFile" type="file" accept=".procreate" hidden>
-    <input id="projectFile" type="file" accept="application/json,.json,.psd,.psb,image/vnd.adobe.photoshop" hidden>
+    <input id="projectFile" type="file" accept="application/json,.json,.psd,.psb,.procreate,image/vnd.adobe.photoshop" hidden>
     <details class="header-menu preview-menu"><summary aria-label="Akce náhledu" title="Akce náhledu" aria-controls="landscapePreviewActions"><svg class="icon"><use href="#i-image"/></svg></summary>
       <div class="header-menu-content" id="landscapePreviewActions">
         <button type="button" id="landscapeShuffle" data-action="random" disabled><svg class="icon"><use href="#i-shuffle"/></svg>Náhodná kombinace</button>
@@ -143,8 +148,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.194" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.194</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.195" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.195</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -555,8 +560,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.194" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.194</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.195" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.195</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -1028,9 +1033,22 @@
       </div>
     </div>
   </dialog>
+  <dialog id="openProjectsDialog" class="open-projects-dialog" aria-labelledby="openProjectsTitle">
+    <div class="open-projects-heading"><h2 id="openProjectsTitle">Otevřené projekty</h2><button type="button" class="icon-button subtle" data-action="close-projects" aria-label="Zavřít">✕</button></div>
+    <ul id="openProjectsList" class="open-projects-list"></ul>
+    <p class="open-projects-note">Projekty se automaticky ukládají do tohoto zařízení.</p>
+    <div class="open-projects-actions"><button type="button" data-action="new-project">Nový projekt</button><button type="button" data-action="open-project">Otevřít soubor…</button></div>
+  </dialog>
+  <dialog id="projectOpeningDialog" class="project-opening-dialog" aria-labelledby="projectOpeningTitle">
+    <div class="open-projects-heading"><h2 id="projectOpeningTitle">Jak otevřít soubor?</h2><button type="button" class="icon-button subtle" data-action="cancel-project-opening" aria-label="Zrušit">✕</button></div>
+    <p id="projectOpeningFile" class="project-opening-file"></p>
+    <button type="button" class="project-opening-option" data-action="project-opening-insert"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span><strong>Vložit do současného projektu</strong><small id="projectOpeningCurrent"></small></span></button>
+    <button type="button" class="project-opening-option" data-action="project-opening-new"><svg class="icon" aria-hidden="true"><use href="#i-projects"/></svg><span><strong>Otevřít jako nový projekt</strong><small>Současný zůstane v seznamu pro přepínání.</small></span></button>
+  </dialog>
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.195-projekty-a-prostredi" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.195 – Otevřené projekty a vlastní prostředí</strong><small>Přepínání místních projektů s miniaturami, vložení nebo otevření nového projektu, 15 nastavení prostředí a nápovědy při klepnutí i podržení.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.194-obrysy-nahled-stitky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.194 – Obrysy, náhled a štítky</strong><small>Obrysy v barvě označení, ostrý přiblížený náhled traitu a symboly na pravém konci řádku i u podsložek.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.193-tuzka-upravy-vrstvy" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.193 – Tužka a úpravy vrstvy</strong><small>Přímé úpravy z poznámek a přehledu: transformace, guma a černá i bílá linka s historií tahů.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.192-slozky-a-sipky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.192 – Složky a šipky</strong><small>Výraznější složky vlevo, šipka uvnitř ikony a více prostoru pro názvy kategorií i podsložek.</small></span><span class="version-tag">Uloženo</span></a>
@@ -1348,6 +1366,7 @@
   <noscript><p class="notice">Pro práci s vrstvami zapni v prohlížeči JavaScript.</p></noscript>
 </body>
 </html>
+
 
 
 

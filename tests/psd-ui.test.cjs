@@ -46,6 +46,9 @@ async function test(worker) {
   const $=id=>w.document.getElementById(id);
   async function choose(bytes,name='example.psd') {
     const file=new w.File([bytes],name), transfer=new w.DataTransfer();transfer.items.add(file);$('psdFile').files=transfer.files;$('psdFile').dispatchEvent(new w.Event('change'));
+    await waitFor(()=>$('projectOpeningDialog').open);
+    w.document.querySelector('[data-action="project-opening-insert"]').click();
+    await waitFor(()=>$('psdDialog').open);
     await waitFor(()=>$('psdStatus').textContent.includes('Vyber vrstvy')||$('psdStatus').textContent.includes('nepodařilo'));
   }
   await choose(psd);
@@ -130,6 +133,8 @@ async function test(worker) {
   projectFile.items.add(new w.File([projectBytes],'Other project.psd'));
   $('projectFile').files = projectFile.files;
   $('projectFile').dispatchEvent(new w.Event('change'));
+  await waitFor(()=>$('projectOpeningDialog').open);
+  w.document.querySelector('[data-action="project-opening-new"]').click();
   await waitFor(()=>$('psdStatus').textContent.includes('samostatný projekt'));
   assert($('psdMode').querySelector('[value="category"]').disabled);
   assert.equal(w.testProject().name,'Retry storage');
@@ -142,10 +147,17 @@ async function test(worker) {
   assert.equal(visibleLayers(w.testProject()).length,2);
   const hiddenId = w.testProject().cats[0].traits.find(trait=>trait.name==='Layer 2').id;
   assert(!visibleLayers(w.testProject()).includes(hiddenId));
-  $('undo').click();
+  assert($('undo').disabled, 'a new document has an independent history');
+  $('openProjectsButton').click();
+  await waitFor(()=>$('openProjectsDialog').open);
+  const previousDocument = [...$('openProjectsList').querySelectorAll('button')].find(button => button.textContent.includes('Retry storage'));
+  assert(previousDocument, 'the original remains available after opening PSD');
+  previousDocument.click();
+  await waitFor(()=>!$('openProjectsDialog').open);
   assert.equal(w.testProject().name,'Retry storage');
   assert((await w.testPreviousImage()).size > 0);
   await w.happyDOM.abort();w.close();
   console.log('PASS full import UI ('+(worker?'worker + bundled parser':'main-thread fallback')+'): tree, preview, cancel during import, PNG/category/folder import, undo, invalid file, warning acknowledgement and append to existing category');
 }
 (async()=>{await test(false);await test(true);})().catch(e=>{console.error(e);process.exitCode=1;});
+

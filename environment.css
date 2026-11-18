@@ -1,0 +1,39 @@
+.environment-fields { padding:14px 0; display:grid; gap:18px; }
+body.compact-workspace .app-header #openProjectsButton { width:40px; min-width:40px; min-height:40px; height:40px; padding:8px; border-radius:12px; }
+@media (orientation:portrait) and (max-width:600px) {
+  body.compact-workspace .app-header { --tool-size:clamp(32px,9.7vw,42px); --tool-gap:clamp(3px,1vw,6px); }
+  body.compact-workspace .app-header #openProjectsButton { width:var(--tool-size); min-width:var(--tool-size); height:var(--tool-size); min-height:var(--tool-size); }
+}
+.environment-field { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 12px; }
+.environment-field .setting-label { grid-column:1/-1; }
+.setting-label { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+.setting-label label { margin:0; line-height:1.4; }
+body .settings-info-button { display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px; width:28px; height:28px; min-height:28px; padding:0; border-radius:50%; font:italic 600 13px Georgia,serif; opacity:.75; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
+.environment-field input[type=range] { width:100%; min-width:0; min-height:40px; margin:0; }
+.environment-field select { grid-column:1/-1; width:100%; min-width:0; }
+.environment-field input[type=checkbox] { width:22px; height:22px; }
+.environment-field output { font-size:12px; min-width:42px; text-align:right; }
+.environment-reset { margin-top:14px; }
+.settings-section>summary>.settings-info-button { margin-left:auto; margin-right:6px; }
+.settings-information { position:fixed; z-index:1000; width:max-content; max-width:min(320px,calc(100vw - 24px)); box-sizing:border-box; padding:12px 14px; border:1px solid var(--scheme-line,#6b5b72); border-radius:12px; background:var(--scheme-panel,#25212b); color:var(--appearance-text-color,#f4eff6); font-size:13px; line-height:1.5; box-shadow:0 8px 30px #0008; pointer-events:none; }
+.settings-information[hidden] { display:none!important; }
+body[data-environment-rowheight] #layerTree :is(.category-pick,.layer-tree-main,.layer-tree-eye,.layer-tree-more) { min-height:var(--environment-rowHeight)!important; }
+body[data-environment-rowgap] #layerTree :is(.layer-tree,.category-list) { gap:var(--environment-rowGap)!important; }
+body[data-environment-labelsize] #layerTree :is(.category-name,.layer-tree-label) { font-size:var(--environment-labelSize)!important; }
+body[data-environment-iconsize] :is(.app-header,.workspace-tools) button>.icon,
+body[data-environment-iconsize] #layerTree :is(.layer-tree-eye,.layer-tree-more)>.icon { width:var(--environment-iconSize)!important; height:var(--environment-iconSize)!important; }
+body[data-environment-panelpadding].compact-workspace .layers-panel { padding:var(--environment-panelPadding)!important; }
+body[data-environment-separators] #layerTree .layer-tree-row { border-bottom:1px solid color-mix(in srgb,var(--scheme-text,#eee) 25%,transparent)!important; }
+body[data-environment-selection] #layerTree .layer-tree-row.is-visible { box-shadow:inset 0 0 0 1px var(--control-accent,#ff76bc)!important; }
+body[data-environment-thumbnail] #layerTree .category-branch .layer-thumb { flex-basis:var(--environment-thumbnail)!important; width:var(--environment-thumbnail)!important; height:var(--environment-thumbnail)!important; }
+body[data-environment-thumbradius] :is(#layerTree .layer-thumb,.open-project-art) { border-radius:var(--environment-thumbRadius)!important; }
+body[data-environment-preview=checker] .stage .canvas-wrap { background:repeating-conic-gradient(#53535a 0 25%,#3b3b42 0 50%) 50%/var(--environment-checkerSize) var(--environment-checkerSize)!important; }
+body[data-environment-preview=dark] .stage .canvas-wrap { background:#29292d!important; }
+body[data-environment-preview=light] .stage .canvas-wrap { background:#f3f3f3!important; }
+body[data-environment-preview=black] .stage .canvas-wrap { background:#000!important; }
+body.environment-reduced-motion *,body.environment-reduced-motion *::before,body.environment-reduced-motion *::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
+body[data-environment-glass=none] { --environment-blur:0px; }
+body[data-environment-glass=soft] { --environment-blur:6px; }
+body[data-environment-glass=strong] { --environment-blur:18px; }
+body:not([data-environment-glass=theme]) dialog::backdrop,
+body:not([data-environment-glass=theme]) :is(.header-menu-content,.layer-context,.workspace-tabs) { backdrop-filter:blur(var(--environment-blur))!important; -webkit-backdrop-filter:blur(var(--environment-blur))!important; }

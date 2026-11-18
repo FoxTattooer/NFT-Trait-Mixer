@@ -19,6 +19,8 @@ let ready = false, busy = false, exporting = false, drawTicket = 0, toastTimer, 
 let recentProject;
 let db, saveTimer, saveQueue = Promise.resolve(true), revision = 0, persistedRevision = 0, queuedRevision = 0;
 let projectRecovery, recoveryDismissed = false;
+let activeProjectId = null, projectList = [], openingChoice = null;
+const projectSessions = new Map();
 let installPrompt = null, workerRegistration = null;
 const undoStack = [], redoStack = [], imageCache = new Map();
 const undoSteps = [], redoSteps = [];
@@ -118,15 +120,18 @@ function flushSave(stagedImages, retained = []) {
   clearTimeout(saveTimer);
   if (!db) return Promise.resolve(false);
   if (revision <= queuedRevision) return saveQueue;
-  const savingRevision = revision, project = M.clone(state), categoryId = active;
+  const savingRevision = revision, project = M.clone(state), categoryId = active, projectId = activeProjectId;
+  const histories = [...projectSessions.values()].flatMap(session => [...session.undo, ...session.redo]);
+  let thumb = '';
+  try { if (!safeMode && M.hasContent(project)) thumb = window.TraitRecent?.makeThumb($('canvas')) || ''; } catch {}
   queuedRevision = savingRevision;
   saveQueue = saveQueue.then(() => {
-    TraitStorage.retain(db, [state, project, ...retained, ...undoStack, ...redoStack]);
+    TraitStorage.retain(db, [state, project, ...retained, ...undoStack, ...redoStack, ...histories]);
     return TraitStorage.save(db, project, (done,total) => {
     if (revision === savingRevision && (done === 1 || done === total || done % 16 === 0)) storageStatus(`Ukládání vrstev ${done} / ${total}…`);
-    }, stagedImages, { categoryId });
+    }, stagedImages, { categoryId, projectId, thumb });
   }).then(() => {
-    TraitStorage.compact(db, [state, project, ...retained, ...undoStack, ...redoStack]);
+    TraitStorage.compact(db, [state, project, ...retained, ...undoStack, ...redoStack, ...histories]);
     if (layerReviewOpen && !busy) { renderLayerReview(); mountThumbnails(); }
     persistedRevision = savingRevision;
     if (revision === savingRevision) {
@@ -145,6 +150,110 @@ function scheduleSave() {
   storageStatus('Ukládání změn…');
   saveTimer = setTimeout(flushSave, 120);
 }
+function rememberProjectSession() {
+  if (!activeProjectId) return;
+  projectSessions.set(activeProjectId, {
+    undo: [...undoStack], redo: [...redoStack], undoSteps: [...undoSteps], redoSteps: [...redoSteps], currentStep, stepNumber,
+    categories: new Map(openLayerCategories), expanded: organizerExpanded, selection: organizerSelection,
+    inspected: inspectedTrait, source: $('projectSource').textContent,
+  });
+}
+function restoreProjectSession(id) {
+  const session = projectSessions.get(id);
+  undoStack.splice(0, undoStack.length, ...(session?.undo || []));
+  redoStack.splice(0, redoStack.length, ...(session?.redo || []));
+  undoSteps.splice(0, undoSteps.length, ...(session?.undoSteps || []));
+  redoSteps.splice(0, redoSteps.length, ...(session?.redoSteps || []));
+  stepNumber = session?.stepNumber || 1;
+  currentStep = session?.currentStep || { number: 1, label: 'Výchozí stav' };
+  openLayerCategories = session?.categories || new Map();
+  organizerExpanded = session?.expanded || {};
+  organizerSelection = session?.selection || {};
+  inspectedTrait = session?.inspected || null;
+  layerBrowseHistory.length = 0;
+  resetCategoryFilters(); resetLayerBulk();
+  layerTraitSearch.input.value = ''; snapshotTraitSearch.input.value = '';
+  imageCache.clear(); recentProject = null;
+  libraryOpen.clear();
+  for (const key of Object.keys(libraryPages)) delete libraryPages[key];
+  selectWorkspaceTab(false);
+}
+async function saveBeforeProjectChange() {
+  if (!db) { storageFailure(); return false; }
+  activeProjectId ||= TraitStorage.workspaceId();
+  // Also persist the active category and the current thumbnail when no content changed.
+  revision++;
+  return await flushSave() && revision === persistedRevision;
+}
+function renderOpenProjects() {
+  $('openProjectCount').textContent = String(projectList.length || 1);
+  $('openProjectsButton').setAttribute('aria-label', `Otevřené projekty · ${projectList.length || 1}`);
+  $('openProjectsList').innerHTML = projectList.map(project => `<li><button type="button" data-action="switch-project" data-id="${esc(project.id)}" class="open-project-row${project.id === activeProjectId ? ' is-active' : ''}" ${project.id === activeProjectId ? 'aria-current="true"' : ''}>
+    <span class="open-project-art">${project.thumb ? `<img src="${esc(project.thumb)}" alt="" width="64" height="64">` : icon('layers')}</span>
+    <span class="open-project-copy"><strong>${esc(project.name)}</strong><small>${project.layers} vrstev · ${project.id === activeProjectId ? 'Právě otevřený' : 'Uloženo v zařízení'}</small></span>
+    ${project.id === activeProjectId ? icon('check') : ''}</button></li>`).join('');
+}
+async function refreshOpenProjects() {
+  if (!db) return;
+  projectList = await TraitStorage.listWorkspaces(db);
+  renderOpenProjects();
+}
+async function openProjects() {
+  if (busy || exporting) return;
+  busy = true; render(true);
+  try {
+    if (!await saveBeforeProjectChange()) return;
+    await refreshOpenProjects();
+    document.querySelector('.file-menu').open = false;
+    $('openProjectsDialog').showModal();
+  } finally { busy = false; render(true); }
+}
+async function activateProject(next, { id = TraitStorage.workspaceId(), categoryId = next.cats[0]?.id, source = 'Obnoveno z tohoto zařízení' } = {}) {
+  if (!await saveBeforeProjectChange()) return false;
+  // Publish the target and active-document pointer together before changing the editor.
+  await TraitStorage.save(db, next, undefined, undefined, { projectId: id, categoryId });
+  rememberProjectSession();
+  state = next; activeProjectId = id; active = categoryId;
+  restoreProjectSession(id);
+  revision++; queuedRevision = persistedRevision = revision;
+  projectRecovery = null; recoveryDismissed = true;
+  storageStatus('Automaticky uloženo v zařízení');
+  showProjectSource(projectSessions.get(id)?.source || source);
+  await refreshOpenProjects();
+  $('openProjectsDialog').close();
+  showPanel('layers'); render();
+  return true;
+}
+async function switchProject(id) {
+  if (id === activeProjectId) { $('openProjectsDialog').close(); return; }
+  busy = true; render(true);
+  try {
+    if (!await saveBeforeProjectChange()) return;
+    const saved = await TraitStorage.readWorkspace(db, id);
+    await activateProject(M.normalize(saved, { allowStoredAssets: true }), { id, categoryId: saved.workspaceCategoryId });
+  } catch (error) { storageFailure(error); toast('Projekt se nepodařilo přepnout. ' + error.message, true); }
+  finally { busy = false; render(); }
+}
+async function createProject() {
+  busy = true; render(true);
+  try { if (await activateProject(M.empty(), { source: 'Vytvořen nový projekt' })) toast('Nový projekt připraven'); }
+  catch (error) { storageFailure(error); }
+  finally { busy = false; render(); }
+}
+function chooseProjectOpening(file) {
+  if (!file || busy || openingChoice) return Promise.resolve(null);
+  document.querySelector('.file-menu').open = false;
+  $('openProjectsDialog').close();
+  $('projectOpeningFile').textContent = file.name;
+  $('projectOpeningCurrent').textContent = state.name;
+  $('projectOpeningDialog').showModal();
+  return new Promise(resolve => { openingChoice = resolve; });
+}
+function finishProjectOpening(mode) {
+  const resolve = openingChoice; openingChoice = null;
+  $('projectOpeningDialog').close(); resolve?.(mode);
+}
+$('projectOpeningDialog').addEventListener('cancel', event => { event.preventDefault(); finishProjectOpening(null); });
 function pruneCache() {
   const ids = new Set(state.cats.flatMap(c => c.traits.map(t => t.id)));
   for (const key of imageCache.keys()) if (!ids.has(key)) imageCache.delete(key);
@@ -3078,7 +3187,7 @@ function updatePreviewStatus(message, failed = false) {
 }
 async function draw() {
   if (safeMode) { updatePreviewStatus('Obnovovací režim · náhledy vypnuté'); return; }
-  const ticket = ++drawTicket, layers = visibleLayers(state);
+  const ticket = ++drawTicket, layers = visibleLayers(state), projectId = activeProjectId;
   const recentId = recentProject?.project === state ? recentProject.id : undefined;
   recentProject = null;
   try {
@@ -3087,6 +3196,8 @@ async function draw() {
       await paintLayers(frame, layers, () => ticket === drawTicket);
       if(ticket!==drawTicket)return;
       const ctx=$('canvas').getContext('2d');ctx.clearRect(0,0,1024,1024);ctx.drawImage(frame,0,0);
+      const thumb = layers.length && window.TraitRecent?.makeThumb(frame);
+      if (db && projectId && thumb) void TraitStorage.saveWorkspaceThumbnail(db, projectId, thumb).catch(() => {});
       if (recentId && layers.length) window.TraitRecent?.captureCanvas(recentId, frame, true);
     } finally {frame.width=frame.height=1;}
     if (ticket !== drawTicket) return;
@@ -3255,9 +3366,11 @@ async function uploadFiles(files, categoryId = active) {
 }
 async function loadProject(file) {
   if (!file || busy) return;
-  if (/\.ps[db]$/i.test(file.name) || file.type === 'image/vnd.adobe.photoshop') {
+  const mode = await chooseProjectOpening(file);
+  if (!mode) { $('projectFile').value = ''; return; }
+  if (/\.(ps[db]|procreate)$/i.test(file.name) || file.type === 'image/vnd.adobe.photoshop') {
     $('projectFile').value = '';
-    if (window.TraitPsdImport) await window.TraitPsdImport.openProject(file);
+    if (window.TraitPsdImport) await window.TraitPsdImport.openProject(file, mode);
     else toast('Podporu PSD se nepodařilo načíst.', true);
     return;
   }
@@ -3274,17 +3387,13 @@ async function loadProject(file) {
         capturedFallback = true;
       }
     }
-    if (state.cats.length && !await ask({ title: 'Otevřít jiný projekt?', description: 'Aktuální projekt bude nahrazen. Můžeš si nejdřív stáhnout zálohu JSON. Změnu lze také vrátit tlačítkem Zpět.', confirm: true, submit: 'Otevřít projekt' })) return;
-    layerBrowseHistory.length = 0;
-    inspectedTrait = null;
-    openLayerCategories.clear();
-    organizerExpanded = {};
-    resetCategoryFilters();
-    resetLayerBulk();
-    change(() => { state = next; active = next.cats[0]?.id || null; imageCache.clear(); }, 'Projekt byl otevřen');
+    if (mode === 'insert') {
+      change(() => { state = M.merge(state, next); }, 'Projekt vložen do současného projektu');
+      await flushSave();
+    } else if (!await activateProject(next, { source: 'Otevřeno ze zálohy JSON' })) return;
     const recentId = recent?.record(file, undefined, fallback);
-    if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: next, id: recentId };
-    showProjectSource('Otevřeno ze zálohy JSON');
+    if (recentId && !safeMode && visibleLayers(next).length) recentProject = { project: state, id: recentId };
+    showProjectSource(mode === 'insert' ? 'Vloženo ze zálohy JSON' : 'Otevřeno ze zálohy JSON');
     showPanel('layers');
   } catch (error) { window.TraitDiagnostics?.error('json-open', error); toast(`Projekt se nepodařilo otevřít: ${error.message}`, true); }
   finally { finishLog?.(); busy = false; $('projectFile').value = ''; render(); }
@@ -3598,6 +3707,7 @@ function saveControlAppearance() {
   saveAppearancePreference(controlAppearanceKey, JSON.stringify(settings), $('controlAppearanceStatus'));
 }
 function pulseControl(event) {
+  if (document.body.classList.contains('environment-reduced-motion')) return;
   const intensity = Number($('controlSurfacePulse').value);
   if (!intensity || quietControlMotion.matches) return;
   const button = event.target.closest?.('button:is([aria-pressed],.icon-button):not(:disabled)');
@@ -3815,6 +3925,7 @@ function hideControlHint() {
   hintButton = null;
 }
 function showControlHint(button, label) {
+  if (document.body.dataset.environmentHints === 'off') return;
   if (!label || !button.isConnected) return;
   hideControlHint();
   hintButton = button;
@@ -4294,22 +4405,13 @@ async function handleAction(action, id, element) {
       if (located && await ask({ title: `Smazat trait „${located.trait.name}“?`, description: 'Odstraní se i související pravidla a výběr v uložených sestavách. Změnu můžeš vrátit tlačítkem Zpět.', confirm: true, submit: 'Smazat trait', danger: true })) change(() => M.removeTrait(state, located.cat.id, id), 'Trait smazán · můžeš použít Zpět');
       break;
     case 'rename-project': { const name = await ask({ title: 'Název projektu', value: state.name }); if (name && name !== state.name) change(() => { state.name = name; }); break; }
-    case 'new-project':
-      if (!M.hasContent(state) || await ask({ title: 'Začít nový projekt?', description: 'Předchozí projekt nahrazuješ prázdným. Pro jistotu si nejdřív stáhni zálohu JSON. Změnu lze vrátit tlačítkem Zpět.', confirm: true, submit: 'Nový projekt' })) {
-        if (M.hasContent(state) && revision > persistedRevision && (!await flushSave() || revision !== persistedRevision)) break;
-        recoveryDismissed = true;
-        layerBrowseHistory.length = 0;
-        inspectedTrait = null;
-        openLayerCategories.clear();
-        organizerExpanded = {};
-        resetCategoryFilters();
-        selectWorkspaceTab(false);
-        resetLayerBulk();
-        change(() => { state = M.empty(); imageCache.clear(); }, 'Nový projekt připraven');
-        showProjectSource('Vytvořen nový projekt');
-        showPanel('layers');
-      }
-      break;
+    case 'new-project': await createProject(); break;
+    case 'open-projects': await openProjects(); break;
+    case 'close-projects': $('openProjectsDialog').close(); break;
+    case 'switch-project': await switchProject(id); break;
+    case 'project-opening-insert': finishProjectOpening('insert'); break;
+    case 'project-opening-new': finishProjectOpening('new'); break;
+    case 'cancel-project-opening': finishProjectOpening(null); break;
     case 'restore-last-project': await restoreLastProject(); break;
     case 'dismiss-project-recovery':
       recoveryDismissed = true;
@@ -4317,7 +4419,7 @@ async function handleAction(action, id, element) {
       $('emptyOpenBackup').hidden = false;
       $('emptyAction').focus();
       break;
-    case 'open-project': $('projectFile').click(); break;
+    case 'open-project': $('openProjectsDialog').close(); $('projectFile').value = ''; $('projectFile').click(); break;
     case 'save-project-psd': await openProjectPsdExport(); break;
     case 'close-project-psd': $('projectPsdDialog').close(); break;
     case 'download-project-psd': downloadProjectPsd(); break;
@@ -4859,6 +4961,10 @@ async function init() {
       readError = error;
       window.TraitDiagnostics?.error('project-load', error);
     }
+    if (!readError) {
+      activeProjectId = await TraitStorage.initializeWorkspace(db);
+      await refreshOpenProjects();
+    }
     if (M.hasContent(state)) {
       storageStatus('Automaticky uloženo v zařízení');
       showProjectSource('Obnoveno z tohoto zařízení');
@@ -4883,6 +4989,7 @@ async function init() {
   finishLog?.();
 }
 init();
+
 
 
 

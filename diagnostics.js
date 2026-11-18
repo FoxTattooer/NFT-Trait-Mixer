@@ -3,7 +3,7 @@
   'use strict';
   const key = 'trait-mixer:diagnostics:v1';
   const importKey = 'trait-mixer:diagnostic-imports:v1';
-  const version = '0.7.194';
+  const version = '0.7.195';
   const maxEntries = 48;
   const maxImports = 6;
   const phases = new Set([
@@ -133,3 +133,4 @@
   });
   window.addEventListener('unhandledrejection', event => error('runtime', event.reason));
 })();
+

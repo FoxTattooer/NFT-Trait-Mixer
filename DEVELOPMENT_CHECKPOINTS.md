@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.195 | checkpoint/v0.7.195-projekty-a-prostredi | Více místních projektů s miniaturami a samostatnými stavy; volba vložit / otevřít jako nový pro JSON, PSD a Procreate; 15 nastavení prostředí a informační tlačítka s mizející nápovědou. |
 | 0.7.194 | checkpoint/v0.7.194-obrysy-nahled-stitky | Obrysy složek podle označení, ostrý náhled přiblížený na obsah traitu a štítky, stavy i vlajky vpravo u kategorií, podsložek a vrstev. |
 | 0.7.193 | checkpoint/v0.7.193-tuzka-upravy-vrstvy | Tužka u poznámek a v přehledu vrstev, přímá transformace, guma a černá či bílá linka s velikostí, historií tahů a uložením do konkrétní vrstvy. |
 | 0.7.192 | checkpoint/v0.7.192-slozky-a-sipky | Složky více vlevo, výraznější obrys a šipka uvnitř ikony, širší prostor pro názvy kategorií a podsložek. |
@@ -152,3 +153,4 @@ Checkpoint větve slouží k obnovení zdrojového kódu. Projektová data ulož
 ## Další kolo
 
 - Rychlé řazení kategorií přes číslo u přepínače: na iPhonu zlepšit uchopení řádku a ověřit, že tažení nepřestane po přesunu položky nebo při rolování.
+

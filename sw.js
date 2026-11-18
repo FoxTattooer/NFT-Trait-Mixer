@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.194';
+const CACHE = PREFIX + 'v0.7.195';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SKIN_ART = ['cup', 'emerald', 'gold', 'lime', 'mosaic', 'orange', 'purple', 'rainbow', 'red', 'silver', 'water']
@@ -13,18 +13,19 @@ const PDF_DOCUMENTS = new Set([
   './docs/NFT-Trait-Mixer-mobilni-design.pdf',
 ].map(path => new URL(path, self.registration.scope).pathname));
 const SHELL = [
+  './environment.css?build=07195', './environment.js?build=07195',
   './layer-inventory.css?build=07164', './layer-inventory.js?build=07160',
   './inventory-base.js?build=07160', './inventory-base-ui.js?build=07131', './inventory-preview.js?build=07112', './inventory-review.js?build=07113', './inventory-dripd.json?build=07111',
   './pdf-info.css?build=07158', './pdf-info.js?build=07101',
   './trait-comparison.css?build=07158', './trait-comparison.js?build=07179',
   './lookbook.css?build=07182', './lookbook-cards.js?build=07148', './lookbook.js?build=07182',
-  './', './index.html', ROADMAP, './styles.css?build=07158', './design.css?build=07169', './compact.css?build=07193',
-  './schemes.css?build=07194', './drag.js?build=07135', './project.js?build=07185', './diagnostics.js?build=07194',
+  './', './index.html', ROADMAP, './styles.css?build=07158', './design.css?build=07169', './compact.css?build=07195',
+  './schemes.css?build=07194', './drag.js?build=07135', './project.js?build=07195', './diagnostics.js?build=07195',
   './showroom-mint.css?build=07158', './showroom-mint.js?build=07156',
   './showroom.css?build=07158', './showroom.js?build=07156', SHOWROOM_ART, ...LOOKBOOK_ART, ...SKIN_ART, './art/fox-credit-drop.png',
-  './step-history.js?build=07169', './trait-transform.js?build=07189', './app.js?build=07194', './trait-eraser.js?build=07193', './recent.js?build=0789', './storage.js?build=07178', './final.js?build=07190', './folder-export.js?build=07190', './final-ui.js?build=07179', './final-builder.js?build=07188',
+  './step-history.js?build=07169', './trait-transform.js?build=07189', './app.js?build=07195', './trait-eraser.js?build=07193', './recent.js?build=0789', './storage.js?build=07195', './final.js?build=07190', './folder-export.js?build=07190', './final-ui.js?build=07179', './final-builder.js?build=07188',
   './psd-core.js?build=0786', './psd-core.js',
-  './psd-export.js?build=07188', './psd-export.js', './psd-file.js', './psd-ui.js?build=07187', './psd-worker.js', './vendor/ag-psd.js',
+  './psd-export.js?build=07188', './psd-export.js', './psd-file.js', './psd-ui.js?build=07195', './psd-worker.js', './vendor/ag-psd.js',
   './procreate-worker.js?build=0789', './procreate-file.js?build=0789', './procreate-plist.js', './procreate-tiles.js',
   './vendor/procreate-zip.js', './vendor/procreate-lzo.js', './manifest.webmanifest', './icons/icon-192-v073.png',
   './icons/icon-512-v073.png', './icons/apple-touch-icon-v073.png', './icons/apple-touch-icon.png',
@@ -81,6 +82,7 @@ self.addEventListener('fetch', event => {
     return await cache.match(key) || fetch(event.request);
   })());
 });
+
 
 
 
