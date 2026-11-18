@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
   <link rel="stylesheet" href="compact.css?build=07195">
-  <link rel="stylesheet" href="schemes.css?build=07199">
+  <link rel="stylesheet" href="schemes.css?build=07200">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
   <link rel="stylesheet" href="pdf-info.css?build=07158">
@@ -26,7 +26,7 @@
   <script src="project.js?build=07195" defer></script>
   <script src="storage.js?build=07195" defer></script>
   <script src="final.js?build=07190" defer></script>
-  <script src="diagnostics.js?build=07199" defer></script>
+  <script src="diagnostics.js?build=07200" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -149,7 +149,7 @@
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
       <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.199" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.199</span></span>
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.200</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -561,7 +561,7 @@
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
         <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.199" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.199</span></span>
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.200</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -1048,6 +1048,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.200-obrys-jen-ikony-slozky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.200 – Obrys jen ikony složky</strong><small>Kategorie i podsložky bez ohraničení celého řádku, také při výběru a rozbalení. Barva označení zůstává na obrysu ikony složky.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.199-obrys-i-pri-vyberu" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.199 – Obrys i při výběru složky</strong><small>Vybraná složka si drží neutrální výplň; stav zvýrazňuje barevný obrys.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.198-neutralni-radky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.198 – Neutrální řádky složek</strong><small>Šedá výplň složek nezávislá na barvě schématu, barevné zůstává ohraničení.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.197-jen-obrysy-slozek" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.197 – Jen barevné obrysy složek</strong><small>Neutrální výplň řádků kategorií i podsložek. Označení zůstává na obrysu, bez vybarvení celé plochy.</small></span><span class="version-tag">Uloženo</span></a>

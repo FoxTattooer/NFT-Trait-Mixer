@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.200 | checkpoint/v0.7.200-obrys-jen-ikony-slozky | Kategorie i podsložky bez rámečku a stínu celého řádku, také při výběru a rozbalení. Barevné označení zůstává jen na obrysu ikony složky. |
 | 0.7.199 | checkpoint/v0.7.199-obrys-i-pri-vyberu | Odstraněna akcentová výplň aktivních kategorií, neutrální řádek zůstává i při výběru. |
 | 0.7.198 | checkpoint/v0.7.198-neutralni-radky | Šedá výplň řádků složek nezávislá na akcentu a barevném schématu; barva pouze na obrysu. |
 | 0.7.197 | checkpoint/v0.7.197-jen-obrysy-slozek | Jen barevné obrysy složek a jejich rámečků, neutrální pozadí celého řádku bez akcentové výplně. |
