@@ -4,6 +4,7 @@ const M = window.TraitProject;
 const $ = id => document.getElementById(id);
 const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const layerFolderIcon = () => `<span class="layer-folder-icon" aria-hidden="true">${icon('folder')}<svg class="icon layer-folder-caret"><use href="#i-chevron"/></svg></span>`;
 const button = (action, label, id = '', glyph = '', extra = '') => `<button data-action="${action}" data-id="${esc(id)}" ${extra}>${glyph ? icon(glyph) : ''}${label}</button>`;
 const tool = (action, label, id, glyph, disabled = false, danger = false) => button(action, '', id, glyph, `class="icon-button subtle ${danger ? 'danger-icon' : ''}" title="${esc(label)}" aria-label="${esc(label)}" ${disabled ? 'disabled' : ''}`);
 let state = M.empty(), active = null, mobilePanel = 'layers', inspectorPanel = 'traits', organizerSelection = {}, organizerExpanded = {};
@@ -765,7 +766,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
       <button type="button" class="layer-tree-main layer-drag-row" data-layer-bulk-row data-drag-kind="${folder ? 'folder' : 'trait'}" data-drag-id="${id}" data-action="${folder ? 'toggle-tree-folder' : 'choose-trait'}" data-id="${id}" data-category="${esc(c.id)}"${folderMark ? ` data-mark="${folderMark}"` : ''} ${folder ? `aria-expanded="${expanded}"` : 'aria-pressed="false"'} title="${esc(item.name)}">
-        ${folder ? icon('chevron') + icon('folder') : `<span class="layer-thumb">${image}</span>`}
+        ${folder ? layerFolderIcon() : `<span class="layer-thumb">${image}</span>`}
         <span class="layer-title-surface"><span class="layer-tree-label" data-layer-rename="${folder ? 'rename-organizer-folder' : 'rename-trait'}" title="Přejmenovat · ${esc(item.name)}">${esc(item.name)}</span>${layerTagMarker(tags)}${layerMarkBadges(item, true, source)}${folder ? '' : `<span class="layer-tree-check" hidden>${icon('check')}</span>`}</span>
       </button>
       ${folder ? '' : `<button type="button" class="layer-tree-eye" data-action="toggle-trait-visibility" data-id="${id}" aria-pressed="false" aria-label="Viditelnost · ${esc(item.name)}">${icon('eye-off')}</button>`}
@@ -1404,7 +1405,7 @@ function renderCategories(hidden, categories) {
     const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
-        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${icon('chevron')}${icon(compactView || mark ? 'folder' : 'folder-tree')}
+        <button type="button" class="category-pick${compactView ? ' layer-drag-row' : ''}" ${compactView ? `data-drag-kind="category" data-drag-id="${id}"` : ''} ${mark ? `data-mark="${mark}"` : ''} data-action="select-category" data-layer-bulk-row data-id="${id}" data-category="${id}" aria-expanded="${expanded}" aria-controls="layer-branch-${id}" title="${expanded ? 'Sbalit' : 'Rozbalit'} vrstvy · ${name}">${layerFolderIcon()}
           <span class="layer-title-surface"><span class="category-copy"><span class="category-name" data-layer-rename="rename-category" title="Přejmenovat · ${name}">${name}</span><span class="category-meta">${counted(traits.length, 'trait', 'traity', 'traitů')}${hiddenLabel}</span></span>${layerTagMarker(c.lookbookTags)}${layerMarkBadges(c, true)}</span>
         </button>
         ${button('open-layer-menu', '', c.id, 'more', `type="button" class="icon-button subtle" data-kind="category" data-category="${id}" aria-label="Akce · ${name}" title="Akce · ${name}" aria-expanded="false" aria-controls="layerContext"`)}

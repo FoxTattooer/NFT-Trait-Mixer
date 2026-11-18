@@ -563,7 +563,7 @@ button.version-diagnostics {margin-top:9px;min-height:44px;color:#c6a7bd;font-si
 #cats .category-card.is-active .category-trait-eye[aria-pressed=true] .icon {color:var(--workspace-accent-icon)!important}
 #cats[data-view="expanded"] .category-top > .category-pick {box-shadow:none!important}
 #cats[data-view="expanded"] .category-top > .category-pick > .icon {color:var(--scheme-muted,#c3bdc7)}
-:is(#layerTree,#traits) :is(.category-pick,.layer-tree-main)[data-mark] > .icon:has(use[href="#i-folder"]) {
+:is(#layerTree,#traits) :is(.category-pick,.layer-tree-main)[data-mark] > .layer-folder-icon > .icon:first-child {
   color:var(--category-mark-color);fill:currentColor;
 }
 #cats[data-view="expanded"] .category-top > .icon-button {width:44px;min-height:44px;flex:0 0 44px;padding:4px}
@@ -1113,3 +1113,26 @@ button.trait-search-result {
 #folderExportEntries { list-style:none; margin:0; padding:0 0 6px; }
 #folderExportEntries li + li { margin-top:4px; }
 #folderExportEntries button { width:100%; justify-content:flex-start; text-align:left; overflow-wrap:anywhere; }
+
+/* A single folder/disclosure glyph leaves more of each row for its name. */
+:is(.category-pick,.layer-tree-main) > .layer-folder-icon {
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;flex:0 0 28px;color:var(--category-mark-color,var(--scheme-muted,#c9c5d0));
+}
+:is(.category-pick,.layer-tree-main) > .layer-folder-icon > .icon:first-child {
+  width:28px;height:28px;stroke-width:2.2;
+  fill:color-mix(in srgb,currentColor 14%,var(--scheme-panel,#202128));
+  filter:drop-shadow(0 1px 1px #0008);
+}
+:is(.category-pick,.layer-tree-main) > .layer-folder-icon > .layer-folder-caret {
+  position:absolute;inset-inline-start:6px;top:8px;width:16px;height:16px;
+  color:var(--scheme-text,#f4eff6);stroke-width:2.8;fill:none;
+  transform-origin:center;transition:transform .18s ease-out,color .18s ease-out;
+}
+:is(.category-pick,.layer-tree-main)[data-mark] > .layer-folder-icon > .layer-folder-caret {color:#182028}
+:is(.category-pick,.layer-tree-main)[aria-expanded=true] > .layer-folder-icon > .layer-folder-caret {transform:rotate(90deg)}
+#layerTree .layer-tree-folder .layer-tree-main {gap:4px;padding-inline-start:2px}
+#appLayout[data-layer-bulk] .layer-folder-caret {display:none}
+@media (prefers-reduced-motion:reduce) {
+  :is(.category-pick,.layer-tree-main) > .layer-folder-icon > .layer-folder-caret {transition:none}
+}
