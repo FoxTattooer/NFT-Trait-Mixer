@@ -1,4 +1,4 @@
-.environment-fields { padding:14px 0; display:grid; gap:18px; }
+.environment-fields { padding:12px; display:grid; gap:12px; }
 body.compact-workspace .app-header #openProjectsButton { width:40px; min-width:40px; min-height:40px; height:40px; padding:8px; border-radius:12px; }
 @media (orientation:portrait) and (max-width:600px) {
   body.compact-workspace .app-header { --tool-size:clamp(32px,9.7vw,42px); --tool-gap:clamp(3px,1vw,6px); }
@@ -15,6 +15,15 @@ body .settings-info-button { display:inline-flex; align-items:center; justify-co
 .environment-field output { font-size:12px; min-width:42px; text-align:right; }
 .environment-reset { margin-top:14px; }
 .settings-section>summary>.settings-info-button { margin-left:auto; margin-right:6px; }
+#settingsDialog .settings-section>summary:has(>.settings-info-button) { display:flex; gap:8px; align-items:center; }
+#settingsDialog .settings-section>summary:has(>.settings-info-button)>span:first-child { flex:1; min-width:0; }
+#settingsDialog .settings-section>summary>.settings-info-button { margin:0; order:3; }
+#settingsDialog .settings-section>summary>.icon { order:4; flex:none; }
+#settingsDialog .environment-field label { font-size:13px; }
+@media (max-width:480px) {
+  .settings-dialog .appearance-sliders { grid-template-columns:minmax(0,1fr) 48px; }
+  .settings-dialog .appearance-sliders>.setting-label { grid-column:1/-1; }
+}
 .settings-information { position:fixed; z-index:1000; width:max-content; max-width:min(320px,calc(100vw - 24px)); box-sizing:border-box; padding:12px 14px; border:1px solid var(--scheme-line,#6b5b72); border-radius:12px; background:var(--scheme-panel,#25212b); color:var(--appearance-text-color,#f4eff6); font-size:13px; line-height:1.5; box-shadow:0 8px 30px #0008; pointer-events:none; }
 .settings-information[hidden] { display:none!important; }
 body[data-environment-rowheight] #layerTree :is(.category-pick,.layer-tree-main,.layer-tree-eye,.layer-tree-more) { min-height:var(--environment-rowHeight)!important; }
