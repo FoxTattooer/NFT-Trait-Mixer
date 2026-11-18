@@ -958,13 +958,13 @@ body[data-color-scheme] #layerEditDialog[data-mark] {
 }
 /* Folder colors belong to outlines, never to a full-row accent fill. */
 body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-card,.layer-tree-folder) {
-  background:var(--scheme-panel,#202128)!important;
+  background:linear-gradient(160deg,#242428,#19191d)!important;
 }
 body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-folder>.layer-tree-main) {
   background:transparent!important;
 }
 body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-folder>.layer-tree-main)>.layer-title-surface {
-  --layer-title-tint:var(--scheme-text,#f4eff6);
+  --layer-title-tint:#fff;
 }
 body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-main)>.layer-folder-icon>.icon:first-child {
   fill:none!important;

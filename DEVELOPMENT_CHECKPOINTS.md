@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.198 | checkpoint/v0.7.198-neutralni-radky | Šedá výplň řádků složek nezávislá na akcentu a barevném schématu; barva pouze na obrysu. |
 | 0.7.197 | checkpoint/v0.7.197-jen-obrysy-slozek | Jen barevné obrysy složek a jejich rámečků, neutrální pozadí celého řádku bez akcentové výplně. |
 | 0.7.196 | checkpoint/v0.7.196-prehledne-nastaveni | Informační tlačítka přímo v nadpisu, pohodlnější rozestupy a přehledné posuvníky na mobilu. |
 | 0.7.195 | checkpoint/v0.7.195-projekty-a-prostredi | Více místních projektů s miniaturami a samostatnými stavy; volba vložit / otevřít jako nový pro JSON, PSD a Procreate; 15 nastavení prostředí a informační tlačítka s mizející nápovědou. |
