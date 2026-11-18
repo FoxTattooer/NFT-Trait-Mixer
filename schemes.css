@@ -640,7 +640,7 @@ body.compact-workspace[data-color-scheme] .workspace-tools :is(.icon-button,summ
 }
 body.compact-workspace[data-color-scheme] .workspace-tools :is(.icon-button,summary) .icon {color:inherit!important}
 body.compact-workspace[data-color-scheme] :is(
-  #workspaceTabs button.is-active, #cats .category-card.is-active, .quick-trait.is-selected,
+  #workspaceTabs button.is-active, .quick-trait.is-selected,
   .workspace-tools .icon-button:is([aria-pressed=true],[aria-expanded=true],[data-filtered]),
   .workspace-tools details[open]>summary, .layer-review-counts button[aria-pressed=true]
 ) {
@@ -757,7 +757,7 @@ body.compact-workspace[data-color-scheme] :is(
   box-shadow:inset 0 1px var(--scheme-sheen)!important;
 }
 body.compact-workspace[data-color-scheme] #cats[data-view=expanded] .category-card.is-active {
-  background:color-mix(in srgb,var(--workspace-accent-wash) 50%,var(--scheme-panel))!important;
+  background:linear-gradient(160deg,#242428,#19191d)!important;
   border-color:color-mix(in srgb,var(--workspace-accent-border) 68%,var(--scheme-stroke))!important;
   box-shadow:inset 2px 0 var(--workspace-accent-border)!important;
 }
