@@ -956,4 +956,21 @@ body[data-color-scheme] #layerEditDialog[data-mark] {
   background:linear-gradient(145deg,#34373e,#24262c)!important;
   border:1px solid var(--scheme-stroke);border-radius:10px;
 }
+/* Folder colors belong to outlines, never to a full-row accent fill. */
+body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-card,.layer-tree-folder) {
+  background:var(--scheme-panel,#202128)!important;
+}
+body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-folder>.layer-tree-main) {
+  background:transparent!important;
+}
+body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-folder>.layer-tree-main)>.layer-title-surface {
+  --layer-title-tint:var(--scheme-text,#f4eff6);
+}
+body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-main)>.layer-folder-icon>.icon:first-child {
+  fill:none!important;
+}
+body.compact-workspace[data-color-scheme] :is(#layerTree,#traits) :is(.category-pick,.layer-tree-main)[data-mark]>.layer-folder-icon>.layer-folder-caret {
+  color:var(--scheme-text,#f4eff6)!important;
+}
 #layerEditThumbnail > img {filter:none!important;opacity:1!important;image-rendering:auto;object-fit:contain}
+

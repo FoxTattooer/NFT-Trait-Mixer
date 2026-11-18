@@ -1,7 +1,7 @@
 'use strict';
 // Increment the version whenever an application-shell file changes.
 const PREFIX = `trait-workshop:${self.registration.scope}:`;
-const CACHE = PREFIX + 'v0.7.196';
+const CACHE = PREFIX + 'v0.7.197';
 const ROADMAP = './plan-rozvoje.html';
 const SHOWROOM_ART = './art/showroom-dripd.png?build=0775';
 const SKIN_ART = ['cup', 'emerald', 'gold', 'lime', 'mosaic', 'orange', 'purple', 'rainbow', 'red', 'silver', 'water']
@@ -20,7 +20,7 @@ const SHELL = [
   './trait-comparison.css?build=07158', './trait-comparison.js?build=07179',
   './lookbook.css?build=07182', './lookbook-cards.js?build=07148', './lookbook.js?build=07182',
   './', './index.html', ROADMAP, './styles.css?build=07158', './design.css?build=07169', './compact.css?build=07195',
-  './schemes.css?build=07194', './drag.js?build=07135', './project.js?build=07195', './diagnostics.js?build=07196',
+  './schemes.css?build=07197', './drag.js?build=07135', './project.js?build=07195', './diagnostics.js?build=07197',
   './showroom-mint.css?build=07158', './showroom-mint.js?build=07156',
   './showroom.css?build=07158', './showroom.js?build=07156', SHOWROOM_ART, ...LOOKBOOK_ART, ...SKIN_ART, './art/fox-credit-drop.png',
   './step-history.js?build=07169', './trait-transform.js?build=07189', './app.js?build=07195', './trait-eraser.js?build=07193', './recent.js?build=0789', './storage.js?build=07195', './final.js?build=07190', './folder-export.js?build=07190', './final-ui.js?build=07179', './final-builder.js?build=07188',
