@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.193 | checkpoint/v0.7.193-tuzka-upravy-vrstvy | Tužka u poznámek a v přehledu vrstev, přímá transformace, guma a černá či bílá linka s velikostí, historií tahů a uložením do konkrétní vrstvy. |
 | 0.7.192 | checkpoint/v0.7.192-slozky-a-sipky | Složky více vlevo, výraznější obrys a šipka uvnitř ikony, širší prostor pro názvy kategorií a podsložek. |
 | 0.7.191 | checkpoint/v0.7.191-guma | Guma v první liště, více velikostí, přiblížení dvěma prsty a vratné tahy na vybrané PNG vrstvě. |
 | 0.7.190 | checkpoint/v0.7.190-kroky-jemny-warp | Kroky zpět a vpřed, dvouprsté klepnutí zpět, jemnější Warp a přímý PNG export vybraných vrstev, složek a kategorií. |

@@ -1,4 +1,4 @@
-/* Erase a single PNG layer with replayable strokes and a composited preview. */
+/* Draw or erase on one PNG layer with replayable strokes and a composited preview. */
 (() => {
   'use strict';
   const dialog = $('traitEraserDialog'), stage = $('traitEraserStage'), preview = $('traitEraserPreview');
@@ -6,6 +6,16 @@
   const controls = $('traitEraserControls'), undo = $('traitEraserUndo'), redo = $('traitEraserRedo');
   const apply = $('traitEraserApply'), close = $('traitEraserClose');
   let draft;
+  const toolNames = { eraser:'Guma', black:'Černá linka', white:'Bílá linka' };
+  function setTool(tool) {
+    if (!draft || !(tool in toolNames) || draft.pointers.size) return;
+    draft.tool = tool;
+    $('traitEraserTitle').textContent = toolNames[tool];
+    stage.setAttribute('aria-label', `${toolNames[tool]} · ${draft.trait.name}`);
+    $('traitEraserHelp').textContent = (tool === 'eraser' ? 'Prstem gumuješ uvedenou vrstvu.' : 'Prstem kreslíš do uvedené vrstvy plnou linkou.') + ' Roztažením dvou prstů přiblížíš náhled, klepnutím dvěma prsty vrátíš tah. Velikost odpovídá plátnu 1024 px.';
+    for (const button of controls.querySelectorAll('[data-paint-tool]')) button.setAttribute('aria-pressed', String(button.dataset.paintTool === tool));
+    cursor.hidden = true;
+  }
 
   function syncControls() {
     const locked = busy || !draft?.work || draft.pointers.size > 0;
@@ -37,11 +47,12 @@
       if (draft === current) paint();
     });
   }
-  function erase(stroke) {
+  function drawStroke(stroke) {
     const ctx = draft.work.getContext('2d'), points = stroke.points;
     ctx.save();
     ctx.scale(draft.work.width,draft.work.height);
-    ctx.globalCompositeOperation = 'destination-out';
+    ctx.globalCompositeOperation = stroke.tool === 'black' || stroke.tool === 'white' ? 'source-over' : 'destination-out';
+    ctx.fillStyle = ctx.strokeStyle = stroke.tool === 'white' ? '#ffffff' : '#000000';
     ctx.lineWidth = stroke.size/1024;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -60,13 +71,13 @@
     const ctx=draft.work.getContext('2d');
     ctx.clearRect(0,0,draft.work.width,draft.work.height);
     ctx.drawImage(draft.strokeBase,0,0);
-    erase(draft.pending);
+    drawStroke(draft.pending);
   }
   function rebuild() {
     const ctx = draft.work.getContext('2d');
     ctx.clearRect(0,0,draft.work.width,draft.work.height);
     ctx.drawImage(draft.original,0,0);
-    for (let index=0; index<draft.position; index++) erase(draft.strokes[index]);
+    for (let index=0; index<draft.position; index++) drawStroke(draft.strokes[index]);
   }
   function step(direction) {
     if (busy || !draft?.work || draft.pointers.size) return;
@@ -100,7 +111,7 @@
     return { x:(first.x+second.x)/2, y:(first.y+second.y)/2, distance:Math.hypot(first.x-second.x,first.y-second.y) };
   }
 
-  async function open({ cat,trait }) {
+  async function open({ cat,trait }, tool = 'eraser') {
     if (dialog.open || busy) return;
     const current = draft = { trait, focus:document.activeElement, pointers:new Map(), strokes:[], position:0, view:{ zoom:1,x:0,y:0 } };
     const valid = () => draft === current && dialog.open;
@@ -111,6 +122,7 @@
     preview.getContext('2d').clearRect(0,0,preview.width,preview.height);
     syncControls();
     brushSize();
+    setTool(tool);
     dialog.showModal();
     const original = document.createElement('canvas'), work = document.createElement('canvas'), strokeBase = document.createElement('canvas');
     const below = document.createElement('canvas'), above = document.createElement('canvas');
@@ -162,7 +174,7 @@
       const ctx=draft.strokeBase.getContext('2d');
       ctx.clearRect(0,0,draft.work.width,draft.work.height);
       ctx.drawImage(draft.work,0,0);
-      draft.pending = { size:Number(size.value),points:[imagePosition(point)] };
+      draft.pending = { tool:draft.tool, size:Number(size.value),points:[imagePosition(point)] };
       showCursor(point,frame);
     }
     paint();
@@ -230,6 +242,8 @@
   });
   size.addEventListener('input',brushSize);
   controls.addEventListener('click',event => {
+    const mode = event.target.closest('[data-paint-tool]');
+    if (mode && !busy && !draft?.pointers.size) setTool(mode.dataset.paintTool);
     const preset = event.target.closest('[data-eraser-size]');
     if (preset && !busy && !draft?.pointers.size) { size.value=preset.dataset.eraserSize; brushSize(); }
   });
@@ -261,7 +275,7 @@
     try {
       const data=await editedLayerPng(current.work);
       busy=false;
-      change(() => { current.trait.data=data; },'Úprava gumou uložena');
+      change(() => { current.trait.data=data; },'Úprava vrstvy uložena');
       dialog.close();
     } catch (error) { status.textContent=error.message; }
     finally { busy=false; close.disabled=controls.disabled=false; syncControls(); }

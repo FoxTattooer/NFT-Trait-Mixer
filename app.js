@@ -591,6 +591,12 @@ function reviewLink({ cat, trait }, label, showFlag = false) {
     <span class="layer-review-copy"><strong>${esc(label)}${layerTagMarker(M.effectiveLayerTags(state, cat, trait))}${showFlag ? flagIcon(trait.flag, true) : ''}</strong><small>${esc(path)}</small></span>${icon('chevron')}`,
     trait.id, '', 'type="button" class="layer-review-link"');
 }
+function layerEditButton(trait) {
+  return button('open-layer-editor', '', trait.id, 'edit', `type="button" class="icon-button subtle layer-edit-button" aria-label="Upravit vrstvu · ${esc(trait.name)}" title="Upravit vrstvu · ${esc(trait.name)}" aria-haspopup="dialog"`);
+}
+function reviewEditableLink(row, label, showFlag) {
+  return `<div class="layer-review-edit-row">${reviewLink(row, label, showFlag)}${layerEditButton(row.trait)}</div>`;
+}
 function renderMatchScope(categories) {
   const category = M.category(state, matchCategory);
   if (!category) { matchCategory = ''; matchFolder = ''; }
@@ -626,7 +632,7 @@ function reviewMatchGroup(group, inScope) {
   const summary = button('toggle-layer-review-match', `<strong>${esc(first.trait.name)}</strong><small>${counted(group.length, 'vrstva', 'vrstvy', 'vrstev')}</small>${icon('chevron')}`, id, '',
     `type="button" class="layer-review-match-summary" aria-expanded="${open}" aria-controls="match-copies-${id}"`);
   const copies = open ? group.slice(0, layerReviewCopiesLimit).map(row => `<div class="layer-review-match-row">
-    ${reviewLink(row, row.trait.name, !!row.trait.flag)}
+    ${reviewLink(row, row.trait.name, !!row.trait.flag)}${layerEditButton(row.trait)}
     ${button('open-layer-menu', '', row.trait.id, 'more', `type="button" class="icon-button layer-review-copy-menu" data-category="${esc(row.cat.id)}" data-kind="trait" aria-label="Akce · ${esc(row.trait.name)}" aria-expanded="false" aria-controls="layerContext"`)}
   </div>`).join('') : '';
   const more = open && group.length > layerReviewCopiesLimit ? button('layer-review-more-copies', 'Další vrstvy', id, 'down', 'type="button"') : '';
@@ -688,7 +694,7 @@ function renderLayerReview() {
     markup ||= '<p class="empty-list">V tomto rozsahu nejsou vrstvy se stejným PNG souborem.</p>';
   } else {
     const isNotes = layerReviewSection === 'notes', list = isNotes ? notes : flags;
-    markup = list.slice(0, layerReviewLimit).map(row => row.trait ? reviewLink(row, isNotes ? row.trait.note : row.trait.name, !isNotes) : reviewFlagLink(row)).join('');
+    markup = list.slice(0, layerReviewLimit).map(row => row.trait ? reviewEditableLink(row, isNotes ? row.trait.note : row.trait.name, !isNotes) : reviewFlagLink(row)).join('');
     if (list.length > layerReviewLimit) markup += button('layer-review-more', 'Zobrazit další', '', 'down', 'type="button"');
     markup ||= `<p class="empty-list">${isNotes ? 'V projektu zatím nejsou poznámky.' : 'V projektu zatím nejsou vlajky.'}</p>`;
   }
@@ -1185,7 +1191,7 @@ function openLayerContext(trigger, id) {
   const rename = { category: 'rename-category', folder: 'rename-organizer-folder', trait: 'rename-trait' }[kind];
   const fullPath = folderId => [c.name, organizerPath(folders, folderId)].filter(Boolean).join(' / ');
   const destination = layerMoveSelect(kind, c.id, item);
-  let edits = layerMenuButton(rename, 'Přejmenovat', id, 'edit', 'edit', kind === 'folder' ? attributes : '');
+  let edits = (kind === 'trait' ? layerMenuButton('open-layer-editor', 'Upravit vrstvu', id, 'edit', 'edit', 'aria-haspopup="dialog"') : '') + layerMenuButton(rename, 'Přejmenovat', id, 'edit', 'edit', kind === 'folder' ? attributes : '');
   let other = '';
   if (kind === 'category') {
     const index = state.cats.indexOf(c);
@@ -1256,6 +1262,43 @@ function syncEraserTool() {
   button.disabled=busy || !target;
   button.title=target ? `Guma · ${target.trait.name}` : 'Guma · vyber vrstvu';
   button.setAttribute('aria-label',button.title);
+  $('layerReviewEdit').disabled = busy || !state.cats.some(cat => cat.traits.length);
+}
+function renderLayerEditorTarget() {
+  const dialog = $('layerEditDialog');
+  if (!dialog.open) return;
+  const target = M.locate(state, $('layerEditTarget').value);
+  $('layerEditName').textContent = target ? `${target.cat.name} · ${target.trait.name}` : 'Vrstva už není v projektu.';
+  const image = $('layerEditThumbnail');
+  const markup = target ? layerThumbnail(target.cat, target.trait) : '';
+  if (image.innerHTML !== markup) image.innerHTML = markup;
+  for (const control of dialog.querySelectorAll('[data-layer-edit-tool]')) {
+    control.dataset.id = target?.trait.id || '';
+    control.disabled = busy || !target;
+  }
+  mountThumbnails();
+}
+function openLayerEditor(target) {
+  const first = state.cats.find(cat => cat.traits.length);
+  target ||= eraserTarget() || (first && { cat:first, trait:first.traits[0] });
+  if (!target) { toast('Nejdřív přidej vrstvu pro úpravy.'); return; }
+  const select = $('layerEditTarget');
+  select.innerHTML = state.cats.filter(cat => cat.traits.length).map(cat => {
+    const org = organizerFolders(cat.id);
+    return `<optgroup label="${esc(cat.name)}">${cat.traits.map(trait => {
+      const name = [organizerPath(org.folders, org.assignments[trait.id]), trait.name].filter(Boolean).join(' › ');
+      return `<option value="${esc(trait.id)}">${esc(name)}</option>`;
+    }).join('')}</optgroup>`;
+  }).join('');
+  select.value = target.trait.id;
+  if (!$('layerEditDialog').open) $('layerEditDialog').showModal();
+  renderLayerEditorTarget();
+}
+$('layerEditTarget').addEventListener('change', renderLayerEditorTarget);
+$('layerEditClose').addEventListener('click', () => { if (!busy) $('layerEditDialog').close(); });
+$('layerEditDialog').addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+for (const id of ['traitTransformDialog', 'traitEraserDialog', 'traitColorsDialog']) {
+  $(id).addEventListener('close', renderLayerEditorTarget);
 }
 function categoryTraitDetails(category, trait, categoryHidden, picked) {
   if (!trait) return '';
@@ -1460,7 +1503,7 @@ function traitNoteEditor(trait) {
     <summary>${icon('edit')}<span>${trait.note ? 'Poznámka' : 'Napsat poznámku'}</span>${icon('chevron')}</summary>
     <form class="trait-note-form" data-trait-id="${esc(trait.id)}" ${trait.note ? 'data-has-note' : ''}>
       <textarea name="note" rows="2" maxlength="${M.TRAIT_NOTE_LIMIT}" aria-label="Poznámka k traitu ${esc(trait.name)}">${esc(trait.note || '')}</textarea>
-      <button type="submit">Uložit poznámku</button>
+      <div class="trait-note-actions">${layerEditButton(trait)}<button type="submit">Uložit poznámku</button></div>
     </form>
   </details>`;
 }
@@ -4032,6 +4075,10 @@ async function handleAction(action, id, element) {
     case 'close-trait-preview': $('traitPreviewDialog').close(); break;
     case 'duplicate-trait':
       if (located) change(() => M.duplicateTrait(state, located.cat, located.trait), 'Trait duplikován', true);
+      break;
+    case 'open-layer-editor': openLayerEditor(located); break;
+    case 'draw-trait-black': case 'draw-trait-white':
+      if (located) await window.TraitEraser.open(located, action === 'draw-trait-black' ? 'black' : 'white');
       break;
     case 'open-eraser': {
       const target = located || eraserTarget();

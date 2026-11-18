@@ -15,7 +15,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?build=07158">
   <link rel="stylesheet" href="design.css?build=07169">
-  <link rel="stylesheet" href="compact.css?build=07192">
+  <link rel="stylesheet" href="compact.css?build=07193">
   <link rel="stylesheet" href="schemes.css?build=07192">
   <link rel="stylesheet" href="showroom.css?build=07158">
   <link rel="stylesheet" href="showroom-mint.css?build=07158">
@@ -25,7 +25,7 @@
   <script src="project.js?build=07185" defer></script>
   <script src="storage.js?build=07178" defer></script>
   <script src="final.js?build=07190" defer></script>
-  <script src="diagnostics.js?build=07192" defer></script>
+  <script src="diagnostics.js?build=07193" defer></script>
   <script src="pdf-info.js?build=07101" defer></script>
   <script src="showroom-mint.js?build=07156" defer></script>
   <script src="showroom.js?build=07156" defer></script>
@@ -35,8 +35,8 @@
   <script src="inventory-base.js?build=07160" defer></script>
   <script src="step-history.js?build=07169" defer></script>
   <script src="trait-transform.js?build=07189" defer></script>
-  <script src="app.js?build=07192" defer></script>
-  <script src="trait-eraser.js?build=07191" defer></script>
+  <script src="app.js?build=07193" defer></script>
+  <script src="trait-eraser.js?build=07193" defer></script>
   <script src="trait-comparison.js?build=07179" defer></script>
   <script src="lookbook-cards.js?build=07148" defer></script>
   <script src="lookbook.js?build=07182" defer></script>
@@ -143,8 +143,8 @@
     </details>
     <div class="history-actions"><button id="undo" data-action="undo" class="icon-button" aria-label="Vrátit změnu" title="Zpět (Ctrl/⌘ Z)" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" data-action="redo" class="icon-button" aria-label="Zopakovat změnu" title="Znovu (Ctrl/⌘ Shift Z)" disabled><svg class="icon"><use href="#i-redo"/></svg></button></div>
     <div class="header-end compact-header-end">
-      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.192" title="Ověřit aktualizaci aplikace">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.192</span></span>
+      <button id="refreshApp" type="button" data-action="refresh-app" data-app-update class="header-refresh app-update-button" data-update-state="idle" aria-label="Ověřit aktualizaci aplikace v0.7.193" title="Ověřit aktualizaci aplikace">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong id="refreshLabel">Aktualizace</strong><span id="appVersion" class="app-version">v0.7.193</span></span>
       </button>
       <details class="header-menu"><summary aria-label="Další možnosti" title="Další možnosti" aria-controls="optionsMenuActions"><svg class="icon"><use href="#i-more"/></svg></summary>
         <div class="header-menu-content" id="optionsMenuActions" aria-label="Panel možností">
@@ -202,6 +202,7 @@
               <button type="button" data-action="layer-review-section" data-id="matches" aria-pressed="false"></button>
               <button type="button" data-action="layer-review-section" data-id="notes" aria-pressed="false"></button>
               <button type="button" data-action="layer-review-section" data-id="flags" aria-pressed="false"></button>
+              <button id="layerReviewEdit" type="button" data-action="open-layer-editor" class="icon-button subtle" aria-label="Upravit vrstvu" title="Upravit vrstvu" aria-haspopup="dialog" disabled><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button>
             </div>
             <details id="layerReviewScope" class="layer-review-scope" hidden>
               <summary id="layerReviewScopeLabel">Celý projekt</summary>
@@ -412,13 +413,29 @@
       </div>
     </form>
   </dialog>
+  <dialog id="layerEditDialog" class="settings-dialog" aria-labelledby="layerEditTitle">
+    <header class="trait-preview-heading">
+      <div><h2 id="layerEditTitle">Upravit vrstvu</h2><p id="layerEditName"></p></div>
+      <button id="layerEditClose" type="button" class="subtle icon-button" aria-label="Zavřít úpravy vrstvy"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <label class="layer-edit-target">Vrstva<select id="layerEditTarget" aria-label="Vrstva pro úpravy"></select></label>
+    <div id="layerEditThumbnail" class="layer-thumb" aria-hidden="true"></div>
+    <p class="helper">Nástroje upravují pouze uvedenou PNG vrstvu. Změny uložíš tlačítkem Použít; zavřením nástroje je zahodíš.</p>
+    <div class="layer-edit-tools">
+      <button type="button" data-layer-edit-tool data-action="transform-trait"><svg class="icon" aria-hidden="true"><use href="#i-transform"/></svg>Transformace</button>
+      <button type="button" data-layer-edit-tool data-action="open-eraser"><svg class="icon" aria-hidden="true"><use href="#i-eraser"/></svg>Guma</button>
+      <button type="button" data-layer-edit-tool data-action="draw-trait-black"><span class="layer-pen-sample" data-pen="black" aria-hidden="true"></span>Černá linka</button>
+      <button type="button" data-layer-edit-tool data-action="draw-trait-white"><span class="layer-pen-sample" data-pen="white" aria-hidden="true"></span>Bílá linka</button>
+      <button type="button" data-layer-edit-tool data-action="edit-trait-colors"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>Barvy a křivky</button>
+    </div>
+  </dialog>
   <dialog id="traitEraserDialog" class="settings-dialog" aria-labelledby="traitEraserTitle">
     <header class="trait-preview-heading">
       <div><h2 id="traitEraserTitle">Guma</h2><p id="traitEraserName"></p></div>
-      <div class="trait-transform-history" role="group" aria-label="Tahy gumy">
-        <button id="traitEraserUndo" type="button" class="subtle icon-button" aria-label="Vrátit tah gumy" disabled><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
-        <button id="traitEraserRedo" type="button" class="subtle icon-button" aria-label="Zopakovat tah gumy" disabled><svg class="icon" aria-hidden="true"><use href="#i-redo"/></svg></button>
-        <button id="traitEraserClose" type="button" class="subtle icon-button" aria-label="Zavřít gumu"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+      <div class="trait-transform-history" role="group" aria-label="Historie tahů">
+        <button id="traitEraserUndo" type="button" class="subtle icon-button" aria-label="Vrátit tah" disabled><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
+        <button id="traitEraserRedo" type="button" class="subtle icon-button" aria-label="Zopakovat tah" disabled><svg class="icon" aria-hidden="true"><use href="#i-redo"/></svg></button>
+        <button id="traitEraserClose" type="button" class="subtle icon-button" aria-label="Zavřít kreslení a gumu"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
       </div>
     </header>
     <div id="traitEraserStage" tabindex="0" role="group" aria-label="Plocha pro gumování vybrané vrstvy" aria-describedby="traitEraserHelp">
@@ -428,11 +445,16 @@
     <div class="trait-eraser-tools">
       <p id="traitEraserHelp" class="helper">Prstem gumuješ uvedenou vrstvu. Roztažením dvou prstů přiblížíš náhled, klepnutím dvěma prsty vrátíš tah.</p>
       <p id="traitEraserStatus" class="helper" role="status"></p>
-      <fieldset id="traitEraserControls" aria-label="Nastavení gumy" disabled>
+      <fieldset id="traitEraserControls" aria-label="Nastavení tahu" disabled>
+        <div class="trait-paint-modes" role="group" aria-label="Nástroj">
+          <button type="button" class="subtle" data-paint-tool="eraser" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-eraser"/></svg>Guma</button>
+          <button type="button" class="subtle" data-paint-tool="black" aria-pressed="false"><span class="layer-pen-sample" data-pen="black" aria-hidden="true"></span>Černá</button>
+          <button type="button" class="subtle" data-paint-tool="white" aria-pressed="false"><span class="layer-pen-sample" data-pen="white" aria-hidden="true"></span>Bílá</button>
+        </div>
         <div class="appearance-sliders">
           <label for="traitEraserSize">Velikost</label><input id="traitEraserSize" type="range" min="1" max="256" value="24"><output id="traitEraserSizeValue" for="traitEraserSize">24 px</output>
         </div>
-        <div class="trait-eraser-presets" role="group" aria-label="Velikosti gumy">
+        <div class="trait-eraser-presets" role="group" aria-label="Velikosti tahu">
           <button type="button" class="subtle" data-eraser-size="8" aria-pressed="false">8 px</button>
           <button type="button" class="subtle" data-eraser-size="24" aria-pressed="true">24 px</button>
           <button type="button" class="subtle" data-eraser-size="64" aria-pressed="false">64 px</button>
@@ -533,8 +555,8 @@
     <header class="lookbook-head">
       <h2 id="lookbookTitle" tabindex="-1">Lookbook</h2>
       <div class="lookbook-head-actions">
-        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.192" title="Ověřit aktualizaci aplikace">
-          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.192</span></span>
+        <button id="lookbookRefreshApp" type="button" class="subtle app-update-button" data-app-update data-update-state="idle" aria-label="Ověřit aktualizaci aplikace · v0.7.193" title="Ověřit aktualizaci aplikace">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="refresh-copy"><strong>Aktualizace</strong><span class="app-version">v0.7.193</span></span>
         </button>
         <button id="lookbookExit" type="button" class="subtle" aria-label="Zpět do editoru"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Editor</button>
       </div>
@@ -1009,6 +1031,7 @@
   <dialog id="versionHistoryDialog" class="version-history-dialog" aria-labelledby="versionHistoryTitle">
     <div class="version-history-heading"><div><span class="eyebrow">GITHUB CHECKPOINTS</span><h2 id="versionHistoryTitle">Historie vývojových verzí</h2><p>Uložené stavy celé aplikace. Nejde o historii změn projektu ani NFT obrázků.</p></div><button type="button" class="icon-button subtle" data-action="close-version-history" aria-label="Zavřít">✕</button></div>
     <div class="version-history-list">
+      <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.193-tuzka-upravy-vrstvy" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.193 – Tužka a úpravy vrstvy</strong><small>Přímé úpravy z poznámek a přehledu: transformace, guma a černá i bílá linka s historií tahů.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.192-slozky-a-sipky" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.192 – Složky a šipky</strong><small>Výraznější složky vlevo, šipka uvnitř ikony a více prostoru pro názvy kategorií i podsložek.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.191-guma" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.191 – Guma</strong><small>Gumování vybrané vrstvy, více velikostí, přiblížení a kroky zpět i vpřed.</small></span><span class="version-tag">Uloženo</span></a>
       <a class="version-history-entry" href="https://github.com/FoxTattooer/NFT-Trait-Mixer/tree/checkpoint/v0.7.190-kroky-jemny-warp" target="_blank" rel="noopener noreferrer"><span class="version-dot"></span><span class="version-entry-copy"><strong>v0.7.190 – Kroky, Warp a PNG</strong><small>Šipky zpět a vpřed, dvouprsté klepnutí, jemnější Warp a přímý export výběru do PNG.</small></span><span class="version-tag">Uloženo</span></a>

@@ -1136,3 +1136,28 @@ button.trait-search-result {
 @media (prefers-reduced-motion:reduce) {
   :is(.category-pick,.layer-tree-main) > .layer-folder-icon > .layer-folder-caret {transition:none}
 }
+
+/* Direct layer editing from review, matches and notes. */
+#layerReviewEdit {margin-inline-start:auto;width:44px;min-width:44px;padding:10px}
+.layer-review-edit-row {display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:4px;align-items:center}
+.layer-review-match-row {grid-template-columns:minmax(0,1fr) 44px 44px}
+.layer-edit-button {width:44px;min-height:44px;padding:10px}
+.layer-edit-button > .icon {width:20px;height:20px}
+.trait-note-actions {display:flex;align-items:center;justify-content:space-between;gap:6px}
+#layerEditDialog {box-sizing:border-box;width:min(460px,calc(100% - 24px))}
+#layerEditDialog[open] {display:grid;gap:10px}
+.layer-edit-target {display:grid;gap:5px;font-size:13px}
+#layerEditTarget {width:100%;min-width:0;min-height:44px}
+#layerEditThumbnail {width:min(38dvh,200px);height:auto;aspect-ratio:1;justify-self:center}
+#layerEditDialog .helper {margin:0;line-height:1.4}
+.layer-edit-tools {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.layer-edit-tools button {min-width:0;min-height:48px;padding:8px;font-size:14px}
+.layer-edit-tools button:last-child {grid-column:1 / -1}
+.layer-edit-tools .icon {width:21px;height:21px;flex:none}
+.layer-pen-sample {display:inline-block;width:19px;height:19px;border-radius:50%;border:1px solid #9d9da5;flex:none}
+.layer-pen-sample[data-pen=black] {background:#000}
+.layer-pen-sample[data-pen=white] {background:#fff}
+.trait-paint-modes {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-bottom:8px}
+.trait-paint-modes button {min-height:44px;min-width:0;padding:5px;font-size:13px}
+.trait-paint-modes .icon {width:20px;height:20px}
+.trait-paint-modes [aria-pressed=true] {border-color:var(--control-accent);color:var(--scheme-text);background:var(--scheme-control)}
