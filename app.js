@@ -767,7 +767,7 @@ function renderLayerBranch(tree, c, limit, visible, manage = false) {
     const tags = M.effectiveLayerTags(state, c, item, folder ? 'folder' : 'trait');
     const source = statusSource(item, folder ? 'folder' : 'trait');
     const folderMark = folder && M.layerStatus(source);
-    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${source.wip ? ' is-wip' : ''}" style="--depth:${indent}" data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
+    return `<div class="layer-tree-row drop-row ${folder ? 'layer-tree-folder' : 'layer-tree-trait'}${manage && !folder && item.note ? ' has-note' : ''}${source.wip ? ' is-wip' : ''}" style="--depth:${indent}" ${folderMark ? `data-mark="${folderMark}" ` : ''}data-drop-kind="${folder ? 'folder' : 'trait'}" data-drop-id="${id}" data-category="${esc(c.id)}" data-parent="${esc(assignments[item.id] || '')}">
       ${layerBulkPick(item)}
       ${manage && folder ? dragHandle('folder', item.id, c.id, item.name) : ''}
       ${folder ? layerBulkExpand('toggle-tree-folder', item, c.id, expanded) : ''}
@@ -1270,7 +1270,9 @@ function renderLayerEditorTarget() {
   const target = M.locate(state, $('layerEditTarget').value);
   $('layerEditName').textContent = target ? `${target.cat.name} · ${target.trait.name}` : 'Vrstva už není v projektu.';
   const image = $('layerEditThumbnail');
-  const markup = target ? layerThumbnail(target.cat, target.trait) : '';
+  const mark = target && M.layerStatus(M.layerStatusSource(state, target.cat)(target.trait));
+  if (mark) dialog.dataset.mark = mark; else delete dialog.dataset.mark;
+  const markup = target ? layerThumbnail(target.cat, target.trait, 'layer-cropped-thumbnail layer-editor-thumbnail') : '';
   if (image.innerHTML !== markup) image.innerHTML = markup;
   for (const control of dialog.querySelectorAll('[data-layer-edit-tool]')) {
     control.dataset.id = target?.trait.id || '';
@@ -1445,6 +1447,7 @@ function renderCategories(hidden, categories) {
     card.classList.toggle('is-hidden', hidden.has(c.id));
     const hiddenLabel = hidden.has(c.id) ? c.visible === false ? ' · skryto' : ' · skryto pravidlem' : '';
     const mark = Object.keys(layerStatusLabels).find(key => c[key]);
+    if (mark) card.dataset.mark = mark; else delete card.dataset.mark;
     const markup = `
       <div class="category-top drop-row" data-drop-kind="category" data-drop-id="${id}" data-category="${id}">
         ${layerBulkPick(c)}${layerBulkExpand('select-category', c, c.id, expanded)}
@@ -2059,7 +2062,7 @@ function pumpThumbnails() {
     thumbnailJobs++;
     const valid = () => img.isConnected && (!managed || !thumbnailObserver || nearbyThumbnails.has(img));
     const lookbookRenderer = img.classList.contains('lookbook-thumbnail') && window.TraitLookbook?.thumbnail;
-    const size = img.classList.contains('final-draft-thumbnail') ? 240 : 96;
+    const size = img.classList.contains('layer-editor-thumbnail') ? 768 : img.classList.contains('final-draft-thumbnail') ? 240 : 96;
     const pending = lookbookRenderer ? lookbookRenderer(source, valid) : thumbnailBlob(source, managed, valid, img.classList.contains('layer-cropped-thumbnail'), size);
     pending.then(blob => {
       if (!valid()) return;

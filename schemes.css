@@ -941,3 +941,19 @@ body.compact-workspace[data-icon-glow] .layer-folder-icon > .icon:first-child {
   filter:drop-shadow(0 0 calc(1px + var(--ui-control-icon-glow-spread,.45) * 8px)
     color-mix(in srgb,var(--ui-control-icon-glow-color,currentColor) calc(var(--ui-control-icon-glow,0) * 100%),transparent))!important;
 }
+
+/* Keep the status outline independent of the current workspace accent. */
+body.compact-workspace[data-color-scheme] #layerTree #cats[data-view] .category-card[data-mark],
+body[data-color-scheme] :is(#layerTree,#traits) .layer-tree-folder[data-mark],
+body[data-color-scheme] #layerEditDialog[data-mark] {
+  border-color:var(--category-mark-color)!important;
+  box-shadow:inset 0 0 0 .4px var(--category-mark-color),0 1px 4px #0005!important;
+}
+/* Category names and nested layer names share the same trailing badge alignment. */
+:is(#layerTree,#traits) .layer-title-surface > :is(.layer-tree-label,.category-copy) {flex:1;min-width:0}
+:is(#layerTree,#traits) .layer-title-surface > .layer-tree-check {margin-inline-start:0;flex:none}
+#layerEditThumbnail {
+  background:linear-gradient(145deg,#34373e,#24262c)!important;
+  border:1px solid var(--scheme-stroke);border-radius:10px;
+}
+#layerEditThumbnail > img {filter:none!important;opacity:1!important;image-rendering:auto;object-fit:contain}
