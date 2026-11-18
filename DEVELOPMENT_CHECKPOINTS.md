@@ -4,6 +4,7 @@ Každá dokončená a uživatelem schválená změna aplikace má dostat samosta
 
 | Verze | GitHub větev | Změna |
 |---|---|---|
+| 0.7.191 | checkpoint/v0.7.191-guma | Guma v první liště, více velikostí, přiblížení dvěma prsty a vratné tahy na vybrané PNG vrstvě. |
 | 0.7.190 | checkpoint/v0.7.190-kroky-jemny-warp | Kroky zpět a vpřed, dvouprsté klepnutí zpět, jemnější Warp a přímý PNG export vybraných vrstev, složek a kategorií. |
 | 0.7.189 | checkpoint/v0.7.189-distort-warp | Perspektivní Distort se čtyřmi nezávislými rohy, plynulý Warp se sítí 4 × 4 a export upraveného PNG. |
 | 0.7.188 | checkpoint/v0.7.188-oprava-exportu-psd | Export všech FIN PNG do jedné složky a oprava přípravy PSD při kombinaci různých verzí editoru a exportéru. |

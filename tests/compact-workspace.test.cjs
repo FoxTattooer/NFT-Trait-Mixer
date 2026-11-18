@@ -41,7 +41,7 @@ w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new Blob([this.native.toBuf
 w.HTMLCanvasElement.prototype.toDataURL=function(){return this.native.toDataURL('image/png');};
 w.__downloads=[];
 w.fetch=async url=>{assert.match(url,/inventory-dripd\.json/);return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../inventory-dripd.json','utf8'))};};
-const appScripts = ['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','trait-transform.js','app.js','trait-comparison.js','lookbook-cards.js','lookbook.js','folder-export.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
+const appScripts = ['project.js','storage.js','final.js','diagnostics.js','showroom-mint.js','showroom.js','layer-inventory.js','inventory-base.js','step-history.js','trait-transform.js','app.js','trait-eraser.js','trait-comparison.js','lookbook-cards.js','lookbook.js','folder-export.js','final-ui.js','final-builder.js','inventory-preview.js','inventory-review.js','inventory-base-ui.js'].map(f=>fs.readFileSync(__dirname+'/../'+f,'utf8')).join('\n');
 w.eval(appScripts+`
 decodeImage = source => globalThis.__load(source);
 download = (blob,name) => globalThis.__downloads.push({blob,name});
@@ -542,10 +542,10 @@ click('#layersTab');
 assert.equal(get('appLayout').dataset.mobilePanel,'layers');
 assert.equal(header.firstElementChild.id,'layerCategoryPicker');
 assert.deepEqual([...header.querySelectorAll('.layer-panel-actions button')].map(button=>button.id),
-  ['layerTraitSearchToggle','compactToggle','addCat','openCategoryExport','layerReviewToggle','layerReviewFilter']);
+  ['layerTraitSearchToggle','compactToggle','eraserTool','openCategoryExport','layerReviewToggle','layerReviewFilter']);
 assert.equal(get('layerReviewTools').parentElement, get('layerPanelActions'), 'review tools share the Layers toolbar');
 assert.equal(get('categoryExportBadge').textContent,'1');
-assert(header.contains(get('layerCategory')) && header.contains(get('compactToggle')) && header.contains(get('addCat')));
+assert(header.contains(get('layerCategory')) && header.contains(get('compactToggle')) && header.contains(get('eraserTool')));
 assert(!get('categorySortDialog'));
 assert(!find('.category-filter-bar #openCategoryExport'));
 click('#openCategoryExport');assert(get('categoryExportDialog').open);
@@ -2837,6 +2837,84 @@ assert.deepEqual([...deformationPixels.getImageData(32,32,1,1).data],[229,53,121
 click('#undo');
 const originalDeformation = await w.readTraitImage('deform-trait');
 assert.deepEqual(Buffer.from(await originalDeformation.arrayBuffer()),deformationImage.toBuffer('image/png'));
+// The toolbar eraser edits one layer, preserves PNG dimensions, and composes layers underneath it.
+const eraseTop=createCanvas(64,64), eraseLower=createCanvas(64,64);
+eraseTop.getContext('2d').fillStyle='#ff0000'; eraseTop.getContext('2d').fillRect(0,0,64,64);
+eraseLower.getContext('2d').fillStyle='#0000ff'; eraseLower.getContext('2d').fillRect(0,0,64,64);
+const eraserProject=M.empty();
+eraserProject.cats=[
+  {id:'erase-top-cat',name:'Vrchní',visible:true,traits:[{id:'erase-top',name:'Červená',data:eraseTop.toDataURL('image/png')}]},
+  {id:'erase-lower-cat',name:'Podklad',visible:true,traits:[{id:'erase-lower',name:'Modrá',data:eraseLower.toDataURL('image/png')}]},
+];
+eraserProject.selected={'erase-top-cat':'erase-top','erase-lower-cat':'erase-lower'};
+w.useTestProject(eraserProject);
+assert.equal(get('addCat'),null);
+assert(!get('eraserTool').disabled);
+assert(get('eraserTool').querySelector('use[href="#i-eraser"]'));
+click('#eraserTool');
+await waitFor(()=>!get('traitEraserControls').disabled);
+assert.match(get('traitEraserName').textContent,/Vrchní.*Červená/);
+const eraseStage=get('traitEraserStage');
+eraseStage.getBoundingClientRect=()=>({left:0,top:0,width:300,height:300});
+eraseStage.setPointerCapture=()=>{};
+const eraserEvent=(type,x,y,id=91,elapsed=0)=>{
+  const event=pointer(type,{pointerId:id,clientX:x,clientY:y});
+  Object.defineProperty(event,'timeStamp',{value:10000+elapsed});
+  eraseStage.dispatchEvent(event);
+};
+const eraserPixels=get('traitEraserPreview').getContext('2d');
+const eraseSample=(x,y)=>[...eraserPixels.getImageData(x,y,1,1).data];
+const stroke=(x,y,dx=0,dy=0)=>{
+  eraserEvent('pointerdown',x,y);
+  if(dx||dy)eraserEvent('pointermove',x+dx,y+dy);
+  eraserEvent('pointerup',x+dx,y+dy);
+};
+click('[data-eraser-size="128"]');
+assert.equal(get('traitEraserSize').value,'128');
+stroke(150,150,60,0);
+assert.deepEqual(eraseSample(384,384),[0,0,255,255]);
+assert.deepEqual(eraseSample(80,80),[255,0,0,255]);
+assert(!get('traitEraserApply').disabled);
+click('#traitEraserUndo');
+assert.deepEqual(eraseSample(384,384),[255,0,0,255]);
+click('#traitEraserRedo');
+assert.deepEqual(eraseSample(384,384),[0,0,255,255]);
+eraserEvent('pointerdown',100,100,92);
+eraserEvent('pointerdown',200,100,93,20);
+eraserEvent('pointerup',100,100,92,70);
+eraserEvent('pointerup',200,100,93,90);
+assert(get('traitEraserApply').disabled);
+assert.deepEqual(eraseSample(384,384),[255,0,0,255]);
+eraserEvent('pointerdown',100,150,92);
+eraserEvent('pointerdown',200,150,93,20);
+eraserEvent('pointermove',50,150,92,40);
+eraserEvent('pointermove',250,150,93,40);
+eraserEvent('pointerup',50,150,92,70);
+eraserEvent('pointerup',250,150,93,90);
+assert.equal(get('traitEraserZoom').textContent,'200 %');
+assert(get('traitEraserApply').disabled,'pinching leaves no eraser marks');
+click('#traitEraserZoom');
+click('#traitEraserRedo');
+eraserEvent('pointerdown',80,80);
+eraserEvent('pointermove',90,90);
+eraserEvent('pointercancel',90,90);
+assert.deepEqual(eraseSample(210,210),[255,0,0,255]);
+click('#traitEraserApply');
+await waitFor(()=>!get('traitEraserDialog').open);
+const erasedImage=await loadImage(Buffer.from(await(await w.readTraitImage('erase-top')).arrayBuffer()));
+assert.deepEqual([erasedImage.width,erasedImage.height],[64,64]);
+const erasedContext=createCanvas(64,64).getContext('2d');
+erasedContext.drawImage(erasedImage,0,0);
+assert.equal(erasedContext.getImageData(32,32,1,1).data[3],0);
+assert.deepEqual([...erasedContext.getImageData(4,4,1,1).data],[255,0,0,255]);
+assert.deepEqual(Buffer.from(await(await w.readTraitImage('erase-lower')).arrayBuffer()),eraseLower.toBuffer('image/png'));
+click('#undo');
+assert.deepEqual(Buffer.from(await(await w.readTraitImage('erase-top')).arrayBuffer()),eraseTop.toBuffer('image/png'));
+click('#eraserTool');
+await waitFor(()=>!get('traitEraserControls').disabled);
+stroke(150,150);
+click('#traitEraserClose');
+assert.deepEqual(Buffer.from(await(await w.readTraitImage('erase-top')).arrayBuffer()),eraseTop.toBuffer('image/png'));
 // The strip tracks durable writes and the updater only activates after saving.
 assert.equal(get('saveStrip'), null);
 w.eval('scheduleSave()');

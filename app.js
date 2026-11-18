@@ -1202,6 +1202,7 @@ function openLayerContext(trigger, id) {
     const index = siblings.findIndex(trait => trait.id === id);
     const lower = M.traitBelow(state, c, id);
     edits += layerMenuButton('duplicate-trait', 'Duplikovat', id, 'compare', 'edit') +
+      layerMenuButton('open-eraser', 'Guma', id, 'eraser', 'edit', 'aria-haspopup="dialog"') +
       layerMenuButton('edit-trait-colors', 'Brightness, Saturation &amp; Hue', id, 'sliders', 'edit', 'aria-haspopup="dialog"') +
       layerMenuButton('transform-trait', 'Transformace', id, 'transform', 'edit', 'aria-haspopup="dialog"') +
       layerMenuButton('merge-trait-down', 'Merge Down', id, 'down', 'edit',
@@ -1242,6 +1243,19 @@ function dragHandle(kind, id, categoryId, label) {
 }
 const categoryTraitDetailsId = categoryId => `category-trait-details-${categoryId}`;
 let inspectedTrait = null;
+function eraserTarget() {
+  const category = M.category(state,active);
+  if (!category) return null;
+  const inspected = inspectedTrait?.categoryId === active && category.traits.find(trait => trait.id === inspectedTrait.id);
+  const trait = inspected || category.traits.find(trait => trait.id === state.selected[active]);
+  return trait ? { cat:category,trait } : null;
+}
+function syncEraserTool() {
+  const target=eraserTarget(), button=$('eraserTool');
+  button.disabled=busy || !target;
+  button.title=target ? `Guma · ${target.trait.name}` : 'Guma · vyber vrstvu';
+  button.setAttribute('aria-label',button.title);
+}
 function categoryTraitDetails(category, trait, categoryHidden, picked) {
   if (!trait) return '';
   const enabled = picked && !trait.hidden && category.visible !== false;
@@ -1285,6 +1299,7 @@ function inspectCategoryTrait(trigger, category, trait) {
     }
   }
   inspectedTrait = isOpen ? null : { categoryId: category.id, id: trait.id };
+  syncEraserTool();
   if (isOpen) return;
   const details = $(categoryTraitDetailsId(category.id));
   details.innerHTML = categoryTraitDetails(category, trait, M.conflicts(state).hidden.has(category.id), M.isSelected(state, category.id, trait.id));
@@ -2031,6 +2046,14 @@ function visibleLayers(project, hidden = M.conflicts(project).hidden) {
   }
   return layers;
 }
+function layerEditContext(cat,trait) {
+  const lowerIds = new Set([
+    ...cat.traits.slice(cat.traits.indexOf(trait)+1),
+    ...state.cats.slice(state.cats.indexOf(cat)+1).flatMap(category => category.traits),
+  ].map(layer => layer.id));
+  const context = visibleLayers(state).filter(layer => layer !== trait);
+  return { below:context.filter(layer => lowerIds.has(layer.id)), above:context.filter(layer => !lowerIds.has(layer.id)) };
+}
 function decodeImage(data) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -2552,16 +2575,12 @@ async function openTraitTransform({ cat, trait }) {
       };
     });
     if (!current()) return;
-    const lowerIds = new Set([
-      ...cat.traits.slice(cat.traits.indexOf(trait) + 1),
-      ...state.cats.slice(state.cats.indexOf(cat) + 1).flatMap(category => category.traits),
-    ].map(layer => layer.id));
-    const context = visibleLayers(state).filter(layer => layer !== trait);
+    const context = layerEditContext(cat,trait);
     const below = document.createElement('canvas'), above = document.createElement('canvas');
     for (const canvas of [below, above]) canvas.width = canvas.height = traitTransformCanvas.width;
-    await paintLayers(below, context.filter(layer => lowerIds.has(layer.id)), current);
+    await paintLayers(below,context.below,current);
     if (!current()) return;
-    await paintLayers(above, context.filter(layer => !lowerIds.has(layer.id)), current);
+    await paintLayers(above,context.above,current);
     if (!current()) return;
     Object.assign(draft, { bounds, pose:initialTraitPose(bounds), source, below, above, deformed:document.createElement('canvas') });
     draft.steps.push(draft.pose);
@@ -3040,6 +3059,7 @@ function render(keepPreview = false) {
   $('projectNameText').textContent = state.name;
   $('projectName').setAttribute('aria-label', `Přejmenovat projekt ${state.name}`);
   $('importPsd').disabled = busy;
+  syncEraserTool();
   $('saveProjectPsd').disabled = busy || exporting || !state.cats.some(category => category.traits.length);
   $('undo').disabled = !undoStack.length || busy;
   $('redo').disabled = !redoStack.length || busy;
@@ -4012,6 +4032,12 @@ async function handleAction(action, id, element) {
     case 'duplicate-trait':
       if (located) change(() => M.duplicateTrait(state, located.cat, located.trait), 'Trait duplikován', true);
       break;
+    case 'open-eraser': {
+      const target = located || eraserTarget();
+      if (target) await window.TraitEraser.open(target);
+      else toast('Nejdřív vyber vrstvu pro gumování.');
+      break;
+    }
     case 'merge-trait-down': if (located) await mergeTraitDown(located); break;
     case 'edit-trait-colors': if (located) await openTraitColors(located); break;
     case 'close-trait-colors': traitColorsDialog.close(); break;
